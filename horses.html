@@ -3139,12 +3139,13 @@ function rand(min, max){ return min + Math.random()*(max-min); }
    here — the phone derives those from these win figures at selection time.
    Keyed by horse number (1-based). */
 function buildOddsTable(){
-  const table = { win:{}, place:{}, show:{} };
+  const table = { win:{}, place:{}, show:{}, names:{} };
   raceHorses.forEach((h, i)=>{
     const o = odds[i] || {};
     if(o.win   != null) table.win[h.num]   = o.win;
     if(o.place != null) table.place[h.num] = o.place;
     if(o.show  != null) table.show[h.num]  = o.show;
+    table.names[h.num] = h.name;   // so the player view shows the real horse name
   });
   return table;
 }
