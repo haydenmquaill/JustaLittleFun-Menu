@@ -3448,7 +3448,7 @@ lq('#lobby-start-game').addEventListener('click', async ()=>{
   document.getElementById('lobby-overlay').style.display='none';
   lobby.gameStarted = true;
   multiGame.active = true;
-  multiGame.raceNumber = 0;        // 0-indexed, matches sessions.current_race
+  multiGame.raceNumber = 0;        // 0-indexed, matches sessions.current_round
   startRaceCycle();                // opens betting for race 0, then runs the loop
 });
 
@@ -3562,7 +3562,7 @@ lq('#confirm-yes').addEventListener('click', async ()=>{
        prerace→race transition fires (beginRace).
      · The horses then hold at the gate for random(5..15)s before they run
        (the engine's gatePhase hold).
-     · On finish: settle_race with the order → status settling.
+     · On finish: settle_round with the order → status settling.
      · Advance on the postrace button: next race, or finish_game after the last.
 ════════════════════════════════════════════════════════════════ */
 const multiGame = {
@@ -3610,7 +3610,7 @@ async function startRaceCycle(){
   const closeDelay = Math.round(lobby.cfg.bettingSeconds + rand(0, 30));
   const { data, error } = await sb.rpc('open_betting', {
     p_session_id:  lobby.session.id,
-    p_race_number: multiGame.raceNumber,
+    p_round_number: multiGame.raceNumber,
     p_odds_table:  buildOddsTable(),
     p_seconds:     closeDelay,
   });
@@ -3681,12 +3681,12 @@ async function onRaceFinished(){
   // word its banner correctly instead of always claiming a photo finish.
   const hadPhotoFinish = photoFinishPositions.size > 0;
 
-  const { error } = await sb.rpc('settle_race', {
+  const { error } = await sb.rpc('settle_round', {
     p_session_id:  lobby.session.id,
-    p_race_number: multiGame.raceNumber,
+    p_round_number: multiGame.raceNumber,
     p_result:      { order, detail, photo: hadPhotoFinish },
   });
-  if(error){ console.error('settle_race failed:', error); }
+  if(error){ console.error('settle_round failed:', error); }
 }
 
 /* Advance to the next race or finish the game. */
@@ -3727,22 +3727,22 @@ async function showFinalLeaderboard(){
 
   const startBal = Number(lobby.cfg.startingBalance) || 0;
 
-  // 3) Gather every bet of the game + each race's horse-name map, to build the
-  //    big-moments marquee. Names come from races.odds_table.names (num→name).
-  const [{ data: allBets }, { data: races }] = await Promise.all([
+  // 3) Gather every bet of the game + each round's horse-name map, to build the
+  //    big-moments marquee. Names come from rounds.odds_table.names (num→name).
+  const [{ data: allBets }, { data: rounds }] = await Promise.all([
     sb.from('bets')
-      .select('player_id, race_number, selection, stake, potential_payout, status')
+      .select('player_id, round_number, selection, stake, potential_payout, status')
       .eq('session_id', lobby.session.id),
-    sb.from('races')
-      .select('race_number, odds_table')
+    sb.from('rounds')
+      .select('round_number, odds_table')
       .eq('session_id', lobby.session.id),
   ]);
 
   const nameById = {};
   (players || []).forEach(p => { nameById[p.id] = p.display_name; });
   const horseNamesByRace = {};
-  (races || []).forEach(r => {
-    horseNamesByRace[r.race_number] = (r.odds_table && r.odds_table.names) || {};
+  (rounds || []).forEach(r => {
+    horseNamesByRace[r.round_number] = (r.odds_table && r.odds_table.names) || {};
   });
 
   const highlights = buildHighlights(allBets || [], nameById, horseNamesByRace);
@@ -3790,10 +3790,10 @@ function buildHighlights(bets, nameById, horseNamesByRace){
     const sel    = b.selection || {};
     const type   = TYPE_LABEL[sel.type] || (sel.type ? sel.type[0].toUpperCase()+sel.type.slice(1) : 'Bet');
     const num    = (sel.horses && sel.horses[0]) != null ? sel.horses[0] : null;
-    const hmap   = horseNamesByRace[b.race_number] || {};
+    const hmap   = horseNamesByRace[b.round_number] || {};
     const horse  = (num != null && hmap[num]) ? hmap[num] : (num != null ? ('Horse ' + num) : '—');
     const who    = nameById[b.player_id] || 'A punter';
-    const base = { who, horse, type, stake, race: (Number(b.race_number)||0) + 1 };
+    const base = { who, horse, type, stake, race: (Number(b.round_number)||0) + 1 };
     if(b.status === 'won'){
       const profit = (Number(b.potential_payout)||0) - stake;
       if(profit > 0) wins.push({ ...base, amount: profit, kind:'win' });
