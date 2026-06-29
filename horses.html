@@ -728,7 +728,7 @@ body {
       </tbody>
     </table>
     <table class="horse-grid" id="podium-table">
-      <thead><tr><th></th><th class="name-col">Placegetter</th><th class="odds-col">Win</th><th class="odds-col">Place</th><th class="odds-col">Margin</th><th class="odds-col">Result</th></tr></thead>
+      <thead><tr><th></th><th class="name-col">Placegetter</th><th class="odds-col">Win</th><th class="odds-col">Place</th><th class="odds-col">Show</th><th class="odds-col">Margin</th></tr></thead>
       <tbody id="podium-tbody"></tbody>
     </table>
   </div>
@@ -811,10 +811,22 @@ const CONFIG = {
   luckStdDev: 0.08,
   luckMin: 0.82,
   luckMax: 1.18,
-  deathChance: 0.00000334, // per death-eligible tick (prog 0.08–0.90), scaled by frameDt.
-                           // Calibrated so a typical race has ≥1 death ~1 in 25 races.
-                           // Each horse rolls independently, so multi-death (up to all) is
-                           // possible but vanishingly rare. Longer races are slightly deadlier.
+  deathChance: 0.00000334, // BASE per-tick fall chance in DRY weather (prog 0.08–0.90,
+                           // scaled by frameDt). ~1 in 25 dry races has ≥1 fall.
+  // Wet weather overrides the base with an explicit target probability that AT LEAST
+  // ONE horse falls during the race, by weather id. The per-tick chance needed to hit
+  // each target is solved at race start from the actual field size (see weatherFallChance),
+  // so the target holds regardless of how many runners there are. Dry weather ids not
+  // listed here just use deathChance. Tune these freely — they're the real knobs.
+  weatherFallTarget: {
+    light_rain: 0.20,
+    heavy_rain: 0.60,
+    storm:      0.90,
+  },
+  weatherFallEligibleTicks: 1800, // ~death-eligible ticks per race (prog 0.08–0.90 window);
+                                  // used only to convert a target into a per-tick chance.
+  minSurvivors: 3,         // never let falls drop the still-running count below this
+                           // (the race needs ≥3 finishers to settle cleanly)
 };
 
 // Race data — populated by setupRace()
@@ -823,6 +835,7 @@ let RACE_WEATHER = null;
 let RACE_TERRAIN = null;
 let RACE_DISTANCE = null;
 let RACE_FIELD_SIZE = 10;
+let RACE_FALL_CHANCE = null;   // per-tick fall chance for the current race (set in setupRace)
 
 // ══════════════════════════════
 //  SUPABASE CONFIG
@@ -953,7 +966,9 @@ function generateOdds(fieldWithRatings) {
     const raw   = 1 / normed[i];
     const win   = Math.round(Math.min(250.0, Math.max(1.1, raw)) * 10) / 10;
     const place = Math.max(1.05, Math.round(win * 0.35 * 10) / 10);
-    return { win: parseFloat(win.toFixed(1)), place: parseFloat(place.toFixed(1)) };
+    // Show (top 3) is easier to hit than place (top 2), so it pays less.
+    const show  = Math.max(1.02, Math.round(win * 0.22 * 10) / 10);
+    return { win: parseFloat(win.toFixed(1)), place: parseFloat(place.toFixed(1)), show: parseFloat(show.toFixed(1)) };
   });
 }
 
@@ -989,6 +1004,9 @@ function setupRace() {
   });
   // Odds from effective rating (luck-biased expected speed × weather)
   odds = generateOdds(field.map((f,i)=>({ rating: raceHorses[i]._raceRating * raceHorses[i]._luck })));
+
+  // Lock this race's per-tick fall chance from the weather's target + field size.
+  RACE_FALL_CHANCE = weatherFallChance();
 }
 
 // ══════════════════════════════
@@ -1894,9 +1912,31 @@ function tickHorseSpeed(horse, prog) {
   return Math.max(speedFloor, horse._currentSpeed);
 }
 
+// Solve the per-tick, per-horse fall probability for the current race so that
+// P(at least one fall during the race) ≈ the configured target for this weather.
+// Dry weather (no target) returns the flat base chance. Computed once per race in
+// setupRace and cached in RACE_FALL_CHANCE.
+function weatherFallChance() {
+  const id     = RACE_WEATHER && RACE_WEATHER.id;
+  const target = id && CONFIG.weatherFallTarget[id];
+  if(!target) return CONFIG.deathChance;       // dry / unlisted → base rate
+
+  const field = Math.max(1, RACE_FIELD_SIZE || (raceHorses ? raceHorses.length : 10));
+  const rolls = field * CONFIG.weatherFallEligibleTicks;
+  // P(0 falls) = (1-p)^rolls = 1-target  →  p = 1 - (1-target)^(1/rolls)
+  return 1 - Math.pow(1 - target, 1 / rolls);
+}
+
 function tryDeath(horse, prog) {
   if(horse.dead || horse.finished || prog < 0.08 || prog > 0.90) return false;
-  if(Math.random() < CONFIG.deathChance * frameDt) {
+
+  // Don't let falls reduce the still-running field below the minimum needed for
+  // a clean finish — even in a freak storm, enough horses must reach the line.
+  const stillRunning = horses.filter(h => !h.dead && !h.finished).length;
+  if(stillRunning <= CONFIG.minSurvivors) return false;
+
+  const p = (typeof RACE_FALL_CHANCE === 'number') ? RACE_FALL_CHANCE : CONFIG.deathChance;
+  if(Math.random() < p * frameDt) {
     horse.dead = true;
     horse.chaosActive = 'DEATH';
     flashScreen('rgba(200,16,46,0.35)'); shakeViewport();
@@ -2573,16 +2613,13 @@ function populatePostRace(placingsHidden, photoFinish) {
   finishOrder.slice(0,3).forEach((h,i)=>{
     const idx  = raceHorses.indexOf(h.def);
     const win  = (odds[idx]?.win||0).toFixed(2);
-    const plc  = (odds[idx]?.win*0.35||0).toFixed(2);
+    const plc  = (odds[idx]?.place||0).toFixed(2);
+    const shw  = (odds[idx]?.show||0).toFixed(2);
     // Margin: how far this horse finished ahead of the next horse (i+1)
     const next    = finishOrder[i + 1];
     const marginGap = next && h.finishTick != null && next.finishTick != null
       ? Math.abs(next.finishTick - h.finishTick) : null;
     const margin  = marginGap != null ? winLength(marginGap, next.finishSpeed) : '—';
-    // Rolling form: drop the oldest result, append this finishing position (1st/2nd/3rd)
-    const placeLabel = ['1','2','3'][i];
-    const rawForm  = Array.isArray(h.def.form) ? h.def.form.map(f=>String(f.pos)) : (h.def.form||'').split('-').filter(Boolean);
-    const rollingForm = [...rawForm.slice(1), placeLabel].join('-');
     const tr = document.createElement('tr');
     // Only blank this row if THIS specific placing is part of a photo finish gap
     const thisIsPhoto = photoFinish && isPhotoFinishPosition(i);
@@ -2597,7 +2634,7 @@ function populatePostRace(placingsHidden, photoFinish) {
       const numCell = h.def.silk
         ? `<td class="num-cell" style="position:relative;padding:0;width:56px;overflow:hidden;"><img src="${silkDataUri(h.def.silk,56)}" width="56" height="56" style="display:block;"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Oswald',sans-serif;font-size:1.6rem;font-weight:800;color:#fff;text-shadow:-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000;">${h.def.num}</span></td>`
         : `<td class="num-cell" style="background:#555"><span class="silk">${h.def.num}</span></td>`;
-      tr.innerHTML = `${numCell}<td class="name-cell">${h.def.name.toUpperCase()}${styleBadge}${favTag}</td><td class="odds-cell">${win}</td><td class="odds-cell">${plc}</td><td class="odds-cell">${margin}</td><td class="odds-cell">${rollingForm}</td>`;
+      tr.innerHTML = `${numCell}<td class="name-cell">${h.def.name.toUpperCase()}${styleBadge}${favTag}</td><td class="odds-cell">${win}</td><td class="odds-cell">${plc}</td><td class="odds-cell">${shw}</td><td class="odds-cell">${margin}</td>`;
     }
     tbody.appendChild(tr);
   });
@@ -2767,7 +2804,7 @@ function buildGrids() {
   const minOdds = Math.min(...odds.map(o=>o.win));
   const half = Math.ceil(raceHorses.length / 2);
   ['grid-left','grid-right'].forEach(id=>{
-    document.getElementById(id).innerHTML=`<thead><tr><th></th><th class="name-col">Runner</th><th class="odds-col">Win</th><th class="odds-col">Place</th><th class="form-col">Form</th></tr></thead><tbody></tbody>`;
+    document.getElementById(id).innerHTML=`<thead><tr><th></th><th class="name-col">Runner</th><th class="odds-col">Win</th><th class="odds-col">Place</th><th class="odds-col">Show</th></tr></thead><tbody></tbody>`;
   });
   raceHorses.forEach((h,i)=>{
     const isFav = odds[i].win === minOdds;
@@ -2782,7 +2819,7 @@ function buildGrids() {
       <td class="name-cell">${h.name}${styleBadge}${fav}</td>
       <td class="odds-cell">${odds[i].win.toFixed(2)}</td>
       <td class="odds-cell">${odds[i].place.toFixed(2)}</td>
-      <td class="form-cell">${formString(h)}</td>
+      <td class="odds-cell">${odds[i].show.toFixed(2)}</td>
     </tr>`;
     document.getElementById(i<half?'grid-left':'grid-right').querySelector('tbody').innerHTML+=row;
   });
@@ -3078,9 +3115,10 @@ lq('#lobby-start-game').addEventListener('click', async ()=>{
      · betting_closes_at = now + bettingSeconds + random(0..30). This is the
        REAL close. Phones count down to it; the visible clock will already be
        in the negatives by then. The authority rejects any bet past it.
-     · At betting_closes_at the screen auto-"finalises bets" (the same action
-       the host used to click): banner → Bets Closed, status → racing.
-     · random(5..10)s later the prerace→race transition fires (beginRace).
+     · At betting_closes_at the screen auto-finalises: bets lock, banner →
+       Bets Closed, status → 'starting' (race starting soon, not yet running).
+     · random(5..10)s later start_racing flips status → 'racing' and the
+       prerace→race transition fires (beginRace).
      · The horses then hold at the gate for random(5..15)s before they run
        (the engine's gatePhase hold).
      · On finish: settle_race with the order → status settling.
@@ -3138,18 +3176,24 @@ async function startRaceCycle(){
   multiGame.closeTimer = setTimeout(finaliseBets, ms);
 }
 
-/* Fired automatically at betting_closes_at. */
+/* Fired automatically at betting_closes_at. Bets are now locked. */
 async function finaliseBets(){
   if(!multiGame.active || multiGame.awaitingSettle) return;
   multiGame.awaitingSettle = true;
 
-  setStatusText('Bets Closed');
+  setStatusText('Bets Closed — Race Starting Soon');
 
-  const { error } = await sb.rpc('start_racing', { p_session_id: lobby.session.id });
-  if(error){ console.error('start_racing failed:', error); }
+  // betting → starting: bets are locked, but the horses haven't jumped yet.
+  const { error } = await sb.rpc('start_countdown', { p_session_id: lobby.session.id });
+  if(error){ console.error('start_countdown failed:', error); }
 
-  // random(5..10)s after bets close, run the prerace→race transition.
-  setTimeout(()=>doWipe(beginRace), rand(5, 10) * 1000);
+  // random(5..10)s after bets close, jump the race. start_racing flips the
+  // session to 'racing' at the exact moment the horses actually run.
+  setTimeout(async ()=>{
+    const { error: rErr } = await sb.rpc('start_racing', { p_session_id: lobby.session.id });
+    if(rErr){ console.error('start_racing failed:', rErr); }
+    doWipe(beginRace);
+  }, rand(5, 10) * 1000);
 }
 
 /* Called by the engine when finishOrder is final → settle on the DB. */
