@@ -503,6 +503,7 @@ body {
 #status-clip {
   overflow: hidden;
   margin-right: 48px;
+  flex: 1;
 }
 #status-text {
   display: inline-flex;
@@ -733,7 +734,7 @@ body {
 
   <div id="controls-bar">
     <div id="status-wrap"><div id="status-clip"><div id="status-text"></div></div></div>
-    <div id="btn-wrap"><button id="btn-action" class="primary">Finalise Bets</button></div>
+    <button id="btn-action" style="display:none" aria-hidden="true"></button>
   </div>
 </div>
 
@@ -2443,9 +2444,11 @@ function startPostRaceTransition(hadSlowmo) {
   stageToPostrace();
   ['postrace-info-table','podium-table'].forEach(id=>document.getElementById(id).classList.add('visible'));
 
-  document.getElementById('btn-action').textContent='New Race';
-  document.getElementById('btn-action').disabled=false;
   setStatusText('Race Complete');
+
+  // Multiplayer: auto-advance to the next race after a short countdown.
+  // (Solo play also auto-advances, since there's no manual button anymore.)
+  startNextRaceCountdown();
 
   // Show first (most significant) cluster in postrace cam
   const postSlot = replaySlot;
@@ -2619,18 +2622,14 @@ function doWipe(callback) {
 function startCountdown() {
   let secs=CONFIG.countdownSeconds;
   const el=document.getElementById('countdown-timer');
-  const btn=document.getElementById('btn-action');
   updateCD(el,secs);
 
   countdownInterval=setInterval(()=>{
     secs--;
     updateCD(el,secs);
     if(secs<=10) el.classList.add('urgent');
-    if(secs===0){
-      // Bets can now be finalised — enable the button but keep counting into negatives
-      btn.disabled=false;
-      btn.textContent='Finalise Bets';
-    }
+    // Visible clock continues into the negatives; bets stay open until the
+    // authoritative betting_closes_at (multiplayer) or the solo close timer.
   },1000);
 }
 
@@ -2670,9 +2669,9 @@ function beginRace() {
   directorTick=0; directorDuration=300; camShot='PACK';
   gatePhase=true;
   // Hold at the gate before they run. Solo keeps the original ~5s feel; a
-  // multiplayer race holds a random 0–25s (≈60 frame-units per second).
+  // multiplayer race holds a random 5–15s (≈60 frame-units per second).
   gateCountdown = (typeof multiGame !== 'undefined' && multiGame.active)
-    ? Math.round(rand(0, 25) * 60)
+    ? Math.round(rand(5, 15) * 60)
     : 300;
   slowmoActive=false; replayFrames=[]; replaySlot=null; activeSlot=null; isRecording=false; secondaryCloseGap=null; photoFinishPositions=new Set();
 
@@ -2694,8 +2693,6 @@ function beginRace() {
     drawHorse(h);
   });
 
-  document.getElementById('btn-action').textContent='Racing...';
-  document.getElementById('btn-action').disabled=true;
   setStatusText(`${RACECOURSE.name} — ${RACE_DISTANCE}m — ${RACE_WEATHER.label}`);
 
   resetFrameClock();
@@ -2770,9 +2767,7 @@ function resetToPrerace() {
   document.getElementById('gate-overlay').style.display='none';
   document.querySelectorAll('.gate-el').forEach(e=>e.remove());
 
-  // Reset status banner and button (setStatusText called by init below)
-  document.getElementById('btn-action').textContent='Finalise Bets';
-  document.getElementById('btn-action').disabled=true;
+  // Reset status banner (setStatusText called by init below)
   document.getElementById('countdown-timer').classList.remove('urgent');
 
   // Re-init
@@ -2829,35 +2824,21 @@ function init() {
     walkUpTick();
     startCountdown();   // counts from CONFIG.countdownSeconds → 0 → negatives
 
-    const btn=document.getElementById('btn-action');
     setStatusText('Accepting Bets');
-    btn.textContent='Finalise Bets';
 
-    if(multiGame.active){
-      // Multiplayer: the controller auto-finalises at betting_closes_at. The
-      // button is an OPTIONAL early close, and the postrace advance control.
-      btn.disabled=false;
-      btn.onclick=()=>{
-        if(phase==='prerace' && !multiGame.awaitingSettle){
-          finaliseBets();              // host closes early → lock + jump
-        } else if(phase==='postrace'||raceOver){
-          advanceAfterRace();          // next race / finish
-        }
-      };
-    } else {
-      // Solo play: original manual flow, untouched.
-      btn.disabled=true; // disabled until countdown reaches zero
-      btn.onclick=()=>{
-        if(phase==='prerace'){
-          btn.disabled=true;
-          btn.textContent='Starting Soon';
-          setStatusText('Bets Closed');
-          // Random 5–10 second delay before race starts, like a real jump
-          const delay = (5 + Math.random()*5) * 1000;
-          setTimeout(()=>doWipe(beginRace), delay);
-        } else if(phase==='postrace'||raceOver) doWipe(resetToPrerace);
-      };
+    if(!multiGame.active){
+      // Solo play: no session, no DB. Auto-finalise after the local countdown
+      // plus a small random tail, then jump — mirrors the multiplayer feel
+      // now that the manual button is gone.
+      const soloCloseMs = (CONFIG.countdownSeconds + rand(0, 30)) * 1000;
+      setTimeout(()=>{
+        if(phase!=='prerace') return;
+        setStatusText('Bets Closed');
+        setTimeout(()=>doWipe(beginRace), rand(5, 10) * 1000);
+      }, soloCloseMs);
     }
+    // Multiplayer: startRaceCycle() already scheduled finaliseBets() at the
+    // DB's betting_closes_at — nothing to wire here.
   });
 }
 
@@ -3047,13 +3028,13 @@ lq('#lobby-start-game').addEventListener('click', async ()=>{
      · Visible countdown counts from bettingSeconds → 0 → negatives
        (the engine's own startCountdown handles this; CONFIG.countdownSeconds
        is set to the session's bettingSeconds).
-     · betting_closes_at = now + bettingSeconds + random(0..60). This is the
+     · betting_closes_at = now + bettingSeconds + random(0..30). This is the
        REAL close. Phones count down to it; the visible clock will already be
        in the negatives by then. The authority rejects any bet past it.
      · At betting_closes_at the screen auto-"finalises bets" (the same action
        the host used to click): banner → Bets Closed, status → racing.
      · random(5..10)s later the prerace→race transition fires (beginRace).
-     · The horses then hold at the gate for random(0..25)s before they run
+     · The horses then hold at the gate for random(5..15)s before they run
        (the engine's gatePhase hold).
      · On finish: settle_race with the order → status settling.
      · Advance on the postrace button: next race, or finish_game after the last.
@@ -3093,8 +3074,8 @@ async function startRaceCycle(){
   // then stages the walk-up and starts the visible countdown.
   init();
 
-  // Real close = bettingSeconds + random(0..60), stamped by the DB.
-  const closeDelay = Math.round(lobby.cfg.bettingSeconds + rand(0, 60));
+  // Real close = bettingSeconds + random(0..30), stamped by the DB.
+  const closeDelay = Math.round(lobby.cfg.bettingSeconds + rand(0, 30));
   const { data, error } = await sb.rpc('open_betting', {
     p_session_id:  lobby.session.id,
     p_race_number: multiGame.raceNumber,
@@ -3110,14 +3091,12 @@ async function startRaceCycle(){
   multiGame.closeTimer = setTimeout(finaliseBets, ms);
 }
 
-/* Fired automatically at betting_closes_at (== the old "Finalise Bets" click). */
+/* Fired automatically at betting_closes_at. */
 async function finaliseBets(){
   if(!multiGame.active || multiGame.awaitingSettle) return;
   multiGame.awaitingSettle = true;
 
   setStatusText('Bets Closed');
-  const btn = document.getElementById('btn-action');
-  if(btn){ btn.disabled = true; btn.textContent = 'Starting Soon'; }
 
   const { error } = await sb.rpc('start_racing', { p_session_id: lobby.session.id });
   if(error){ console.error('start_racing failed:', error); }
@@ -3138,7 +3117,7 @@ async function onRaceFinished(){
   if(error){ console.error('settle_race failed:', error); }
 }
 
-/* Advance to the next race or finish the game (from the postrace button). */
+/* Advance to the next race or finish the game. */
 async function advanceAfterRace(){
   const next = multiGame.raceNumber + 1;
   if(next >= lobby.cfg.numRaces){
@@ -3149,6 +3128,39 @@ async function advanceAfterRace(){
   }
   multiGame.raceNumber = next;
   doWipe(()=>{ resetToPrerace(); startRaceCycle(); });
+}
+
+/* Auto-advance: after a race completes, count down 20s in the banner, then
+   move on. Works for both modes — multiplayer advances the session race,
+   solo just stages a fresh race. If this is the final multiplayer race,
+   we finish the game instead of counting down. */
+let _nextRaceInterval = null;
+function startNextRaceCountdown(){
+  clearInterval(_nextRaceInterval);
+
+  // Final multiplayer race → finish immediately, no countdown.
+  if(multiGame.active && (multiGame.raceNumber + 1) >= lobby.cfg.numRaces){
+    advanceAfterRace();   // calls finish_game
+    return;
+  }
+
+  let secs = 20;   // hard-coded auto-advance delay
+  const show = n => setStatusText(`NEXT RACE IN ${n}`);
+  show(secs);
+
+  _nextRaceInterval = setInterval(()=>{
+    secs--;
+    if(secs > 0){
+      show(secs);
+    } else {
+      clearInterval(_nextRaceInterval);
+      if(multiGame.active){
+        advanceAfterRace();
+      } else {
+        doWipe(()=>{ resetToPrerace(); init(); });   // solo: fresh race
+      }
+    }
+  }, 1000);
 }
 
 /* ── boot: load game data in the background, keep lobby up ── */
