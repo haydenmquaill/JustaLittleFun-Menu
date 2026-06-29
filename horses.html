@@ -2340,6 +2340,7 @@ function raceTick(ts) {
   // 3rd place crossed — wait for ALL living horses to finish before triggering sequence
   if(!raceOver && finishOrder.length >= 3){
     raceOver=true;
+    if(typeof multiGame !== 'undefined' && multiGame.active){ onRaceFinished(); }
     function waitAllFinished() {
       const allDone = horses.every(h => h.finished || h.dead);
       if(allDone) {
@@ -2667,7 +2668,12 @@ function beginRace() {
   phase='racing';
   raceOver=false; tick=0; finishOrder=[]; dnfOrder=[]; lastMilestone=-1;
   directorTick=0; directorDuration=300; camShot='PACK';
-  gatePhase=true; gateCountdown=300;
+  gatePhase=true;
+  // Hold at the gate before they run. Solo keeps the original ~5s feel; a
+  // multiplayer race holds a random 0–25s (≈60 frame-units per second).
+  gateCountdown = (typeof multiGame !== 'undefined' && multiGame.active)
+    ? Math.round(rand(0, 25) * 60)
+    : 300;
   slowmoActive=false; replayFrames=[]; replaySlot=null; activeSlot=null; isRecording=false; secondaryCloseGap=null; photoFinishPositions=new Set();
 
   buildGates();
@@ -2821,22 +2827,37 @@ function init() {
     // Start walk-up animation
     resetFrameClock();
     walkUpTick();
-    startCountdown();
+    startCountdown();   // counts from CONFIG.countdownSeconds → 0 → negatives
 
     const btn=document.getElementById('btn-action');
     setStatusText('Accepting Bets');
     btn.textContent='Finalise Bets';
-    btn.disabled=true; // disabled until countdown reaches zero
-    btn.onclick=()=>{
-      if(phase==='prerace'){
-        btn.disabled=true;
-        btn.textContent='Starting Soon';
-        setStatusText('Bets Closed');
-        // Random 5–10 second delay before race starts, like a real jump
-        const delay = (5 + Math.random()*5) * 1000;
-        setTimeout(()=>doWipe(beginRace), delay);
-      } else if(phase==='postrace'||raceOver) doWipe(resetToPrerace);
-    };
+
+    if(multiGame.active){
+      // Multiplayer: the controller auto-finalises at betting_closes_at. The
+      // button is an OPTIONAL early close, and the postrace advance control.
+      btn.disabled=false;
+      btn.onclick=()=>{
+        if(phase==='prerace' && !multiGame.awaitingSettle){
+          finaliseBets();              // host closes early → lock + jump
+        } else if(phase==='postrace'||raceOver){
+          advanceAfterRace();          // next race / finish
+        }
+      };
+    } else {
+      // Solo play: original manual flow, untouched.
+      btn.disabled=true; // disabled until countdown reaches zero
+      btn.onclick=()=>{
+        if(phase==='prerace'){
+          btn.disabled=true;
+          btn.textContent='Starting Soon';
+          setStatusText('Bets Closed');
+          // Random 5–10 second delay before race starts, like a real jump
+          const delay = (5 + Math.random()*5) * 1000;
+          setTimeout(()=>doWipe(beginRace), delay);
+        } else if(phase==='postrace'||raceOver) doWipe(resetToPrerace);
+      };
+    }
   });
 }
 
@@ -3011,13 +3032,124 @@ function renderPlayers(){
 }
 function escapeHtml(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-/* Start game → hide lobby, run the existing race flow untouched */
+/* Start game → hide lobby, hand control to the DB-driven betting loop */
 lq('#lobby-start-game').addEventListener('click', async ()=>{
-  // flip session into the game; the race begins on the screen
-  await sb.rpc('start_racing', { p_session_id: lobby.session.id }).catch(()=>{});
   document.getElementById('lobby-overlay').style.display='none';
-  init();   // existing boot — sets up and stages the first race
+  multiGame.active = true;
+  multiGame.raceNumber = 0;        // 0-indexed, matches sessions.current_race
+  startRaceCycle();                // opens betting for race 0, then runs the loop
 });
+
+/* ════════════════════════════════════════════════════════════════
+   MULTIPLAYER BETTING LOOP  (the screen is the authority)
+
+   Timing model (per race):
+     · Visible countdown counts from bettingSeconds → 0 → negatives
+       (the engine's own startCountdown handles this; CONFIG.countdownSeconds
+       is set to the session's bettingSeconds).
+     · betting_closes_at = now + bettingSeconds + random(0..60). This is the
+       REAL close. Phones count down to it; the visible clock will already be
+       in the negatives by then. The authority rejects any bet past it.
+     · At betting_closes_at the screen auto-"finalises bets" (the same action
+       the host used to click): banner → Bets Closed, status → racing.
+     · random(5..10)s later the prerace→race transition fires (beginRace).
+     · The horses then hold at the gate for random(0..25)s before they run
+       (the engine's gatePhase hold).
+     · On finish: settle_race with the order → status settling.
+     · Advance on the postrace button: next race, or finish_game after the last.
+════════════════════════════════════════════════════════════════ */
+const multiGame = {
+  active: false,
+  raceNumber: 0,
+  closesAt: null,        // Date — authoritative betting close (from DB)
+  closeTimer: null,      // fires the auto-finalise at betting_closes_at
+  awaitingSettle: false, // true once a race is running, until we've settled it
+};
+
+function rand(min, max){ return min + Math.random()*(max-min); }
+
+/* Straight-odds table the phones display: win + place now (engine produces
+   both); show slots in once the engine grows a show column. Exotics are NOT
+   here — the phone derives those from these win figures at selection time.
+   Keyed by horse number (1-based). */
+function buildOddsTable(){
+  const table = { win:{}, place:{}, show:{} };
+  raceHorses.forEach((h, i)=>{
+    const o = odds[i] || {};
+    if(o.win   != null) table.win[h.num]   = o.win;
+    if(o.place != null) table.place[h.num] = o.place;
+    if(o.show  != null) table.show[h.num]  = o.show;
+  });
+  return table;
+}
+
+/* Stage the race + open betting on the DB. */
+async function startRaceCycle(){
+  multiGame.awaitingSettle = false;
+  // The visible countdown must start from the session's betting seconds.
+  CONFIG.countdownSeconds = lobby.cfg.bettingSeconds;
+
+  // init() runs setupRace() synchronously (so raceHorses + odds exist now),
+  // then stages the walk-up and starts the visible countdown.
+  init();
+
+  // Real close = bettingSeconds + random(0..60), stamped by the DB.
+  const closeDelay = Math.round(lobby.cfg.bettingSeconds + rand(0, 60));
+  const { data, error } = await sb.rpc('open_betting', {
+    p_session_id:  lobby.session.id,
+    p_race_number: multiGame.raceNumber,
+    p_odds_table:  buildOddsTable(),
+    p_seconds:     closeDelay,
+  });
+  if(error){ console.error('open_betting failed:', error); return; }
+
+  // Auto-finalise exactly at the DB's stamped close (authority), not our clock.
+  multiGame.closesAt = new Date(data.betting_closes_at);
+  const ms = Math.max(0, multiGame.closesAt.getTime() - Date.now());
+  clearTimeout(multiGame.closeTimer);
+  multiGame.closeTimer = setTimeout(finaliseBets, ms);
+}
+
+/* Fired automatically at betting_closes_at (== the old "Finalise Bets" click). */
+async function finaliseBets(){
+  if(!multiGame.active || multiGame.awaitingSettle) return;
+  multiGame.awaitingSettle = true;
+
+  setStatusText('Bets Closed');
+  const btn = document.getElementById('btn-action');
+  if(btn){ btn.disabled = true; btn.textContent = 'Starting Soon'; }
+
+  const { error } = await sb.rpc('start_racing', { p_session_id: lobby.session.id });
+  if(error){ console.error('start_racing failed:', error); }
+
+  // random(5..10)s after bets close, run the prerace→race transition.
+  setTimeout(()=>doWipe(beginRace), rand(5, 10) * 1000);
+}
+
+/* Called by the engine when finishOrder is final → settle on the DB. */
+async function onRaceFinished(){
+  if(!multiGame.active) return;
+  const order = finishOrder.map(h => raceHorses.indexOf(h.def) + 1).filter(n => n > 0);
+  const { error } = await sb.rpc('settle_race', {
+    p_session_id:  lobby.session.id,
+    p_race_number: multiGame.raceNumber,
+    p_result:      { order },
+  });
+  if(error){ console.error('settle_race failed:', error); }
+}
+
+/* Advance to the next race or finish the game (from the postrace button). */
+async function advanceAfterRace(){
+  const next = multiGame.raceNumber + 1;
+  if(next >= lobby.cfg.numRaces){
+    const { error } = await sb.rpc('finish_game', { p_session_id: lobby.session.id });
+    if(error){ console.error('finish_game failed:', error); }
+    setStatusText('That’s the card — final results are up');
+    return;
+  }
+  multiGame.raceNumber = next;
+  doWipe(()=>{ resetToPrerace(); startRaceCycle(); });
+}
 
 /* ── boot: load game data in the background, keep lobby up ── */
 loadGameData().then(()=>{
