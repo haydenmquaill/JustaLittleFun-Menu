@@ -1,0 +1,67 @@
+[
+  {
+    "id": "doomben",
+    "name": "Doomben Downs",
+    "location": "Brisbane",
+    "terrains": ["TURF", "DIRT"],
+    "distances": [1200, 1400, 1600, 2000, 2400],
+    "description": "A tight turning track that rewards speed and power. Short straight favours horses that accelerate early.",
+    "terrainAffinityBonus": {
+      "dirt": 1.05,
+      "turf": 1.00
+    },
+    "distanceProfile": "SHORT_TO_MIDDLE"
+  },
+  {
+    "id": "eagle_farm",
+    "name": "Eagle Farm",
+    "location": "Brisbane",
+    "terrains": ["TURF"],
+    "distances": [1400, 1600, 2000, 2400, 3200],
+    "description": "A long sweeping track with a generous straight. The distance tests stamina and rewards genuine stayers.",
+    "terrainAffinityBonus": {
+      "turf": 1.05,
+      "dirt": 0.95
+    },
+    "distanceProfile": "MIDDLE_TO_LONG"
+  },
+  {
+    "id": "sunshine_coast",
+    "name": "Sunshine Coast Turf Club",
+    "location": "Sunshine Coast",
+    "terrains": ["TURF"],
+    "distances": [1000, 1200, 1400, 1600, 1800],
+    "description": "An undulating track with a tricky camber. Balanced horses thrive here, as do those with natural rhythm.",
+    "terrainAffinityBonus": {
+      "turf": 1.03,
+      "dirt": 0.92
+    },
+    "distanceProfile": "SHORT_TO_MIDDLE"
+  },
+  {
+    "id": "ipswich",
+    "name": "Ipswich Raceway",
+    "location": "Ipswich",
+    "terrains": ["DIRT"],
+    "distances": [1000, 1100, 1200, 1400, 1600],
+    "description": "A tight dirt circuit beloved by sprinters and power horses. Stamina matters less here — it is over before it starts.",
+    "terrainAffinityBonus": {
+      "dirt": 1.08,
+      "turf": 0.90
+    },
+    "distanceProfile": "SHORT"
+  },
+  {
+    "id": "gold_coast",
+    "name": "Gold Coast Turf Club",
+    "location": "Gold Coast",
+    "terrains": ["TURF", "DIRT"],
+    "distances": [1200, 1400, 1600, 1800, 2000],
+    "description": "Wide open bends and a long run home. All-rounders love this track. End closers find plenty of room to weave.",
+    "terrainAffinityBonus": {
+      "turf": 1.02,
+      "dirt": 1.02
+    },
+    "distanceProfile": "MIDDLE"
+  }
+]

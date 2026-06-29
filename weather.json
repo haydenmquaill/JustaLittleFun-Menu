@@ -1,0 +1,117 @@
+[
+  {
+    "id": "sunny",
+    "label": "Sunny",
+    "railCondition": "FAST",
+    "weight": 30,
+    "speedModifier": 1.08,
+    "staminaDrainModifier": 0.90,
+    "wetTrackActivates": false,
+    "visual": {
+      "skyTop": "#3a7abf",
+      "skyBottom": "#a8d0f0",
+      "rainIntensity": 0,
+      "fogDensity": 0,
+      "lightningEnabled": false,
+      "trackTint": null,
+      "cloudCover": 0.10,
+      "ambientBrightness": 1.10
+    }
+  },
+  {
+    "id": "overcast",
+    "label": "Overcast",
+    "railCondition": "GOOD",
+    "weight": 28,
+    "speedModifier": 1.00,
+    "staminaDrainModifier": 1.00,
+    "wetTrackActivates": false,
+    "visual": {
+      "skyTop": "#7a8a96",
+      "skyBottom": "#b0bec5",
+      "rainIntensity": 0,
+      "fogDensity": 0,
+      "lightningEnabled": false,
+      "trackTint": null,
+      "cloudCover": 0.75,
+      "ambientBrightness": 0.90
+    }
+  },
+  {
+    "id": "light_rain",
+    "label": "Light Rain",
+    "railCondition": "SOFT",
+    "weight": 20,
+    "speedModifier": 0.95,
+    "staminaDrainModifier": 1.10,
+    "wetTrackActivates": true,
+    "visual": {
+      "skyTop": "#4a5a66",
+      "skyBottom": "#7a8e99",
+      "rainIntensity": 0.35,
+      "fogDensity": 0.05,
+      "lightningEnabled": false,
+      "trackTint": "rgba(0,0,0,0.08)",
+      "cloudCover": 0.88,
+      "ambientBrightness": 0.82
+    }
+  },
+  {
+    "id": "heavy_rain",
+    "label": "Heavy Rain",
+    "railCondition": "HEAVY",
+    "weight": 12,
+    "speedModifier": 0.85,
+    "staminaDrainModifier": 1.25,
+    "wetTrackActivates": true,
+    "visual": {
+      "skyTop": "#2a3540",
+      "skyBottom": "#4a5a66",
+      "rainIntensity": 0.80,
+      "fogDensity": 0.15,
+      "lightningEnabled": false,
+      "trackTint": "rgba(0,0,0,0.18)",
+      "cloudCover": 0.97,
+      "ambientBrightness": 0.70
+    }
+  },
+  {
+    "id": "fog",
+    "label": "Foggy",
+    "railCondition": "GOOD",
+    "weight": 6,
+    "speedModifier": 0.97,
+    "staminaDrainModifier": 1.00,
+    "wetTrackActivates": false,
+    "visual": {
+      "skyTop": "#b0b8bc",
+      "skyBottom": "#d8dfe2",
+      "rainIntensity": 0,
+      "fogDensity": 0.65,
+      "lightningEnabled": false,
+      "trackTint": "rgba(255,255,255,0.10)",
+      "cloudCover": 0.60,
+      "ambientBrightness": 0.78
+    }
+  },
+  {
+    "id": "storm",
+    "label": "Thunderstorm",
+    "railCondition": "HEAVY",
+    "weight": 4,
+    "speedModifier": 0.82,
+    "staminaDrainModifier": 1.30,
+    "wetTrackActivates": true,
+    "visual": {
+      "skyTop": "#141e26",
+      "skyBottom": "#2e3e4a",
+      "rainIntensity": 1.00,
+      "fogDensity": 0.20,
+      "lightningEnabled": true,
+      "lightningIntervalMs": [3000, 8000],
+      "trackTint": "rgba(0,0,0,0.25)",
+      "cloudCover": 1.00,
+      "ambientBrightness": 0.55
+    }
+  }
+]

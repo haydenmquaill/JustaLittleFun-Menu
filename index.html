@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JustaLittleFun — Game Night</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;600&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue:#1a2e5a; --red:#c8102e;
+    --white:#fff; --offwhite:#f4f4f4; --silver:#e0e0e0;
+    --mid:#666; --dark:#111; --green:#1e7d3a; --gold:#c8971a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Barlow Condensed',sans-serif;
+    color:var(--white);
+    background:
+      repeating-linear-gradient(90deg, transparent 0 90px, rgba(255,255,255,0.015) 90px 92px),
+      radial-gradient(120% 90% at 50% -10%, #154a26 0%, #08160d 60%, #000 100%);
+    min-height:100dvh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:48px 24px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .eyebrow{
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:1.2rem;
+    letter-spacing:10px; text-transform:uppercase; color:var(--gold);
+    display:flex; align-items:center; gap:18px;
+  }
+  .eyebrow::before,.eyebrow::after{
+    content:""; width:54px; height:2px;
+    background:linear-gradient(90deg,transparent,var(--gold));
+  }
+  .eyebrow::after{transform:scaleX(-1)}
+  h1{
+    font-family:'Barlow Condensed',sans-serif; font-weight:800;
+    font-size:clamp(56px,12vw,112px); line-height:.9; letter-spacing:2px;
+    text-transform:uppercase; text-align:center;
+    margin:16px 0 6px; text-shadow:0 4px 0 rgba(0,0,0,.45);
+  }
+  h1 em{font-style:normal;color:var(--gold)}
+  .tagline{
+    font-size:1.5rem; letter-spacing:3px; text-transform:uppercase;
+    color:var(--silver); font-weight:600; text-align:center;
+  }
+  .pick-label{
+    font-family:'Oswald',sans-serif; font-weight:700; font-size:1.3rem;
+    letter-spacing:6px; text-transform:uppercase; color:var(--white);
+    border-bottom:2px solid var(--gold); padding-bottom:10px;
+    margin:56px 0 26px; width:100%; max-width:920px; text-align:left;
+  }
+  .games{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:22px; width:100%; max-width:920px;
+  }
+  .game{
+    position:relative; display:block; text-decoration:none;
+    background:var(--white); color:var(--dark);
+    box-shadow:0 2px 12px rgba(0,0,0,0.4);
+    transition:transform .09s, box-shadow .09s;
+    overflow:hidden;
+  }
+  .game.live{cursor:pointer}
+  .game.live:hover{transform:translateY(-4px); box-shadow:0 10px 24px rgba(0,0,0,0.5)}
+  .game.live:active{transform:translateY(-1px)}
+  .game-banner{
+    height:150px; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(160deg,#154a26,#0a2c1a);
+    border-bottom:4px solid var(--gold); position:relative;
+  }
+  .game-banner::before{
+    content:""; position:absolute; inset:0;
+    background:repeating-linear-gradient(90deg, transparent 0 26px, rgba(255,255,255,0.04) 26px 27px);
+  }
+  .game-banner .glyph{
+    font-family:'Barlow Condensed',sans-serif; font-weight:800;
+    font-size:3.4rem; letter-spacing:3px; text-transform:uppercase; color:var(--white);
+    position:relative; text-shadow:0 2px 0 rgba(0,0,0,.4);
+  }
+  .game-body{padding:18px 22px 22px}
+  .game-name{
+    font-family:'Oswald',sans-serif; font-weight:700; font-size:1.9rem;
+    letter-spacing:1px; text-transform:uppercase; color:var(--dark); line-height:1.05;
+  }
+  .game-desc{
+    font-family:'Barlow Condensed',sans-serif; font-weight:600;
+    font-size:1.15rem; color:var(--mid); margin-top:4px; line-height:1.25;
+  }
+  .game-cta{
+    display:inline-flex; align-items:center; gap:10px; margin-top:16px;
+    font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.3rem;
+    letter-spacing:3px; text-transform:uppercase; color:var(--green);
+  }
+  .game-cta .arrow{transition:transform .12s}
+  .game.live:hover .game-cta .arrow{transform:translateX(5px)}
+  .ribbon{
+    position:absolute; top:14px; right:-34px; transform:rotate(45deg);
+    background:var(--gold); color:var(--dark);
+    font-family:'Oswald',sans-serif; font-weight:700; font-size:0.8rem;
+    letter-spacing:2px; text-transform:uppercase; padding:5px 44px;
+    box-shadow:0 2px 6px rgba(0,0,0,.3);
+  }
+  .game.soon{opacity:.5}
+  .game.soon .game-banner{background:linear-gradient(160deg,#2a2a2a,#161616); border-bottom-color:#444}
+  .game.soon .game-cta{color:var(--mid)}
+  .game.soon .ribbon{background:#444; color:var(--silver)}
+  footer{
+    margin-top:56px; font-family:'Barlow Condensed',sans-serif; font-weight:600;
+    font-size:0.9rem; letter-spacing:3px; text-transform:uppercase;
+    color:rgba(255,255,255,.4); text-align:center;
+  }
+</style>
+</head>
+<body>
+
+  <span class="eyebrow">JustaLittleFun</span>
+  <h1>Game <em>Night</em></h1>
+  <p class="tagline">Pick a game to host on the big screen</p>
+
+  <div class="pick-label">Choose your game</div>
+
+  <div class="games">
+
+    <a class="game live" href="horses.html">
+      <div class="game-banner">
+        <span class="glyph">Horse Racing</span>
+      </div>
+      <div class="game-body">
+        <div class="game-name">Post &amp; Parlay</div>
+        <div class="game-desc">Run a card of races, take the room's bets, crown a champion punter.</div>
+        <span class="game-cta">Start session <span class="arrow">&rarr;</span></span>
+      </div>
+    </a>
+
+    <div class="game soon">
+      <div class="ribbon">Soon</div>
+      <div class="game-banner">
+        <span class="glyph">More to come</span>
+      </div>
+      <div class="game-body">
+        <div class="game-name">Next game</div>
+        <div class="game-desc">Another party game for the same lobby and betting setup.</div>
+        <span class="game-cta">Coming soon</span>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>Play money only &middot; No real wagering</footer>
+
+</body>
+</html>
