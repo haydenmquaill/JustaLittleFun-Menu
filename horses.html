@@ -2428,7 +2428,12 @@ function raceTick(ts) {
   // 3rd place crossed — wait for ALL living horses to finish before triggering sequence
   if(!raceOver && finishOrder.length >= 3){
     raceOver=true;
-    if(typeof multiGame !== 'undefined' && multiGame.active){ onRaceFinished(); }
+    // Race crossed the line, but the result is under review (possible photo
+    // finish). Move to 'photo' — NOTHING is revealed or paid out yet. The actual
+    // settlement (and the phone reveal) happens later in startPostRaceTransition,
+    // at the same moment the TV reveals the board, so a payout can never spoil
+    // the finish.
+    if(typeof multiGame !== 'undefined' && multiGame.active){ enterPhotoReview(); }
     function waitAllFinished() {
       const allDone = horses.every(h => h.finished || h.dead);
       if(allDone) {
@@ -2530,6 +2535,11 @@ function startPostRaceTransition(hadSlowmo) {
   pr.classList.add('visible');
   stageToPostrace();
   ['postrace-info-table','podium-table'].forEach(id=>document.getElementById(id).classList.add('visible'));
+
+  // REVEAL MOMENT: the board is now on screen. Settle on the DB now — this both
+  // pays out bets and pushes the full result to phones, so the balance change
+  // and the placement reveal happen together (no photo-finish spoiler).
+  if(typeof multiGame !== 'undefined' && multiGame.active){ onRaceFinished(); }
 
   setStatusText('Race Complete');
 
@@ -3136,6 +3146,7 @@ const multiGame = {
   closesAt: null,        // Date — authoritative betting close (from DB)
   closeTimer: null,      // fires the auto-finalise at betting_closes_at
   awaitingSettle: false, // true once a race is running, until we've settled it
+  settledRace: -1,       // race_number we've already settled (settle-once guard)
 };
 
 function rand(min, max){ return min + Math.random()*(max-min); }
@@ -3162,6 +3173,7 @@ function buildOddsTable(){
 /* Stage the race + open betting on the DB. */
 async function startRaceCycle(){
   multiGame.awaitingSettle = false;
+  multiGame.settledRace = -1;   // allow this race to settle once at its reveal
   // The visible countdown must start from the session's betting seconds.
   CONFIG.countdownSeconds = lobby.cfg.bettingSeconds;
 
@@ -3206,14 +3218,43 @@ async function finaliseBets(){
   }, rand(5, 10) * 1000);
 }
 
-/* Called by the engine when finishOrder is final → settle on the DB. */
-async function onRaceFinished(){
+/* Race crossed the line → move the session to 'photo' (under review). No
+   payout, no reveal. The phone shows a holding state. */
+async function enterPhotoReview(){
   if(!multiGame.active) return;
+  const { error } = await sb.rpc('start_photo', { p_session_id: lobby.session.id });
+  if(error){ console.error('start_photo failed:', error); }
+}
+
+/* Called at the REVEAL moment (startPostRaceTransition) → settle on the DB with
+   the full finishing detail. This is when balances change AND the phone reveals
+   placements — simultaneously, so a payout can't spoil the finish. */
+async function onRaceFinished(){
+  if(!multiGame.active || multiGame.settledRace === multiGame.raceNumber) return;
+  multiGame.settledRace = multiGame.raceNumber;   // guard: settle each race once
+
+  // Finishing order as horse numbers (1-based), in crossing order.
   const order = finishOrder.map(h => raceHorses.indexOf(h.def) + 1).filter(n => n > 0);
+
+  // Rich detail for the phone: position, number, name, silk, margin, time.
+  const detail = finishOrder.map((h, i) => {
+    const prev = finishOrder[i - 1];
+    const gap  = (prev && prev.finishTick != null && h.finishTick != null)
+      ? Math.abs(h.finishTick - prev.finishTick) : null;
+    return {
+      pos:    i + 1,
+      num:    h.def.num,
+      name:   h.def.name,
+      silk:   h.def.silk || null,
+      margin: i === 0 ? 'Winner' : (gap != null ? winLength(gap, h.finishSpeed) : ''),
+      time:   h.finishTick != null ? formatTime(h.finishTick / TARGET_FPS) : '',
+    };
+  });
+
   const { error } = await sb.rpc('settle_race', {
     p_session_id:  lobby.session.id,
     p_race_number: multiGame.raceNumber,
-    p_result:      { order },
+    p_result:      { order, detail },
   });
   if(error){ console.error('settle_race failed:', error); }
 }
