@@ -545,6 +545,7 @@ body {
   font-family:'Barlow Condensed',sans-serif; font-size:3.4rem; font-weight:800; letter-spacing:2px;
   color:var(--white); text-transform:uppercase;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 .ticker-sep {
   font-family:'Barlow Condensed',sans-serif; font-size:3.4rem; font-weight:800;
@@ -599,6 +600,61 @@ body {
   font-family:'Oswald',sans-serif; font-weight:600; font-size:1.4rem;
   letter-spacing:8px; text-transform:uppercase; color:rgba(255,255,255,0.6);
 }
+/* Action buttons (top-right) — reuse the old manual-button look: white pill,
+   blue uppercase Barlow Condensed, skew-corrected inside the navy header. */
+#final-actions { display:flex; gap:14px; align-items:stretch; }
+.fh-btn {
+  font-family:'Barlow Condensed',sans-serif; font-weight:800;
+  font-size:2.1rem; letter-spacing:2px; text-transform:uppercase;
+  border:none; cursor:pointer; padding:8px 30px;
+  background:var(--white); color:var(--blue);
+  box-shadow:0 4px 0 #0d1c3a, 0 6px 18px rgba(0,0,0,0.4);
+  transition:transform .08s, box-shadow .08s, opacity .15s;
+}
+.fh-btn:hover { opacity:0.85; }
+.fh-btn:active { transform:translateY(3px); box-shadow:0 1px 0 #0d1c3a, 0 4px 12px rgba(0,0,0,0.4); }
+.fh-btn.ghost {
+  background:transparent; color:var(--white);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,0.55);
+}
+.fh-btn.ghost:active { transform:translateY(2px); box-shadow:inset 0 0 0 2px rgba(255,255,255,0.55); }
+
+/* Confirmation modal for "Main Menu" (close session) */
+#confirm-overlay {
+  position:absolute; inset:0; z-index:5000; display:none;
+  align-items:center; justify-content:center;
+  background:rgba(6,12,8,0.78);
+}
+#confirm-overlay.active { display:flex; }
+#confirm-box {
+  background:var(--white); color:var(--dark);
+  width:min(720px,80%); padding:40px 44px 34px; text-align:center;
+  box-shadow:0 18px 50px rgba(0,0,0,0.6);
+}
+#confirm-box .cf-title {
+  font-family:'Barlow Condensed',sans-serif; font-weight:800;
+  font-size:3rem; letter-spacing:1px; text-transform:uppercase; color:var(--blue); line-height:1.05;
+}
+#confirm-box .cf-sub {
+  font-family:'Barlow Condensed',sans-serif; font-weight:600;
+  font-size:1.4rem; color:var(--mid); margin-top:12px; line-height:1.3;
+}
+#confirm-actions { display:flex; gap:18px; justify-content:center; margin-top:30px; }
+#confirm-actions .cf-btn {
+  font-family:'Barlow Condensed',sans-serif; font-weight:800;
+  font-size:1.9rem; letter-spacing:2px; text-transform:uppercase;
+  border:none; cursor:pointer; padding:12px 40px;
+  transition:transform .08s, box-shadow .08s, opacity .15s;
+}
+#confirm-actions .cf-confirm {
+  background:var(--blue); color:var(--white);
+  box-shadow:0 4px 0 #0d1c3a;
+}
+#confirm-actions .cf-confirm:active { transform:translateY(3px); box-shadow:0 1px 0 #0d1c3a; }
+#confirm-actions .cf-cancel {
+  background:transparent; color:var(--blue); box-shadow:inset 0 0 0 2px var(--silver);
+}
+#confirm-actions .cf-cancel:hover { opacity:0.8; }
 
 /* Main body: champion column (left) + standings (right) */
 #final-body { display:flex; gap:36px; flex:1; min-height:0; }
@@ -953,7 +1009,10 @@ body {
   <div id="final-overlay">
     <div id="final-header">
       <span class="fh-title">Final <em>Results</em></span>
-      <span class="fh-side">JustaLittleFun Racing</span>
+      <div id="final-actions">
+        <button class="fh-btn" id="btn-again">Again</button>
+        <button class="fh-btn ghost" id="btn-mainmenu">Main Menu</button>
+      </div>
     </div>
     <div id="final-body">
       <div id="champion-card">
@@ -980,6 +1039,18 @@ body {
     </div>
   </div>
   <canvas id="confetti-canvas"></canvas>
+
+  <!-- Confirmation prompt for Main Menu (closes the session) -->
+  <div id="confirm-overlay">
+    <div id="confirm-box">
+      <div class="cf-title">Close session and return to game selection?</div>
+      <div class="cf-sub">This ends the game for everyone in the room. Players will be disconnected.</div>
+      <div id="confirm-actions">
+        <button class="cf-btn cf-cancel" id="confirm-cancel">Cancel</button>
+        <button class="cf-btn cf-confirm" id="confirm-yes">Close session</button>
+      </div>
+    </div>
+  </div>
 
   <div id="wipe-overlay">
     <img src="jalf_logo.png" alt="JALF" id="wipe-logo">
@@ -3195,6 +3266,18 @@ function setStatusText(msg) {
           _tickerX = phase * newUnit;
         }
         _tickerUnit = newUnit;
+        // If a longer message now needs more copies to cover the clip, add them.
+        const clip = document.getElementById('status-clip');
+        if(clip && _tickerUnit > 0){
+          const needed = Math.ceil((clip.offsetWidth * 2) / _tickerUnit) + 2;
+          while(el.querySelectorAll('.ticker-copy').length < needed){
+            const s = document.createElement('span');
+            s.className = 'ticker-copy'; s.textContent = msg; el.appendChild(s);
+            const sep = document.createElement('span');
+            sep.className = 'ticker-sep'; sep.textContent = '\u00a0\u00a0\u25c6\u00a0\u00a0';
+            el.appendChild(sep);
+          }
+        }
       }
     });
     return;
@@ -3250,6 +3333,8 @@ const lobby = {
   channel: null,
   players: [],
   gameDataReady: false,
+  rematch: false,        // true while committing a rematch (reset same session)
+  gameStarted: false,    // true once a round is underway
 };
 
 const lq = sel => document.querySelector(sel);
@@ -3275,9 +3360,36 @@ document.querySelectorAll('.stepper').forEach(st=>{
 lq('#lobby-start-session').addEventListener('click',()=>showStack('lobby-config'));
 lq('#lobby-config-back').addEventListener('click',()=>showStack('lobby-menu'));
 
-lq('#lobby-create').addEventListener('click', createRoom);
+lq('#lobby-create').addEventListener('click', commitConfig);
 
-async function createRoom(){
+async function commitConfig(){
+  // Rematch: the session already exists (reset to a blank lobby). Re-apply the
+  // freshly-chosen config to the SAME session and re-stamp player balances,
+  // rather than creating a new room.
+  if(lobby.rematch && lobby.session){
+    const btn=lq('#lobby-create'); btn.disabled=true;
+    lq('#lobby-config-msg').textContent='Reopening lobby…';
+    const { error } = await sb.rpc('apply_config', {
+      p_session_id: lobby.session.id, p_config: lobby.cfg,
+    });
+    if(error){
+      btn.disabled=false;
+      lq('#lobby-config-msg').textContent = error.message || 'Could not apply settings';
+      return;
+    }
+    lobby.rematch = false;
+    btn.textContent = 'Create room';
+    lq('#lobby-config-msg').textContent='';
+    lq('#lobby-code').textContent = lobby.session.room_code;
+    lq('#lobby-join-url').textContent = PLAYER_JOIN_URL;
+    showStack('lobby-room');
+    // Resubscribe to player joins/leaves for the room screen, and repaint.
+    if(lobby.channel){ try{ sb.removeChannel(lobby.channel); }catch(e){} lobby.channel = null; }
+    subscribePlayers();
+    return;
+  }
+
+  // Fresh session.
   const btn=lq('#lobby-create'); btn.disabled=true;
   lq('#lobby-config-msg').textContent='Creating room…';
   const { data, error } = await sb.rpc('create_session', {
@@ -3334,9 +3446,104 @@ function escapeHtml(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&
 /* Start game → hide lobby, hand control to the DB-driven betting loop */
 lq('#lobby-start-game').addEventListener('click', async ()=>{
   document.getElementById('lobby-overlay').style.display='none';
+  lobby.gameStarted = true;
   multiGame.active = true;
   multiGame.raceNumber = 0;        // 0-indexed, matches sessions.current_race
   startRaceCycle();                // opens betting for race 0, then runs the loop
+});
+
+/* ════════════════════════════════════════════════════════════════
+   END-OF-NIGHT ACTIONS (final leaderboard header)
+   AGAIN     → reopen the lobby for another round with the same crew.
+   MAIN MENU → confirm, close the session, return to the host landing.
+════════════════════════════════════════════════════════════════ */
+
+/* Stop every end-screen animation/timer so nothing keeps running underneath
+   the lobby when we go again. */
+function teardownFinalScreen(){
+  clearInterval(_nextRaceInterval);
+  cancelAnimationFrame(_marqueeRaf); _marqueeRaf = null;
+  cancelAnimationFrame(_confettiRaf); _confettiRaf = null;
+  _revealTimers.forEach(t=>clearTimeout(t)); _revealTimers = [];
+  clearTimeout(multiGame.closeTimer);
+  const ov = document.getElementById('final-overlay'); if(ov) ov.classList.remove('active');
+  const cc = document.getElementById('confetti-canvas');
+  if(cc){ cc.classList.remove('active'); const c=cc.getContext('2d'); if(c) c.clearRect(0,0,cc.width,cc.height); }
+}
+
+/* Reset the engine + multiplayer state back to a clean pre-lobby baseline so a
+   fresh round starts exactly like the first did. */
+function resetEngineForNewRound(){
+  multiGame.active = false;
+  multiGame.raceNumber = 0;
+  multiGame.closesAt = null;
+  multiGame.awaitingSettle = false;
+  multiGame.settledRace = -1;
+  if(typeof resetToPrerace === 'function') resetToPrerace();
+}
+
+lq('#btn-again').addEventListener('click', async ()=>{
+  const btn = lq('#btn-again');
+  btn.disabled = true;
+  teardownFinalScreen();
+  resetEngineForNewRound();
+
+  // Reset the SAME session in place: wipe races + bets, clear config and
+  // current_race, set status back to 'lobby' — WITHOUT removing the player
+  // rows, so the current crew stays joined for the rematch.
+  if(lobby.session){
+    const { error } = await sb.rpc('reset_lobby', { p_session_id: lobby.session.id });
+    if(error){
+      console.error('reset_lobby failed:', error);
+      btn.disabled = false;
+      // Surface it on the lobby screen rather than silently stranding the host.
+      document.getElementById('lobby-overlay').style.display = 'flex';
+      showStack('lobby-config');
+      lq('#lobby-config-msg').textContent =
+        'Could not reset the room (' + (error.message||'unknown') + '). Add the reset_lobby RPC, or use Main Menu.';
+      return;
+    }
+  }
+
+  // The session lives on; config must be set again. Mark rematch mode so the
+  // config screen commits via reset/apply rather than creating a new session.
+  lobby.rematch = true;
+  lobby.gameStarted = false;
+
+  // Show the lobby overlay on the config screen so the host can re-pick the
+  // race card. Existing players remain subscribed; refresh the roster.
+  document.getElementById('lobby-overlay').style.display = 'flex';
+  lq('#lobby-config-msg').textContent = 'Set the card for the next round — your players are still here.';
+  lq('#lobby-create').textContent = 'Reopen lobby';
+  lq('#lobby-create').disabled = false;
+  showStack('lobby-config');
+
+  // Re-fetch the current players so the lobby-room screen is accurate once
+  // the host commits the config.
+  if(lobby.session){
+    const { data } = await sb.from('players').select('*').eq('session_id', lobby.session.id);
+    lobby.players = data || [];
+  }
+
+  btn.disabled = false;
+});
+
+/* MAIN MENU — confirm, then close the session and return to the host landing. */
+const confirmOverlay = document.getElementById('confirm-overlay');
+lq('#btn-mainmenu').addEventListener('click', ()=>{
+  confirmOverlay.classList.add('active');
+});
+lq('#confirm-cancel').addEventListener('click', ()=>{
+  confirmOverlay.classList.remove('active');
+});
+lq('#confirm-yes').addEventListener('click', async ()=>{
+  const yes = lq('#confirm-yes'); yes.disabled = true;
+  // Best-effort close the session so phones know the night is over.
+  if(lobby.session){
+    try { await sb.rpc('finish_game', { p_session_id: lobby.session.id }); } catch(e){}
+  }
+  teardownFinalScreen();
+  window.location.href = 'index-HOST.html';
 });
 
 /* ════════════════════════════════════════════════════════════════
@@ -3469,10 +3676,15 @@ async function onRaceFinished(){
     };
   });
 
+  // Was there an ACTUAL photo finish? photoFinishPositions is authoritative by
+  // now (recomputed once all horses crossed). Pass it through so the phone can
+  // word its banner correctly instead of always claiming a photo finish.
+  const hadPhotoFinish = photoFinishPositions.size > 0;
+
   const { error } = await sb.rpc('settle_race', {
     p_session_id:  lobby.session.id,
     p_race_number: multiGame.raceNumber,
-    p_result:      { order, detail },
+    p_result:      { order, detail, photo: hadPhotoFinish },
   });
   if(error){ console.error('settle_race failed:', error); }
 }
@@ -3517,16 +3729,10 @@ async function showFinalLeaderboard(){
 
   // 3) Gather every bet of the game + each race's horse-name map, to build the
   //    big-moments marquee. Names come from races.odds_table.names (num→name).
-  //    Bets are only keyed by player_id/race_number in this schema, so we pull
-  //    them for this session's roster of players.
-  const playerIds = (players || []).map(p => p.id);
-  const betsQuery = playerIds.length
-    ? sb.from('bets')
-        .select('player_id, race_number, selection, stake, potential_payout, status')
-        .in('player_id', playerIds)
-    : Promise.resolve({ data: [] });
   const [{ data: allBets }, { data: races }] = await Promise.all([
-    betsQuery,
+    sb.from('bets')
+      .select('player_id, race_number, selection, stake, potential_payout, status')
+      .eq('session_id', lobby.session.id),
     sb.from('races')
       .select('race_number, odds_table')
       .eq('session_id', lobby.session.id),
@@ -3784,9 +3990,13 @@ function startNextRaceCountdown(){
   const isFinalRace = multiGame.active && (multiGame.raceNumber + 1) >= lobby.cfg.numRaces;
 
   let secs = 20;   // hard-coded auto-advance / settle window
+  // Zero-pad the seconds so the ticker text never changes character count
+  // (combined with tabular-nums this keeps the scroll width perfectly stable,
+  // so the marquee never has to re-measure mid-countdown).
+  const pad = n => String(n).padStart(2,'0');
   const show = n => setStatusText(isFinalRace
-    ? `FINAL RESULTS IN ${n}`
-    : `NEXT RACE IN ${n}`);
+    ? `FINAL RESULTS IN ${pad(n)}`
+    : `NEXT RACE IN ${pad(n)}`);
   show(secs);
 
   _nextRaceInterval = setInterval(()=>{
