@@ -2854,8 +2854,14 @@ function resetToPrerace() {
   // Reset status banner (setStatusText called by init below)
   document.getElementById('countdown-timer').classList.remove('urgent');
 
-  // Re-init
-  init();
+  // NOTE: we deliberately do NOT call init() here. Both callers of
+  // resetToPrerace() (the multiplayer advanceAfterRace and the solo
+  // next-race path) call an init path immediately after — startRaceCycle()
+  // for multiplayer (which inits) and init() directly for solo. Calling
+  // init() here as well caused a DOUBLE init on every race after the first:
+  // two overlapping loadSheets()→startCountdown()→walkUp cycles fought each
+  // other, so the gate-hold→run handoff never fired and race 2 hung at the
+  // gate. Leaving init to the caller fixes it.
 }
 
 function init() {
@@ -3139,13 +3145,16 @@ function rand(min, max){ return min + Math.random()*(max-min); }
    here — the phone derives those from these win figures at selection time.
    Keyed by horse number (1-based). */
 function buildOddsTable(){
-  const table = { win:{}, place:{}, show:{}, names:{} };
+  const table = { win:{}, place:{}, show:{}, names:{}, silks:{} };
   raceHorses.forEach((h, i)=>{
     const o = odds[i] || {};
     if(o.win   != null) table.win[h.num]   = o.win;
     if(o.place != null) table.place[h.num] = o.place;
     if(o.show  != null) table.show[h.num]  = o.show;
     table.names[h.num] = h.name;   // so the player view shows the real horse name
+    // The silk object (background / accentColor / pattern) so the phone can
+    // render the IDENTICAL silk with the same renderSilkSVG logic.
+    if(h.silk) table.silks[h.num] = h.silk;
   });
   return table;
 }
