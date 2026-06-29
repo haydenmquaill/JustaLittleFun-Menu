@@ -568,6 +568,181 @@ body {
 #controls-bar button:disabled { opacity:0.4; cursor:not-allowed; }
 
 
+/* ══════════════════════════════
+   FINAL LEADERBOARD (end of card)
+   Full-screen broadcast frame shown after the last race settles.
+   Sits above the page but below the wipe (z 4000 < wipe 9999).
+══════════════════════════════ */
+#final-overlay {
+  position:absolute; inset:0; z-index:4000; display:none;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(30,125,58,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 60%, rgba(26,46,90,0.28) 0%, transparent 60%),
+    #0d1f12;
+  flex-direction:column; padding:30px 36px 0; overflow:hidden;
+}
+#final-overlay.active { display:flex; }
+
+/* Skewed navy header bar */
+#final-header {
+  background:var(--blue); box-shadow:0 2px 12px rgba(0,0,0,0.4);
+  transform:skewX(-8deg); padding:16px 56px; margin:0 8px 26px;
+  display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+}
+#final-header > * { transform:skewX(8deg); }
+#final-header .fh-title {
+  font-family:'Barlow Condensed',sans-serif; font-weight:800;
+  font-size:4rem; letter-spacing:2px; text-transform:uppercase; line-height:1; color:var(--white);
+}
+#final-header .fh-title em { font-style:normal; color:rgba(255,255,255,0.55); }
+#final-header .fh-side {
+  font-family:'Oswald',sans-serif; font-weight:600; font-size:1.4rem;
+  letter-spacing:8px; text-transform:uppercase; color:rgba(255,255,255,0.6);
+}
+
+/* Main body: champion column (left) + standings (right) */
+#final-body { display:flex; gap:36px; flex:1; min-height:0; }
+
+/* ── Champion / winner card ── */
+#champion-card {
+  flex:0 0 620px; background:var(--white); color:var(--dark);
+  box-shadow:0 2px 12px rgba(0,0,0,0.4);
+  display:flex; flex-direction:column; align-items:center;
+  padding:40px 40px 36px; position:relative; overflow:hidden;
+}
+#champion-card .champ-eyebrow {
+  font-family:'Oswald',sans-serif; font-weight:600; font-size:1.5rem;
+  letter-spacing:10px; text-transform:uppercase; color:var(--gold);
+  display:flex; align-items:center; gap:18px;
+}
+#champion-card .champ-eyebrow::before, #champion-card .champ-eyebrow::after {
+  content:""; width:54px; height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold));
+}
+#champion-card .champ-eyebrow::after { transform:scaleX(-1); }
+#champ-trophy { font-size:8rem; line-height:1; margin:14px 0 6px; filter:drop-shadow(0 6px 10px rgba(0,0,0,.3)); }
+#champ-name {
+  font-family:'Barlow Condensed',sans-serif; font-weight:800;
+  font-size:6rem; line-height:0.92; letter-spacing:1px; text-transform:uppercase;
+  color:var(--blue); text-align:center; margin:6px 0 2px;
+  word-break:break-word; max-width:100%;
+}
+#champ-sub {
+  font-family:'Oswald',sans-serif; font-weight:600; font-size:1.5rem;
+  letter-spacing:3px; text-transform:uppercase; color:var(--mid); margin-bottom:24px;
+}
+#champ-balance {
+  background:var(--blue); color:var(--white);
+  padding:18px 56px; text-align:center; box-shadow:0 2px 12px rgba(0,0,0,0.4);
+  border:4px solid #33508a;
+}
+#champ-balance .cb-lab {
+  font-family:'Oswald',sans-serif; font-weight:600; font-size:1.1rem;
+  letter-spacing:6px; text-transform:uppercase; color:rgba(255,255,255,0.6);
+}
+#champ-balance .cb-val {
+  font-family:'Barlow Condensed',sans-serif; font-weight:800;
+  font-size:5rem; line-height:0.95; letter-spacing:2px; color:var(--white);
+}
+#champ-profit {
+  margin-top:18px; font-family:'Barlow Condensed',sans-serif; font-weight:800;
+  font-size:1.9rem; letter-spacing:2px; text-transform:uppercase; color:var(--green);
+}
+#champ-profit.down { color:var(--red); }
+
+/* ── Standings list (right) ── */
+#standings-wrap { flex:1; display:flex; flex-direction:column; min-height:0; }
+#standings-head {
+  display:flex; align-items:center; justify-content:space-between;
+  font-family:'Oswald',sans-serif; font-weight:700; font-size:1.6rem;
+  letter-spacing:4px; text-transform:uppercase; color:var(--white);
+  border-bottom:2px solid var(--blue-lt); padding-bottom:10px; margin-bottom:14px; flex-shrink:0;
+}
+#standings-list { display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+.fl-row {
+  display:flex; align-items:center; gap:18px; background:var(--white); color:var(--dark);
+  padding:12px 22px; box-shadow:0 2px 10px rgba(0,0,0,0.35);
+  opacity:0; transform:translateY(24px);
+}
+.fl-row.revealed { opacity:1; transform:translateY(0);
+  transition:opacity .45s ease, transform .45s cubic-bezier(.2,.8,.2,1); }
+.fl-row.top1 { background:linear-gradient(100deg,#fff 0%,#fff8e4 100%); box-shadow:0 0 0 3px var(--gold),0 2px 12px rgba(0,0,0,.4); }
+.fl-row.top2 { box-shadow:0 0 0 2px #b8c0d4,0 2px 12px rgba(0,0,0,.35); }
+.fl-row.top3 { box-shadow:0 0 0 2px #d8a87a,0 2px 12px rgba(0,0,0,.35); }
+.fl-rank {
+  flex:0 0 64px; text-align:center;
+  font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:3rem;
+  line-height:1; color:var(--blue);
+}
+.fl-row.top1 .fl-rank { color:var(--gold); }
+.fl-medal { font-size:2.4rem; line-height:1; flex:0 0 auto; }
+.fl-name {
+  flex:1; min-width:0; font-family:'Barlow Condensed',sans-serif; font-weight:800;
+  font-size:2.6rem; line-height:1; letter-spacing:1px; text-transform:uppercase; color:var(--dark);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.fl-bal {
+  flex:0 0 auto; font-family:'Barlow Condensed',sans-serif; font-weight:800;
+  font-size:2.8rem; line-height:1; letter-spacing:1px; color:var(--blue);
+  font-variant-numeric:tabular-nums;
+}
+.fl-bal .fl-c { font-size:1.6rem; color:var(--mid); vertical-align:super; margin-right:2px; }
+.fl-delta {
+  flex:0 0 132px; text-align:right;
+  font-family:'Oswald',sans-serif; font-weight:700; font-size:1.5rem;
+  letter-spacing:1px; font-variant-numeric:tabular-nums;
+}
+.fl-delta.up { color:var(--green); }
+.fl-delta.down { color:var(--red); }
+.fl-delta.flat { color:var(--mid); }
+
+/* ── Highlights marquee (big wins / losses) ── */
+#final-marquee {
+  flex-shrink:0; margin:24px -36px 0; padding:0;
+  background:var(--blue); box-shadow:0 -2px 12px rgba(0,0,0,0.4);
+  overflow:hidden; position:relative; height:148px;
+}
+#final-marquee::before {
+  content:"Big moments"; position:absolute; top:0; left:0; z-index:3;
+  font-family:'Oswald',sans-serif; font-weight:700; font-size:1rem;
+  letter-spacing:6px; text-transform:uppercase; color:rgba(255,255,255,0.85);
+  background:var(--dark); padding:8px 22px;
+}
+#marquee-track {
+  display:flex; align-items:center; gap:18px; height:100%;
+  padding:0 18px; will-change:transform; white-space:nowrap;
+}
+.mq-tile {
+  flex:0 0 auto; background:var(--white); color:var(--dark);
+  padding:14px 22px; box-shadow:0 2px 8px rgba(0,0,0,0.35);
+  display:flex; flex-direction:column; gap:3px; min-width:300px;
+  border-left:6px solid var(--green);
+}
+.mq-tile.loss { border-left-color:var(--red); }
+.mq-tile .mq-amount {
+  font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:2.4rem; line-height:1;
+  color:var(--green); letter-spacing:1px;
+}
+.mq-tile.loss .mq-amount { color:var(--red); }
+.mq-tile .mq-who {
+  font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.7rem;
+  line-height:1; text-transform:uppercase; color:var(--dark); letter-spacing:.5px;
+}
+.mq-tile .mq-detail {
+  font-family:'Oswald',sans-serif; font-weight:500; font-size:1.05rem;
+  color:var(--mid); letter-spacing:.5px; text-transform:uppercase;
+}
+
+/* ── Confetti canvas (above the leaderboard, below the wipe) ── */
+#confetti-canvas {
+  position:absolute; inset:0; z-index:4500; pointer-events:none; display:none;
+}
+#confetti-canvas.active { display:block; }
+
+@media (prefers-reduced-motion:reduce){
+  .fl-row.revealed { transition:none; }
+}
+
 /* Stage placeholder sizing */
 </style>
 </head>
@@ -773,6 +948,38 @@ body {
       <div id="stewards-label">STEWARDS EXAMINING</div>
     </div>
   </div>
+
+  <!-- FINAL LEADERBOARD — shown after the last race settles -->
+  <div id="final-overlay">
+    <div id="final-header">
+      <span class="fh-title">Final <em>Results</em></span>
+      <span class="fh-side">JustaLittleFun Racing</span>
+    </div>
+    <div id="final-body">
+      <div id="champion-card">
+        <span class="champ-eyebrow">Champion Punter</span>
+        <div id="champ-trophy">🏆</div>
+        <div id="champ-name">—</div>
+        <div id="champ-sub">Top of the tote</div>
+        <div id="champ-balance">
+          <div class="cb-lab">Final balance</div>
+          <div class="cb-val" id="champ-balance-val">$0</div>
+        </div>
+        <div id="champ-profit"></div>
+      </div>
+      <div id="standings-wrap">
+        <div id="standings-head">
+          <span>Final standings</span>
+          <span id="standings-count"></span>
+        </div>
+        <div id="standings-list"></div>
+      </div>
+    </div>
+    <div id="final-marquee">
+      <div id="marquee-track"></div>
+    </div>
+  </div>
+  <canvas id="confetti-canvas"></canvas>
 
   <div id="wipe-overlay">
     <img src="jalf_logo.png" alt="JALF" id="wipe-logo">
@@ -2969,14 +3176,25 @@ function setStatusText(msg) {
   if(!el || !clip) return;
 
   if(_tickerBuilt) {
-    // Already running — swap text then remeasure unit width (phrase length may have changed)
+    // Already running — swap text then remeasure unit width (phrase length may
+    // have changed). When the unit width changes we must rescale the current
+    // offset by the SAME ratio, otherwise the scroll position jumps: _tickerX
+    // is held constant while the wrap point (_tickerUnit) moves, so the copies
+    // visibly snap. Rescaling keeps the visual phase continuous as the
+    // countdown number (and thus the text length) ticks down each second.
     el.querySelectorAll('.ticker-copy').forEach(s => s.textContent = msg);
     requestAnimationFrame(() => {
       const copies = el.querySelectorAll('.ticker-copy');
       if(copies.length >= 2) {
         const pageScale = Math.min(window.innerWidth / PAGE_W, window.innerHeight / PAGE_H);
         const screenUnit = copies[1].getBoundingClientRect().left - copies[0].getBoundingClientRect().left;
-        _tickerUnit = Math.abs(screenUnit / pageScale);
+        const newUnit = Math.abs(screenUnit / pageScale);
+        if(_tickerUnit > 0 && newUnit > 0) {
+          // Preserve the fractional phase through the new unit width.
+          const phase = (_tickerX % _tickerUnit) / _tickerUnit;   // -1..0
+          _tickerX = phase * newUnit;
+        }
+        _tickerUnit = newUnit;
       }
     });
     return;
@@ -3272,6 +3490,287 @@ async function advanceAfterRace(){
   doWipe(()=>{ resetToPrerace(); startRaceCycle(); });
 }
 
+/* ════════════════════════════════════════════════════════════════
+   FINAL LEADERBOARD
+   Called after the last race's 20s settling window. Pulls the final
+   player balances + every bet of the game, finishes the game on the DB
+   (so phones flip to their final view), then renders:
+     · a champion card with confetti,
+     · the full standings list revealed bottom→top,
+     · a marquee of the biggest single-bet wins and losses.
+════════════════════════════════════════════════════════════════ */
+async function showFinalLeaderboard(){
+  // 1) Finish the game on the DB — this is the authority flip the phones watch.
+  const { error: fErr } = await sb.rpc('finish_game', { p_session_id: lobby.session.id });
+  if(fErr){ console.error('finish_game failed:', fErr); }
+  setStatusText('That’s the card — final results are up');
+
+  // 2) Gather final standings (player balances).
+  const { data: players, error: pErr } = await sb
+    .from('players').select('id, display_name, balance')
+    .eq('session_id', lobby.session.id);
+  if(pErr){ console.error('final players read failed:', pErr); }
+  const roster = (players || []).slice()
+    .sort((a,b)=> (Number(b.balance)||0) - (Number(a.balance)||0));
+
+  const startBal = Number(lobby.cfg.startingBalance) || 0;
+
+  // 3) Gather every bet of the game + each race's horse-name map, to build the
+  //    big-moments marquee. Names come from races.odds_table.names (num→name).
+  //    Bets are only keyed by player_id/race_number in this schema, so we pull
+  //    them for this session's roster of players.
+  const playerIds = (players || []).map(p => p.id);
+  const betsQuery = playerIds.length
+    ? sb.from('bets')
+        .select('player_id, race_number, selection, stake, potential_payout, status')
+        .in('player_id', playerIds)
+    : Promise.resolve({ data: [] });
+  const [{ data: allBets }, { data: races }] = await Promise.all([
+    betsQuery,
+    sb.from('races')
+      .select('race_number, odds_table')
+      .eq('session_id', lobby.session.id),
+  ]);
+
+  const nameById = {};
+  (players || []).forEach(p => { nameById[p.id] = p.display_name; });
+  const horseNamesByRace = {};
+  (races || []).forEach(r => {
+    horseNamesByRace[r.race_number] = (r.odds_table && r.odds_table.names) || {};
+  });
+
+  const highlights = buildHighlights(allBets || [], nameById, horseNamesByRace);
+
+  // 4) Paint the champion card.
+  const champ = roster[0];
+  if(champ){
+    document.getElementById('champ-name').textContent = champ.display_name || '—';
+    document.getElementById('champ-balance-val').textContent = '$' + fmtMoney(champ.balance);
+    const profit = (Number(champ.balance)||0) - startBal;
+    const pEl = document.getElementById('champ-profit');
+    if(profit > 0){ pEl.textContent = '▲ Up $' + fmtMoney(profit) + ' on the night'; pEl.classList.remove('down'); }
+    else if(profit < 0){ pEl.textContent = '▼ Down $' + fmtMoney(-profit) + ' — but still top'; pEl.classList.add('down'); }
+    else { pEl.textContent = 'Finished right where they started'; pEl.classList.remove('down'); }
+    // A solo champion (everyone else broke) still reads fine.
+    document.getElementById('champ-sub').textContent =
+      roster.length > 1 ? 'Top of the tote' : 'Last one standing';
+  }
+
+  // 5) Render standings rows (hidden), build marquee, then reveal + confetti.
+  renderFinalStandings(roster, startBal);
+  renderHighlightsMarquee(highlights);
+
+  document.getElementById('final-overlay').classList.add('active');
+
+  // Reveal bottom→top: the suspense builds up to 1st place.
+  revealStandingsBottomUp(() => {
+    // Once the winner's row lands, fire confetti + start the marquee.
+    launchConfetti();
+    startMarquee();
+  });
+}
+
+function fmtMoney(n){ return (Math.round(Number(n)||0)).toLocaleString(); }
+
+/* Build the biggest single-bet wins and losses across the whole game.
+   A winning bet's "swing" is profit (payout − stake); a losing bet's swing
+   is the stake forfeited. We surface the top few of each. */
+function buildHighlights(bets, nameById, horseNamesByRace){
+  const TYPE_LABEL = { win:'Win', place:'Place', show:'Show' };
+  const wins = [], losses = [];
+  bets.forEach(b=>{
+    const stake  = Number(b.stake) || 0;
+    if(stake <= 0) return;
+    const sel    = b.selection || {};
+    const type   = TYPE_LABEL[sel.type] || (sel.type ? sel.type[0].toUpperCase()+sel.type.slice(1) : 'Bet');
+    const num    = (sel.horses && sel.horses[0]) != null ? sel.horses[0] : null;
+    const hmap   = horseNamesByRace[b.race_number] || {};
+    const horse  = (num != null && hmap[num]) ? hmap[num] : (num != null ? ('Horse ' + num) : '—');
+    const who    = nameById[b.player_id] || 'A punter';
+    const base = { who, horse, type, stake, race: (Number(b.race_number)||0) + 1 };
+    if(b.status === 'won'){
+      const profit = (Number(b.potential_payout)||0) - stake;
+      if(profit > 0) wins.push({ ...base, amount: profit, kind:'win' });
+    } else if(b.status === 'lost'){
+      losses.push({ ...base, amount: stake, kind:'loss' });
+    }
+  });
+  wins.sort((a,b)=> b.amount - a.amount);
+  losses.sort((a,b)=> b.amount - a.amount);
+  // Take the top moments of each; interleave so the marquee mixes ups and downs.
+  const topWins   = wins.slice(0, 6);
+  const topLosses = losses.slice(0, 6);
+  const mixed = [];
+  const max = Math.max(topWins.length, topLosses.length);
+  for(let i=0;i<max;i++){
+    if(topWins[i])   mixed.push(topWins[i]);
+    if(topLosses[i]) mixed.push(topLosses[i]);
+  }
+  return mixed;
+}
+
+function renderFinalStandings(roster, startBal){
+  const list = document.getElementById('standings-list');
+  const countEl = document.getElementById('standings-count');
+  countEl.textContent = roster.length + (roster.length === 1 ? ' punter' : ' punters');
+  list.innerHTML = '';
+  const MEDALS = ['🥇','🥈','🥉'];
+  roster.forEach((p, i)=>{
+    const rank = i + 1;
+    const bal  = Number(p.balance) || 0;
+    const delta = bal - startBal;
+    const row = document.createElement('div');
+    row.className = 'fl-row' + (rank<=3 ? ' top'+rank : '');
+    const medal = rank<=3 ? `<span class="fl-medal">${MEDALS[i]}</span>` : '';
+    let deltaCls = 'flat', deltaTxt = '±$0';
+    if(delta > 0){ deltaCls='up';   deltaTxt='+$'+fmtMoney(delta); }
+    else if(delta < 0){ deltaCls='down'; deltaTxt='−$'+fmtMoney(-delta); }
+    row.innerHTML =
+      `<span class="fl-rank">${rank}</span>` +
+      medal +
+      `<span class="fl-name">${escapeHtml(p.display_name)}</span>` +
+      `<span class="fl-bal"><span class="fl-c">$</span>${fmtMoney(bal)}</span>` +
+      `<span class="fl-delta ${deltaCls}">${deltaTxt}</span>`;
+    list.appendChild(row);
+  });
+}
+
+/* Reveal rows from the bottom of the list up to 1st place. onWinner fires
+   as the top (1st-place) row is revealed. */
+let _revealTimers = [];
+function revealStandingsBottomUp(onWinner){
+  _revealTimers.forEach(t=>clearTimeout(t)); _revealTimers = [];
+  const rows = Array.from(document.querySelectorAll('#standings-list .fl-row'));
+  if(!rows.length){ if(onWinner) onWinner(); return; }
+  const STEP = 600;                 // ms between each row landing
+  const last = rows.length - 1;     // index of 1st-place row (top of the DOM list)
+  rows.forEach((row, domIdx)=>{
+    // domIdx 0 = 1st place (top). Reveal order: bottom row first.
+    const revealOrder = last - domIdx;   // bottom row → 0, top row → last
+    const t = setTimeout(()=>{
+      row.classList.add('revealed');
+      if(domIdx === 0 && onWinner) onWinner();   // the winner just landed
+    }, 400 + revealOrder * STEP);
+    _revealTimers.push(t);
+  });
+}
+
+/* ── Big-moments marquee ── */
+function renderHighlightsMarquee(items){
+  const track = document.getElementById('marquee-track');
+  track.innerHTML = '';
+  const marquee = document.getElementById('final-marquee');
+  if(!items.length){
+    marquee.style.display = 'none';
+    return;
+  }
+  marquee.style.display = 'block';
+  const tileHTML = it => {
+    const cls = it.kind === 'loss' ? 'mq-tile loss' : 'mq-tile';
+    const amt = it.kind === 'loss'
+      ? '−$' + fmtMoney(it.amount)
+      : '+$' + fmtMoney(it.amount);
+    const verb = it.kind === 'loss' ? 'lost on' : 'won on';
+    return `<div class="${cls}">
+      <span class="mq-amount">${amt}</span>
+      <span class="mq-who">${escapeHtml(it.who)}</span>
+      <span class="mq-detail">${it.type} bet · ${escapeHtml(it.horse)} · R${it.race} · $${fmtMoney(it.stake)} stake</span>
+    </div>`;
+  };
+  // Duplicate the set so the scroll loops seamlessly.
+  const html = items.map(tileHTML).join('');
+  track.innerHTML = html + html;
+  track._setWidth = 0;   // measured when the marquee starts
+}
+
+let _marqueeRaf = null, _marqueeX = 0;
+function startMarquee(){
+  const track = document.getElementById('marquee-track');
+  if(!track || !track.children.length) return;
+  cancelAnimationFrame(_marqueeRaf);
+  _marqueeX = 0;
+  // One full set is half the track (we duplicated it). Reset at that point.
+  const measure = () => {
+    let half = 0;
+    const kids = track.children;
+    const n = kids.length / 2;
+    for(let i=0;i<n;i++){ half += kids[i].getBoundingClientRect().width / _pageScaleNow(); }
+    half += (n) * 18;   // gaps
+    track._setWidth = half;
+  };
+  measure();
+  const SPEED = 1.4;   // px per frame (unscaled)
+  const loop = () => {
+    _marqueeX -= SPEED;
+    if(track._setWidth && -_marqueeX >= track._setWidth){ _marqueeX += track._setWidth; }
+    track.style.transform = `translateX(${_marqueeX}px)`;
+    _marqueeRaf = requestAnimationFrame(loop);
+  };
+  _marqueeRaf = requestAnimationFrame(loop);
+}
+function _pageScaleNow(){ return Math.min(window.innerWidth / PAGE_W, window.innerHeight / PAGE_H) || 1; }
+
+/* ── Confetti ── lightweight canvas burst, gold/navy/white/green. */
+let _confettiRaf = null;
+function launchConfetti(){
+  const canvas = document.getElementById('confetti-canvas');
+  if(!canvas) return;
+  canvas.classList.add('active');
+  canvas.width = PAGE_W; canvas.height = PAGE_H;
+  const ctx = canvas.getContext('2d');
+  const COLORS = ['#c8971a','#1a2e5a','#ffffff','#1e7d3a','#c8102e','#33508a'];
+  const pieces = [];
+  const N = 220;
+  for(let i=0;i<N;i++){
+    pieces.push({
+      x: PAGE_W*0.15 + Math.random()*PAGE_W*0.7,
+      y: -20 - Math.random()*PAGE_H*0.6,
+      w: 8 + Math.random()*10,
+      h: 12 + Math.random()*14,
+      vx: (Math.random()-0.5)*4,
+      vy: 4 + Math.random()*5,
+      rot: Math.random()*Math.PI,
+      vr: (Math.random()-0.5)*0.3,
+      color: COLORS[(Math.random()*COLORS.length)|0],
+      sway: Math.random()*Math.PI*2,
+    });
+  }
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if(reduce){
+    // Static sprinkle, no animation.
+    pieces.forEach(p=>{ p.y = Math.random()*PAGE_H; });
+    ctx.clearRect(0,0,PAGE_W,PAGE_H);
+    pieces.forEach(p=>{ ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+      ctx.fillStyle=p.color; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore(); });
+    return;
+  }
+  const start = performance.now();
+  const DURATION = 6500;   // confetti rains for ~6.5s
+  cancelAnimationFrame(_confettiRaf);
+  const frame = (now) => {
+    const elapsed = now - start;
+    ctx.clearRect(0,0,PAGE_W,PAGE_H);
+    pieces.forEach(p=>{
+      p.sway += 0.03;
+      p.x += p.vx + Math.sin(p.sway)*0.8;
+      p.y += p.vy;
+      p.rot += p.vr;
+      if(p.y > PAGE_H + 30){ p.y = -20; p.x = PAGE_W*0.15 + Math.random()*PAGE_W*0.7; }
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+      ctx.fillStyle = p.color; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+      ctx.restore();
+    });
+    if(elapsed < DURATION){
+      _confettiRaf = requestAnimationFrame(frame);
+    } else {
+      // Fade out by clearing and hiding.
+      ctx.clearRect(0,0,PAGE_W,PAGE_H);
+      canvas.classList.remove('active');
+    }
+  };
+  _confettiRaf = requestAnimationFrame(frame);
+}
+
 /* Auto-advance: after a race completes, count down 20s in the banner, then
    move on. Works for both modes — multiplayer advances the session race,
    solo just stages a fresh race. If this is the final multiplayer race,
@@ -3280,14 +3779,14 @@ let _nextRaceInterval = null;
 function startNextRaceCountdown(){
   clearInterval(_nextRaceInterval);
 
-  // Final multiplayer race → finish immediately, no countdown.
-  if(multiGame.active && (multiGame.raceNumber + 1) >= lobby.cfg.numRaces){
-    advanceAfterRace();   // calls finish_game
-    return;
-  }
+  // Is this the final multiplayer race? If so, after the same 20s settling
+  // window we reveal the FINAL LEADERBOARD instead of staging a new race.
+  const isFinalRace = multiGame.active && (multiGame.raceNumber + 1) >= lobby.cfg.numRaces;
 
-  let secs = 20;   // hard-coded auto-advance delay
-  const show = n => setStatusText(`NEXT RACE IN ${n}`);
+  let secs = 20;   // hard-coded auto-advance / settle window
+  const show = n => setStatusText(isFinalRace
+    ? `FINAL RESULTS IN ${n}`
+    : `NEXT RACE IN ${n}`);
   show(secs);
 
   _nextRaceInterval = setInterval(()=>{
@@ -3296,7 +3795,11 @@ function startNextRaceCountdown(){
       show(secs);
     } else {
       clearInterval(_nextRaceInterval);
-      if(multiGame.active){
+      if(isFinalRace){
+        // End of the card → reveal the final leaderboard (which also finishes
+        // the game on the DB so phones flip to their final view).
+        doWipe(showFinalLeaderboard);
+      } else if(multiGame.active){
         advanceAfterRace();
       } else {
         doWipe(()=>{ resetToPrerace(); init(); });   // solo: fresh race
