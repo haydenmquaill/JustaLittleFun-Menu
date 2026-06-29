@@ -2961,7 +2961,7 @@ async function createRoom(){
   const btn=lq('#lobby-create'); btn.disabled=true;
   lq('#lobby-config-msg').textContent='Creating room…';
   const { data, error } = await sb.rpc('create_session', {
-    p_game_mode:'horse_racing', p_config: lobby.cfg,
+    p_game_mode:'horses', p_config: lobby.cfg,
   });
   if(error){
     btn.disabled=false;
