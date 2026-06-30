@@ -12,43 +12,7 @@
     },
     "luck": 83,
     "style": "FRONT_RUNNER",
-    "form": [
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-05-01"
-      },
-      {
-        "pos": 2,
-        "courseId": "doomben",
-        "distance": 1400,
-        "terrain": "DIRT",
-        "date": "2026-04-10"
-      },
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1000,
-        "terrain": "DIRT",
-        "date": "2026-03-22"
-      },
-      {
-        "pos": 3,
-        "courseId": "gold_coast",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-03-01"
-      },
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1100,
-        "terrain": "DIRT",
-        "date": "2026-02-14"
-      }
-    ],
+    "trainer": "C. Waller",
     "career": {
       "starts": 18,
       "wins": 7,
@@ -68,43 +32,7 @@
     },
     "luck": 57,
     "style": "END_CLOSER",
-    "form": [
-      {
-        "pos": 3,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-05-03"
-      },
-      {
-        "pos": 1,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-04-12"
-      },
-      {
-        "pos": 2,
-        "courseId": "gold_coast",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-03-28"
-      },
-      {
-        "pos": 1,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-03-05"
-      },
-      {
-        "pos": 4,
-        "courseId": "doomben",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-02-20"
-      }
-    ],
+    "trainer": "G. Waterhouse",
     "career": {
       "starts": 22,
       "wins": 6,
@@ -124,43 +52,7 @@
     },
     "luck": 44,
     "style": "PACE_CHASER",
-    "form": [
-      {
-        "pos": 6,
-        "courseId": "sunshine_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-05-02"
-      },
-      {
-        "pos": 4,
-        "courseId": "eagle_farm",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-04-18"
-      },
-      {
-        "pos": 5,
-        "courseId": "gold_coast",
-        "distance": 1800,
-        "terrain": "TURF",
-        "date": "2026-03-30"
-      },
-      {
-        "pos": 3,
-        "courseId": "eagle_farm",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-03-08"
-      },
-      {
-        "pos": 2,
-        "courseId": "sunshine_coast",
-        "distance": 1800,
-        "terrain": "TURF",
-        "date": "2026-02-22"
-      }
-    ],
+    "trainer": "C. Maher",
     "career": {
       "starts": 28,
       "wins": 3,
@@ -180,43 +72,7 @@
     },
     "luck": 38,
     "style": "FRONT_RUNNER",
-    "form": [
-      {
-        "pos": 2,
-        "courseId": "ipswich",
-        "distance": 1000,
-        "terrain": "DIRT",
-        "date": "2026-05-04"
-      },
-      {
-        "pos": 6,
-        "courseId": "doomben",
-        "distance": 1600,
-        "terrain": "DIRT",
-        "date": "2026-04-20"
-      },
-      {
-        "pos": 4,
-        "courseId": "ipswich",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-04-02"
-      },
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1000,
-        "terrain": "DIRT",
-        "date": "2026-03-15"
-      },
-      {
-        "pos": 3,
-        "courseId": "gold_coast",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-02-28"
-      }
-    ],
+    "trainer": "A. Freedman",
     "career": {
       "starts": 15,
       "wins": 4,
@@ -236,43 +92,7 @@
     },
     "luck": 85,
     "style": "PACE_CHASER",
-    "form": [
-      {
-        "pos": 1,
-        "courseId": "doomben",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-05-06"
-      },
-      {
-        "pos": 3,
-        "courseId": "gold_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-04-22"
-      },
-      {
-        "pos": 2,
-        "courseId": "sunshine_coast",
-        "distance": 1400,
-        "terrain": "TURF",
-        "date": "2026-04-05"
-      },
-      {
-        "pos": 1,
-        "courseId": "doomben",
-        "distance": 1600,
-        "terrain": "DIRT",
-        "date": "2026-03-18"
-      },
-      {
-        "pos": 2,
-        "courseId": "gold_coast",
-        "distance": 1800,
-        "terrain": "TURF",
-        "date": "2026-03-02"
-      }
-    ],
+    "trainer": "J. Cummings",
     "career": {
       "starts": 20,
       "wins": 6,
@@ -292,43 +112,7 @@
     },
     "luck": 38,
     "style": "LATE_SURGER",
-    "form": [
-      {
-        "pos": 5,
-        "courseId": "sunshine_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-05-07"
-      },
-      {
-        "pos": 3,
-        "courseId": "gold_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-04-25"
-      },
-      {
-        "pos": 7,
-        "courseId": "eagle_farm",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-04-08"
-      },
-      {
-        "pos": 2,
-        "courseId": "sunshine_coast",
-        "distance": 1800,
-        "terrain": "TURF",
-        "date": "2026-03-20"
-      },
-      {
-        "pos": 4,
-        "courseId": "gold_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-03-04"
-      }
-    ],
+    "trainer": "P. Moody",
     "career": {
       "starts": 24,
       "wins": 2,
@@ -348,43 +132,7 @@
     },
     "luck": 74,
     "style": "END_CLOSER",
-    "form": [
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-05-08"
-      },
-      {
-        "pos": 1,
-        "courseId": "doomben",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-04-26"
-      },
-      {
-        "pos": 2,
-        "courseId": "ipswich",
-        "distance": 1100,
-        "terrain": "DIRT",
-        "date": "2026-04-09"
-      },
-      {
-        "pos": 1,
-        "courseId": "gold_coast",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-03-22"
-      },
-      {
-        "pos": 3,
-        "courseId": "ipswich",
-        "distance": 1400,
-        "terrain": "DIRT",
-        "date": "2026-03-05"
-      }
-    ],
+    "trainer": "D. Weir",
     "career": {
       "starts": 14,
       "wins": 8,
@@ -404,43 +152,7 @@
     },
     "luck": 89,
     "style": "LATE_SURGER",
-    "form": [
-      {
-        "pos": 4,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-05-09"
-      },
-      {
-        "pos": 2,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-04-27"
-      },
-      {
-        "pos": 3,
-        "courseId": "gold_coast",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-04-10"
-      },
-      {
-        "pos": 1,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-03-23"
-      },
-      {
-        "pos": 2,
-        "courseId": "sunshine_coast",
-        "distance": 1800,
-        "terrain": "TURF",
-        "date": "2026-03-06"
-      }
-    ],
+    "trainer": "M. Price",
     "career": {
       "starts": 19,
       "wins": 4,
@@ -460,43 +172,7 @@
     },
     "luck": 40,
     "style": "END_CLOSER",
-    "form": [
-      {
-        "pos": 7,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-05-10"
-      },
-      {
-        "pos": 5,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-04-28"
-      },
-      {
-        "pos": 4,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-04-11"
-      },
-      {
-        "pos": 1,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-03-24"
-      },
-      {
-        "pos": 6,
-        "courseId": "gold_coast",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-03-07"
-      }
-    ],
+    "trainer": "K. Lees",
     "career": {
       "starts": 26,
       "wins": 3,
@@ -516,43 +192,7 @@
     },
     "luck": 68,
     "style": "PACE_CHASER",
-    "form": [
-      {
-        "pos": 2,
-        "courseId": "gold_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-05-11"
-      },
-      {
-        "pos": 2,
-        "courseId": "doomben",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-04-29"
-      },
-      {
-        "pos": 3,
-        "courseId": "sunshine_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-04-12"
-      },
-      {
-        "pos": 2,
-        "courseId": "gold_coast",
-        "distance": 1800,
-        "terrain": "DIRT",
-        "date": "2026-03-25"
-      },
-      {
-        "pos": 3,
-        "courseId": "doomben",
-        "distance": 1400,
-        "terrain": "DIRT",
-        "date": "2026-03-08"
-      }
-    ],
+    "trainer": "T. Busuttil",
     "career": {
       "starts": 30,
       "wins": 4,
@@ -572,43 +212,7 @@
     },
     "luck": 63,
     "style": "FRONT_RUNNER",
-    "form": [
-      {
-        "pos": 3,
-        "courseId": "doomben",
-        "distance": 1400,
-        "terrain": "DIRT",
-        "date": "2026-05-12"
-      },
-      {
-        "pos": 3,
-        "courseId": "ipswich",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-04-30"
-      },
-      {
-        "pos": 2,
-        "courseId": "ipswich",
-        "distance": 1000,
-        "terrain": "DIRT",
-        "date": "2026-04-13"
-      },
-      {
-        "pos": 3,
-        "courseId": "doomben",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-03-26"
-      },
-      {
-        "pos": 1,
-        "courseId": "gold_coast",
-        "distance": 1400,
-        "terrain": "DIRT",
-        "date": "2026-03-09"
-      }
-    ],
+    "trainer": "B. Baker",
     "career": {
       "starts": 16,
       "wins": 3,
@@ -628,43 +232,7 @@
     },
     "luck": 80,
     "style": "LATE_SURGER",
-    "form": [
-      {
-        "pos": 3,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-05-13"
-      },
-      {
-        "pos": 2,
-        "courseId": "sunshine_coast",
-        "distance": 1800,
-        "terrain": "TURF",
-        "date": "2026-05-01"
-      },
-      {
-        "pos": 3,
-        "courseId": "eagle_farm",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-04-14"
-      },
-      {
-        "pos": 2,
-        "courseId": "gold_coast",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-03-27"
-      },
-      {
-        "pos": 3,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-03-10"
-      }
-    ],
+    "trainer": "J. O'Shea",
     "career": {
       "starts": 25,
       "wins": 2,
@@ -684,43 +252,7 @@
     },
     "luck": 81,
     "style": "END_CLOSER",
-    "form": [
-      {
-        "pos": 5,
-        "courseId": "ipswich",
-        "distance": 1400,
-        "terrain": "DIRT",
-        "date": "2026-05-14"
-      },
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1000,
-        "terrain": "DIRT",
-        "date": "2026-05-02"
-      },
-      {
-        "pos": 2,
-        "courseId": "ipswich",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-04-15"
-      },
-      {
-        "pos": 1,
-        "courseId": "doomben",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-03-28"
-      },
-      {
-        "pos": 4,
-        "courseId": "sunshine_coast",
-        "distance": 1400,
-        "terrain": "TURF",
-        "date": "2026-03-11"
-      }
-    ],
+    "trainer": "L. Bridge",
     "career": {
       "starts": 12,
       "wins": 5,
@@ -740,43 +272,7 @@
     },
     "luck": 78,
     "style": "PACE_CHASER",
-    "form": [
-      {
-        "pos": 2,
-        "courseId": "sunshine_coast",
-        "distance": 1400,
-        "terrain": "TURF",
-        "date": "2026-05-15"
-      },
-      {
-        "pos": 3,
-        "courseId": "gold_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-05-03"
-      },
-      {
-        "pos": 1,
-        "courseId": "sunshine_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-04-16"
-      },
-      {
-        "pos": 3,
-        "courseId": "doomben",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-03-29"
-      },
-      {
-        "pos": 2,
-        "courseId": "sunshine_coast",
-        "distance": 1400,
-        "terrain": "TURF",
-        "date": "2026-03-12"
-      }
-    ],
+    "trainer": "R. Hore-Lacy",
     "career": {
       "starts": 21,
       "wins": 5,
@@ -796,43 +292,7 @@
     },
     "luck": 46,
     "style": "FRONT_RUNNER",
-    "form": [
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1100,
-        "terrain": "DIRT",
-        "date": "2026-05-16"
-      },
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1000,
-        "terrain": "DIRT",
-        "date": "2026-05-04"
-      },
-      {
-        "pos": 4,
-        "courseId": "doomben",
-        "distance": 1600,
-        "terrain": "DIRT",
-        "date": "2026-04-17"
-      },
-      {
-        "pos": 2,
-        "courseId": "ipswich",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-03-30"
-      },
-      {
-        "pos": 5,
-        "courseId": "gold_coast",
-        "distance": 1800,
-        "terrain": "TURF",
-        "date": "2026-03-13"
-      }
-    ],
+    "trainer": "M. Ellerton",
     "career": {
       "starts": 13,
       "wins": 5,
@@ -852,43 +312,7 @@
     },
     "luck": 72,
     "style": "LATE_SURGER",
-    "form": [
-      {
-        "pos": 4,
-        "courseId": "eagle_farm",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-05-17"
-      },
-      {
-        "pos": 2,
-        "courseId": "gold_coast",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-05-05"
-      },
-      {
-        "pos": 1,
-        "courseId": "eagle_farm",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-04-18"
-      },
-      {
-        "pos": 3,
-        "courseId": "sunshine_coast",
-        "distance": 1800,
-        "terrain": "TURF",
-        "date": "2026-03-31"
-      },
-      {
-        "pos": 2,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-03-14"
-      }
-    ],
+    "trainer": "S. Richards",
     "career": {
       "starts": 20,
       "wins": 4,
@@ -908,43 +332,7 @@
     },
     "luck": 92,
     "style": "PACE_CHASER",
-    "form": [
-      {
-        "pos": 1,
-        "courseId": "gold_coast",
-        "distance": 1800,
-        "terrain": "TURF",
-        "date": "2026-05-18"
-      },
-      {
-        "pos": 2,
-        "courseId": "doomben",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-05-06"
-      },
-      {
-        "pos": 1,
-        "courseId": "sunshine_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-04-19"
-      },
-      {
-        "pos": 3,
-        "courseId": "gold_coast",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-04-01"
-      },
-      {
-        "pos": 1,
-        "courseId": "doomben",
-        "distance": 1600,
-        "terrain": "DIRT",
-        "date": "2026-03-15"
-      }
-    ],
+    "trainer": "D. Lane",
     "career": {
       "starts": 17,
       "wins": 7,
@@ -964,43 +352,7 @@
     },
     "luck": 66,
     "style": "END_CLOSER",
-    "form": [
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1000,
-        "terrain": "DIRT",
-        "date": "2026-05-19"
-      },
-      {
-        "pos": 3,
-        "courseId": "ipswich",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-05-07"
-      },
-      {
-        "pos": 2,
-        "courseId": "doomben",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-04-20"
-      },
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1100,
-        "terrain": "DIRT",
-        "date": "2026-04-02"
-      },
-      {
-        "pos": 4,
-        "courseId": "gold_coast",
-        "distance": 1600,
-        "terrain": "DIRT",
-        "date": "2026-03-16"
-      }
-    ],
+    "trainer": "T. Pike",
     "career": {
       "starts": 11,
       "wins": 5,
@@ -1020,43 +372,7 @@
     },
     "luck": 49,
     "style": "END_CLOSER",
-    "form": [
-      {
-        "pos": 2,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-05-20"
-      },
-      {
-        "pos": 1,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-05-08"
-      },
-      {
-        "pos": 3,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-04-21"
-      },
-      {
-        "pos": 2,
-        "courseId": "gold_coast",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-04-03"
-      },
-      {
-        "pos": 1,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-03-17"
-      }
-    ],
+    "trainer": "G. Begg",
     "career": {
       "starts": 23,
       "wins": 5,
@@ -1076,43 +392,7 @@
     },
     "luck": 59,
     "style": "PACE_CHASER",
-    "form": [
-      {
-        "pos": 3,
-        "courseId": "doomben",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-05-21"
-      },
-      {
-        "pos": 4,
-        "courseId": "gold_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-05-09"
-      },
-      {
-        "pos": 2,
-        "courseId": "doomben",
-        "distance": 1400,
-        "terrain": "DIRT",
-        "date": "2026-04-22"
-      },
-      {
-        "pos": 3,
-        "courseId": "sunshine_coast",
-        "distance": 1400,
-        "terrain": "TURF",
-        "date": "2026-04-04"
-      },
-      {
-        "pos": 2,
-        "courseId": "gold_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-03-18"
-      }
-    ],
+    "trainer": "M. Kavanagh",
     "career": {
       "starts": 22,
       "wins": 3,
@@ -1132,43 +412,7 @@
     },
     "luck": 46,
     "style": "LATE_SURGER",
-    "form": [
-      {
-        "pos": 8,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-05-22"
-      },
-      {
-        "pos": 6,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-05-10"
-      },
-      {
-        "pos": 5,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-04-23"
-      },
-      {
-        "pos": 1,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-04-05"
-      },
-      {
-        "pos": 3,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-03-19"
-      }
-    ],
+    "trainer": "P. Stokes",
     "career": {
       "starts": 28,
       "wins": 2,
@@ -1188,43 +432,7 @@
     },
     "luck": 74,
     "style": "FRONT_RUNNER",
-    "form": [
-      {
-        "pos": 1,
-        "courseId": "doomben",
-        "distance": 1400,
-        "terrain": "DIRT",
-        "date": "2026-05-23"
-      },
-      {
-        "pos": 2,
-        "courseId": "sunshine_coast",
-        "distance": 1400,
-        "terrain": "TURF",
-        "date": "2026-05-11"
-      },
-      {
-        "pos": 1,
-        "courseId": "gold_coast",
-        "distance": 1600,
-        "terrain": "DIRT",
-        "date": "2026-04-24"
-      },
-      {
-        "pos": 3,
-        "courseId": "doomben",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-04-06"
-      },
-      {
-        "pos": 2,
-        "courseId": "doomben",
-        "distance": 1400,
-        "terrain": "DIRT",
-        "date": "2026-03-20"
-      }
-    ],
+    "trainer": "J. Sadler",
     "career": {
       "starts": 16,
       "wins": 6,
@@ -1244,43 +452,7 @@
     },
     "luck": 87,
     "style": "END_CLOSER",
-    "form": [
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1000,
-        "terrain": "DIRT",
-        "date": "2026-05-24"
-      },
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1100,
-        "terrain": "DIRT",
-        "date": "2026-05-12"
-      },
-      {
-        "pos": 2,
-        "courseId": "ipswich",
-        "distance": 1000,
-        "terrain": "DIRT",
-        "date": "2026-04-25"
-      },
-      {
-        "pos": 1,
-        "courseId": "doomben",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-04-07"
-      },
-      {
-        "pos": 5,
-        "courseId": "sunshine_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-03-21"
-      }
-    ],
+    "trainer": "R. Laing",
     "career": {
       "starts": 10,
       "wins": 6,
@@ -1300,43 +472,7 @@
     },
     "luck": 55,
     "style": "LATE_SURGER",
-    "form": [
-      {
-        "pos": 5,
-        "courseId": "eagle_farm",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-05-25"
-      },
-      {
-        "pos": 3,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-05-13"
-      },
-      {
-        "pos": 2,
-        "courseId": "gold_coast",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-04-26"
-      },
-      {
-        "pos": 4,
-        "courseId": "eagle_farm",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-04-08"
-      },
-      {
-        "pos": 1,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-03-22"
-      }
-    ],
+    "trainer": "A. Purcell",
     "career": {
       "starts": 21,
       "wins": 3,
@@ -1356,43 +492,7 @@
     },
     "luck": 91,
     "style": "FRONT_RUNNER",
-    "form": [
-      {
-        "pos": 2,
-        "courseId": "ipswich",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-05-26"
-      },
-      {
-        "pos": 1,
-        "courseId": "doomben",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-05-14"
-      },
-      {
-        "pos": 3,
-        "courseId": "ipswich",
-        "distance": 1400,
-        "terrain": "DIRT",
-        "date": "2026-04-27"
-      },
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-04-09"
-      },
-      {
-        "pos": 2,
-        "courseId": "doomben",
-        "distance": 1400,
-        "terrain": "DIRT",
-        "date": "2026-03-23"
-      }
-    ],
+    "trainer": "M. Walker",
     "career": {
       "starts": 14,
       "wins": 5,
@@ -1412,43 +512,7 @@
     },
     "luck": 35,
     "style": "PACE_CHASER",
-    "form": [
-      {
-        "pos": 4,
-        "courseId": "gold_coast",
-        "distance": 1800,
-        "terrain": "TURF",
-        "date": "2026-05-27"
-      },
-      {
-        "pos": 3,
-        "courseId": "doomben",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-05-15"
-      },
-      {
-        "pos": 5,
-        "courseId": "gold_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-04-28"
-      },
-      {
-        "pos": 3,
-        "courseId": "sunshine_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-04-10"
-      },
-      {
-        "pos": 4,
-        "courseId": "doomben",
-        "distance": 1800,
-        "terrain": "TURF",
-        "date": "2026-03-24"
-      }
-    ],
+    "trainer": "C. McDonald",
     "career": {
       "starts": 27,
       "wins": 2,
@@ -1468,43 +532,7 @@
     },
     "luck": 63,
     "style": "LATE_SURGER",
-    "form": [
-      {
-        "pos": 2,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-05-28"
-      },
-      {
-        "pos": 4,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-05-16"
-      },
-      {
-        "pos": 1,
-        "courseId": "eagle_farm",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-04-29"
-      },
-      {
-        "pos": 3,
-        "courseId": "gold_coast",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-04-11"
-      },
-      {
-        "pos": 2,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-03-25"
-      }
-    ],
+    "trainer": "S. Zahra",
     "career": {
       "starts": 20,
       "wins": 4,
@@ -1524,43 +552,7 @@
     },
     "luck": 95,
     "style": "END_CLOSER",
-    "form": [
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1000,
-        "terrain": "DIRT",
-        "date": "2026-05-29"
-      },
-      {
-        "pos": 3,
-        "courseId": "ipswich",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-05-17"
-      },
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1000,
-        "terrain": "DIRT",
-        "date": "2026-04-30"
-      },
-      {
-        "pos": 1,
-        "courseId": "doomben",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-04-12"
-      },
-      {
-        "pos": 6,
-        "courseId": "eagle_farm",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-03-26"
-      }
-    ],
+    "trainer": "J. Pride",
     "career": {
       "starts": 9,
       "wins": 5,
@@ -1580,43 +572,7 @@
     },
     "luck": 52,
     "style": "PACE_CHASER",
-    "form": [
-      {
-        "pos": 3,
-        "courseId": "gold_coast",
-        "distance": 1800,
-        "terrain": "TURF",
-        "date": "2026-05-30"
-      },
-      {
-        "pos": 2,
-        "courseId": "doomben",
-        "distance": 1600,
-        "terrain": "DIRT",
-        "date": "2026-05-18"
-      },
-      {
-        "pos": 3,
-        "courseId": "gold_coast",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-05-01"
-      },
-      {
-        "pos": 2,
-        "courseId": "sunshine_coast",
-        "distance": 1800,
-        "terrain": "TURF",
-        "date": "2026-04-13"
-      },
-      {
-        "pos": 3,
-        "courseId": "gold_coast",
-        "distance": 1600,
-        "terrain": "DIRT",
-        "date": "2026-03-27"
-      }
-    ],
+    "trainer": "D. Bowman",
     "career": {
       "starts": 29,
       "wins": 3,
@@ -1636,43 +592,7 @@
     },
     "luck": 55,
     "style": "FRONT_RUNNER",
-    "form": [
-      {
-        "pos": 2,
-        "courseId": "ipswich",
-        "distance": 1400,
-        "terrain": "DIRT",
-        "date": "2026-05-31"
-      },
-      {
-        "pos": 1,
-        "courseId": "ipswich",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-05-19"
-      },
-      {
-        "pos": 4,
-        "courseId": "doomben",
-        "distance": 1600,
-        "terrain": "DIRT",
-        "date": "2026-05-02"
-      },
-      {
-        "pos": 2,
-        "courseId": "ipswich",
-        "distance": 1400,
-        "terrain": "DIRT",
-        "date": "2026-04-14"
-      },
-      {
-        "pos": 1,
-        "courseId": "gold_coast",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-03-28"
-      }
-    ],
+    "trainer": "L. Meech",
     "career": {
       "starts": 15,
       "wins": 5,
@@ -1692,43 +612,7 @@
     },
     "luck": 35,
     "style": "FRONT_RUNNER",
-    "form": [
-      {
-        "pos": 8,
-        "courseId": "ipswich",
-        "distance": 1000,
-        "terrain": "DIRT",
-        "date": "2026-05-01"
-      },
-      {
-        "pos": 7,
-        "courseId": "doomben",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-04-15"
-      },
-      {
-        "pos": 9,
-        "courseId": "ipswich",
-        "distance": 1100,
-        "terrain": "DIRT",
-        "date": "2026-03-28"
-      },
-      {
-        "pos": 6,
-        "courseId": "gold_coast",
-        "distance": 1200,
-        "terrain": "DIRT",
-        "date": "2026-03-10"
-      },
-      {
-        "pos": 8,
-        "courseId": "ipswich",
-        "distance": 1000,
-        "terrain": "DIRT",
-        "date": "2026-02-20"
-      }
-    ],
+    "trainer": "B. McDougall",
     "career": {
       "starts": 22,
       "wins": 0,
@@ -1748,43 +632,7 @@
     },
     "luck": 35,
     "style": "END_CLOSER",
-    "form": [
-      {
-        "pos": 9,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-05-02"
-      },
-      {
-        "pos": 8,
-        "courseId": "sunshine_coast",
-        "distance": 1800,
-        "terrain": "TURF",
-        "date": "2026-04-18"
-      },
-      {
-        "pos": 7,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-04-01"
-      },
-      {
-        "pos": 10,
-        "courseId": "gold_coast",
-        "distance": 2000,
-        "terrain": "TURF",
-        "date": "2026-03-15"
-      },
-      {
-        "pos": 8,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-02-28"
-      }
-    ],
+    "trainer": "T. Gollan",
     "career": {
       "starts": 25,
       "wins": 0,
@@ -1804,43 +652,7 @@
     },
     "luck": 35,
     "style": "PACE_CHASER",
-    "form": [
-      {
-        "pos": 10,
-        "courseId": "gold_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-05-03"
-      },
-      {
-        "pos": 8,
-        "courseId": "doomben",
-        "distance": 1400,
-        "terrain": "DIRT",
-        "date": "2026-04-20"
-      },
-      {
-        "pos": 9,
-        "courseId": "sunshine_coast",
-        "distance": 1600,
-        "terrain": "TURF",
-        "date": "2026-04-05"
-      },
-      {
-        "pos": 7,
-        "courseId": "gold_coast",
-        "distance": 1800,
-        "terrain": "TURF",
-        "date": "2026-03-18"
-      },
-      {
-        "pos": 10,
-        "courseId": "doomben",
-        "distance": 1600,
-        "terrain": "DIRT",
-        "date": "2026-03-02"
-      }
-    ],
+    "trainer": "K. Schweida",
     "career": {
       "starts": 30,
       "wins": 0,
@@ -1860,43 +672,7 @@
     },
     "luck": 35,
     "style": "LATE_SURGER",
-    "form": [
-      {
-        "pos": 7,
-        "courseId": "sunshine_coast",
-        "distance": 1200,
-        "terrain": "TURF",
-        "date": "2026-05-04"
-      },
-      {
-        "pos": 9,
-        "courseId": "gold_coast",
-        "distance": 1400,
-        "terrain": "TURF",
-        "date": "2026-04-22"
-      },
-      {
-        "pos": 8,
-        "courseId": "sunshine_coast",
-        "distance": 1000,
-        "terrain": "TURF",
-        "date": "2026-04-08"
-      },
-      {
-        "pos": 6,
-        "courseId": "sunshine_coast",
-        "distance": 1200,
-        "terrain": "TURF",
-        "date": "2026-03-22"
-      },
-      {
-        "pos": 9,
-        "courseId": "gold_coast",
-        "distance": 1400,
-        "terrain": "TURF",
-        "date": "2026-03-06"
-      }
-    ],
+    "trainer": "R. Heathcote",
     "career": {
       "starts": 18,
       "wins": 0,
@@ -1916,43 +692,7 @@
     },
     "luck": 35,
     "style": "END_CLOSER",
-    "form": [
-      {
-        "pos": 10,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-05-05"
-      },
-      {
-        "pos": 9,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-04-24"
-      },
-      {
-        "pos": 8,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-04-10"
-      },
-      {
-        "pos": 10,
-        "courseId": "eagle_farm",
-        "distance": 3200,
-        "terrain": "TURF",
-        "date": "2026-03-25"
-      },
-      {
-        "pos": 7,
-        "courseId": "eagle_farm",
-        "distance": 2400,
-        "terrain": "TURF",
-        "date": "2026-03-08"
-      }
-    ],
+    "trainer": "S. Kendrick",
     "career": {
       "starts": 32,
       "wins": 0,

@@ -1,0 +1,53 @@
+{
+  "_comment": "Configurable display copy for Just a Little Fun. Edit freely. Tokens in {curly braces} are filled in at runtime. Available tokens are noted per section. Host reads this from ./data/phrases.json; the player page reads the same file.",
+
+  "wipeTransitions": [
+    "Just a little fun!",
+    "It's all good!",
+    "And they're off!",
+    "Who's your pick?",
+    "Back the right horse!",
+    "May the best horse win!",
+    "Place your bets!",
+    "Eyes on the track!",
+    "Next race loading...",
+    "It's a great day for racing!"
+  ],
+
+  "milestones": {
+    "_tokens": "{field} = number of runners, {distance} = metres, {terrain} = surface, {weather} = conditions label, {leader} = current leader name (UPPER CASE applied automatically)",
+    "start": "FIELD OF {field} — {distance}M {terrain} — {weather}",
+    "quarter": "{leader} SHOWING EARLY",
+    "half": "HALFWAY — {leader} TO THE FORE",
+    "threeQuarter": "THREE QUARTERS — WATCH THE BACKMARKERS"
+  },
+
+  "raceCalls": {
+    "_tokens": "{horse} = horse name (UPPER CASE applied automatically)",
+    "racing": "AND THEY ARE RACING",
+    "firstPastPost": "{horse} — FIRST PAST THE POST",
+    "down": "{horse} IS DOWN — RACE OVER FOR THEM",
+    "photoNose": "PHOTO FINISH — STEWARDS WILL DETERMINE THE RESULT",
+    "photoClose": "VERY CLOSE FINISH — REPLAY"
+  },
+
+  "champion": {
+    "_tokens": "{n} = number of punters",
+    "subMany": "Top of the tote",
+    "subSolo": "Last one standing",
+    "profitUp": "\u25b2 Up ${amount} on the night",
+    "profitDown": "\u25bc Down ${amount} \u2014 but still top",
+    "profitFlat": "Finished right where they started"
+  },
+
+  "placement": {
+    "_comment": "Player-side end-of-game placement copy. rank 1/2/3 and last are special; middle-of-field scales by band (top/mid/back).",
+    "first":  { "medal": "\ud83c\udfc6", "headline": "Champion punter!", "subMany": "You topped the tote and took the whole room. Drinks are on you.", "subSolo": "Last one standing \u2014 the title is yours." },
+    "second": { "medal": "\ud83e\udd48", "headline": "So, so close", "sub": "Pipped right at the post. A whisker off the top spot \u2014 unlucky." },
+    "third":  { "medal": "\ud83e\udd49", "headline": "On the podium", "sub": "A spot on the dais and bragging rights to match. Solid card." },
+    "last":   { "medal": "\ud83e\udd44", "headline": "Wooden spoon", "sub": "Someone had to prop up the field \u2014 might as well wear it with pride. There's always next card." },
+    "midTop": { "medal": "\ud83d\udc4f", "headline": "Top of the chasers", "sub": "Just missed the medals but well clear of the pack. Nicely played." },
+    "midMid": { "medal": "\ud83d\ude42", "headline": "Mid-field finish", "sub": "Right in the thick of it \u2014 a few bets away from the top end. Respectable night." },
+    "midBack":{ "medal": "\ud83d\ude05", "headline": "Down the field", "sub": "Hung in there near the back, but you dodged the wooden spoon. We'll call that a win." }
+  }
+}
