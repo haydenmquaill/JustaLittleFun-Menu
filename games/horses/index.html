@@ -820,6 +820,7 @@ body {
       <div class="lobby-title">Race <em>night</em></div>
       <div class="lobby-tagline">Host a card of races · take the room's bets · crown a champion punter</div>
       <button class="lobby-btn gold" id="lobby-start-session">Start session</button>
+      <button class="lobby-btn ghost" id="lobby-back-to-menu" style="margin-top:16px;">Back to game selection</button>
     </div>
   </div>
 
@@ -2702,12 +2703,11 @@ function raceTick(ts) {
   // 3rd place crossed — wait for ALL living horses to finish before triggering sequence
   if(!raceOver && finishOrder.length >= 3){
     raceOver=true;
-    // Race crossed the line, but the result is under review (possible photo
-    // finish). Move to 'photo' — NOTHING is revealed or paid out yet. The actual
-    // settlement (and the phone reveal) happens later in startPostRaceTransition,
-    // at the same moment the TV reveals the board, so a payout can never spoil
-    // the finish.
-    if(typeof multiGame !== 'undefined' && multiGame.active){ enterPhotoReview(); }
+    // NOTE: we intentionally do NOT touch the session status here any more.
+    // The phone status (photo vs settling) is decided later, at the post-race
+    // transition, based on whether a slow-mo replay is actually playing — see
+    // startPostRaceTransition(). Flipping to 'photo' this early made the phone
+    // show the "under review" banner on every race, even clean finishes.
     function waitAllFinished() {
       const allDone = horses.every(h => h.finished || h.dead);
       if(allDone) {
@@ -2810,11 +2810,6 @@ function startPostRaceTransition(hadSlowmo) {
   stageToPostrace();
   ['postrace-info-table','podium-table'].forEach(id=>document.getElementById(id).classList.add('visible'));
 
-  // REVEAL MOMENT: the board is now on screen. Settle on the DB now — this both
-  // pays out bets and pushes the full result to phones, so the balance change
-  // and the placement reveal happen together (no photo-finish spoiler).
-  if(typeof multiGame !== 'undefined' && multiGame.active){ onRaceFinished(); }
-
   setStatusText('Race Complete');
 
   // Multiplayer: auto-advance to the next race after a short countdown.
@@ -2824,6 +2819,13 @@ function startPostRaceTransition(hadSlowmo) {
   // Show first (most significant) cluster in postrace cam
   const postSlot = replaySlot;
   if(hadSlowmo && postSlot && postSlot.frames.length > 0){
+    // ── CLOSE FINISH PATH ──
+    // A slow-mo replay is about to play instead of the winner trot/eating cam.
+    // Tell the phones the result is UNDER REVIEW (status 'photo') — no placings,
+    // no payouts yet. We only settle (status 'settling') once the random review
+    // window elapses and the podium rows are populated below.
+    if(typeof multiGame !== 'undefined' && multiGame.active){ enterPhotoReview(); }
+
     // Stop raceTick so it doesn't fight replay over camera/positions
     if(animFrame) { cancelAnimationFrame(animFrame); animFrame=null; }
     const livePostSnap = snapshotHorses();
@@ -2840,7 +2842,14 @@ function startPostRaceTransition(hadSlowmo) {
       Math.max(10000, 10000 + Math.random() * 5000),
       replayDurationMs - 500
     );
-    const revealTimer = setTimeout(() => populatePostRace(false, false), revealMs);
+    const revealTimer = setTimeout(() => {
+      // The review has finalised: fill in the contested podium rows…
+      populatePostRace(false, false);
+      // …and ONLY NOW settle on the DB. settle_round flips the session to
+      // 'settling', which is the phones' cue to reveal placings + payouts —
+      // simultaneously with the board filling in here, so nothing spoils early.
+      if(typeof multiGame !== 'undefined' && multiGame.active){ onRaceFinished(); }
+    }, revealMs);
 
     // Loop replay — hold last frame for 3s between each pass
     function loopReplay() {
@@ -2850,8 +2859,12 @@ function startPostRaceTransition(hadSlowmo) {
     }
     loopReplay();
   } else {
-    // No replay — populate all results immediately and go straight to winner trot cam
+    // ── CLEAN FINISH PATH ──
+    // No replay/photo review. There's no random wait to honour, so skip the
+    // 'photo' status entirely and go straight to the reveal: populate the board
+    // and settle immediately (status → 'settling'), then run the winner trot cam.
     populatePostRace(false, false);
+    if(typeof multiGame !== 'undefined' && multiGame.active){ onRaceFinished(); }
     startWinnerTrotCam();
   }
 }
@@ -2974,16 +2987,28 @@ function doWipe(callback) {
   w.style.transition = '';
   w.classList.add('in');
   setTimeout(() => {
-    callback();
-    w.classList.remove('in');
-    w.classList.add('out');
-    _wipeCleanupId = setTimeout(() => {
-      w.style.transition = 'none';
-      w.classList.remove('out');
-      void w.offsetWidth;
-      w.style.transition = '';
-      _wipeCleanupId = null;
-    }, 800);
+    // Run the scene swap while fully covered. If the callback is async (returns
+    // a thenable — e.g. init() waiting on loadSheets()), HOLD the cover until it
+    // resolves so the wipe never slides out over a half-built stage. Synchronous
+    // callbacks resolve immediately and behave exactly as before.
+    let result;
+    try { result = callback(); } catch(e){ result = undefined; }
+    const slideOut = () => {
+      w.classList.remove('in');
+      w.classList.add('out');
+      _wipeCleanupId = setTimeout(() => {
+        w.style.transition = 'none';
+        w.classList.remove('out');
+        void w.offsetWidth;
+        w.style.transition = '';
+        _wipeCleanupId = null;
+      }, 800);
+    };
+    if(result && typeof result.then === 'function'){
+      result.then(slideOut, slideOut);
+    } else {
+      slideOut();
+    }
   }, 2000);
 }
 
@@ -3155,7 +3180,7 @@ function init() {
   document.getElementById('race-label').textContent=`${RACE_DISTANCE}m — ${RACE_TERRAIN} — ${RACE_WEATHER.label}`;
 
 
-  loadSheets(raceHorses).then(()=>{
+  return loadSheets(raceHorses).then(()=>{
     buildWorld();
     initWeatherParticles();
     stageToPrerace();
@@ -3173,25 +3198,10 @@ function init() {
     walkcamSpeed  = (walkcamTarget - cameraX) / (CONFIG.countdownSeconds * 0.85 * 60);
     applyCamera();
 
-    // Slide out opening wipe after a hold — first load only
-    if(!window._hasLoaded) {
-      window._hasLoaded = true;
-      const w = document.getElementById('wipe-overlay');
-      w.style.transition = 'none';
-      w.classList.add('in');
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        w.style.transition = '';
-        setTimeout(() => {
-          w.classList.remove('in');
-          w.classList.add('out');
-          setTimeout(() => {
-            w.style.transition = 'none';
-            w.classList.remove('out');
-            requestAnimationFrame(() => requestAnimationFrame(() => { w.style.transition = ''; }));
-          }, 800);
-        }, 2000);
-      }));
-    }
+    // NOTE: the screen wipe is owned by the CALLER now (the Start-game click and
+    // the inter-race advance both run init() inside doWipe(), which holds the
+    // cover until this promise resolves). init() no longer runs its own opening
+    // wipe — doing both caused the prerace stage to flash before the wipe.
 
     // Start walk-up animation
     resetFrameClock();
@@ -3355,6 +3365,10 @@ document.querySelectorAll('.stepper').forEach(st=>{
 /* menu → config → create */
 lq('#lobby-start-session').addEventListener('click',()=>showStack('lobby-config'));
 lq('#lobby-config-back').addEventListener('click',()=>showStack('lobby-menu'));
+lq('#lobby-back-to-menu').addEventListener('click',()=>{
+  // This page lives at games/horses/, so the menu index is two levels up.
+  window.location.href = '../../index.html';
+});
 
 lq('#lobby-create').addEventListener('click', commitConfig);
 
@@ -3404,7 +3418,8 @@ async function commitConfig(){
   subscribePlayers();
 }
 
-/* live player list — INSERT on players for this session */
+/* live player list — INSERT/DELETE on players for this session */
+let _lobbyRosterPoll = null;
 function subscribePlayers(){
   lobby.channel = sb.channel('lobby-'+lobby.session.id)
     .on('postgres_changes',
@@ -3415,9 +3430,22 @@ function subscribePlayers(){
       payload => { lobby.players = lobby.players.filter(p=>p.id!==payload.old.id); renderPlayers(); })
     .subscribe();
 
-  // also fetch any who joined before we subscribed
-  sb.from('players').select('*').eq('session_id', lobby.session.id)
-    .then(({data})=>{ if(data){ lobby.players=data; renderPlayers(); } });
+  // Authoritative refresh from the DB — initial fill plus a repeating reconcile.
+  // Realtime DELETE events only carry the full old row when the table has
+  // REPLICA IDENTITY FULL, and can be dropped if the socket blips; re-reading
+  // the roster every few seconds guarantees players who have left disappear,
+  // and that a same-name re-join doesn't leave a stale duplicate.
+  const refreshRoster = async ()=>{
+    const { data } = await sb.from('players').select('*').eq('session_id', lobby.session.id);
+    if(data){ lobby.players = data; renderPlayers(); }
+  };
+  refreshRoster();
+  if(_lobbyRosterPoll){ clearInterval(_lobbyRosterPoll); }
+  _lobbyRosterPoll = setInterval(()=>{
+    const room = document.getElementById('lobby-room');
+    const overlayVisible = document.getElementById('lobby-overlay').style.display !== 'none';
+    if(overlayVisible && room && room.classList.contains('active')) refreshRoster();
+  }, 3000);
 }
 
 function renderPlayers(){
@@ -3439,13 +3467,46 @@ function renderPlayers(){
 }
 function escapeHtml(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-/* Start game → hide lobby, hand control to the DB-driven betting loop */
+/* Start game → cover the screen with the wipe FIRST, then hide the lobby and
+   build the prerace underneath it, so the prerace never flashes before the
+   transition. The wipe slides out only once startRaceCycle()'s init() has
+   finished staging (its promise resolves). */
 lq('#lobby-start-game').addEventListener('click', async ()=>{
+  const w = document.getElementById('wipe-overlay');
+  const p = document.getElementById('wipe-phrase');
+  if(p) p.textContent = PHRASES[Math.floor(Math.random()*PHRASES.length)];
+  // Cover instantly (no slide-in — the lobby is already on screen, so we just
+  // need the cover in place before we swap what's underneath).
+  if(_wipeCleanupId){ clearTimeout(_wipeCleanupId); _wipeCleanupId=null; }
+  w.style.transition = 'none';
+  w.classList.remove('out');
+  w.classList.add('in');
+  void w.offsetWidth;
+
+  // Swap underneath the cover.
   document.getElementById('lobby-overlay').style.display='none';
   lobby.gameStarted = true;
   multiGame.active = true;
   multiGame.raceNumber = 0;        // 0-indexed, matches sessions.current_round
-  startRaceCycle();                // opens betting for race 0, then runs the loop
+  window._hasLoaded = true;        // legacy guard, kept truthy for safety
+
+  // Build race 0 (opens betting; init() stages the prerace), then slide the
+  // cover out once everything is ready.
+  await startRaceCycle();
+
+  // Hold a beat so the prerace is visibly settled, then slide the cover off.
+  w.style.transition = '';
+  setTimeout(()=>{
+    w.classList.remove('in');
+    w.classList.add('out');
+    _wipeCleanupId = setTimeout(()=>{
+      w.style.transition = 'none';
+      w.classList.remove('out');
+      void w.offsetWidth;
+      w.style.transition = '';
+      _wipeCleanupId = null;
+    }, 800);
+  }, 1200);
 });
 
 /* ════════════════════════════════════════════════════════════════
@@ -3481,22 +3542,59 @@ function resetEngineForNewRound(){
 lq('#btn-again').addEventListener('click', async ()=>{
   const btn = lq('#btn-again');
   btn.disabled = true;
+
+  // Cover the screen FIRST so the postrace/final screen doesn't flash before
+  // the config screen appears. Cover instantly (the final screen is already up),
+  // hold while we tear down + reset + swap to config, then slide the cover off.
+  const w = document.getElementById('wipe-overlay');
+  const p = document.getElementById('wipe-phrase');
+  if(p) p.textContent = PHRASES[Math.floor(Math.random()*PHRASES.length)];
+  if(_wipeCleanupId){ clearTimeout(_wipeCleanupId); _wipeCleanupId=null; }
+  w.style.transition = 'none';
+  w.classList.remove('out');
+  w.classList.add('in');
+  void w.offsetWidth;
+  w.style.transition = '';
+
+  const revealConfig = ()=>{
+    // Slide the cover off to reveal the config screen.
+    setTimeout(()=>{
+      w.classList.remove('in');
+      w.classList.add('out');
+      _wipeCleanupId = setTimeout(()=>{
+        w.style.transition = 'none';
+        w.classList.remove('out');
+        void w.offsetWidth;
+        w.style.transition = '';
+        _wipeCleanupId = null;
+      }, 800);
+    }, 600);
+  };
+
   teardownFinalScreen();
   resetEngineForNewRound();
 
-  // Reset the SAME session in place: wipe races + bets, clear config and
-  // current_race, set status back to 'lobby' — WITHOUT removing the player
+  // Reset the SAME session in place: wipe rounds + bets, clear config and
+  // current_round, set status back to 'lobby' — WITHOUT removing the player
   // rows, so the current crew stays joined for the rematch.
   if(lobby.session){
     const { error } = await sb.rpc('reset_lobby', { p_session_id: lobby.session.id });
     if(error){
       console.error('reset_lobby failed:', error);
-      btn.disabled = false;
-      // Surface it on the lobby screen rather than silently stranding the host.
+      // Even on failure, set up rematch mode and re-enable the config screen so
+      // the host can pick the card and tap Reopen lobby to retry: that path runs
+      // apply_config, which re-stamps a valid config and reopens the lobby
+      // regardless. Do NOT strand the host.
+      lobby.rematch     = true;
+      lobby.gameStarted = false;
       document.getElementById('lobby-overlay').style.display = 'flex';
-      showStack('lobby-config');
+      lq('#lobby-create').textContent = 'Reopen lobby';
+      lq('#lobby-create').disabled = false;
       lq('#lobby-config-msg').textContent =
-        'Could not reset the room (' + (error.message||'unknown') + '). Add the reset_lobby RPC, or use Main Menu.';
+        'Couldn’t auto-reset the room (' + (error.message||'unknown') + '). Pick the card and tap Reopen lobby to try again, or use Main Menu.';
+      showStack('lobby-config');
+      btn.disabled = false;
+      revealConfig();
       return;
     }
   }
@@ -3522,6 +3620,7 @@ lq('#btn-again').addEventListener('click', async ()=>{
   }
 
   btn.disabled = false;
+  revealConfig();
 });
 
 /* MAIN MENU — confirm, then close the session and return to the host landing. */
@@ -3599,8 +3698,10 @@ async function startRaceCycle(){
   CONFIG.countdownSeconds = lobby.cfg.bettingSeconds;
 
   // init() runs setupRace() synchronously (so raceHorses + odds exist now),
-  // then stages the walk-up and starts the visible countdown.
-  init();
+  // then stages the walk-up and starts the visible countdown. We await it so
+  // the prerace stage is fully built before we return — callers run us inside
+  // doWipe(), which holds the screen cover until this resolves (no flash).
+  await init();
 
   // Real close = bettingSeconds + random(0..30), stamped by the DB.
   const closeDelay = Math.round(lobby.cfg.bettingSeconds + rand(0, 30));
@@ -3695,7 +3796,7 @@ async function advanceAfterRace(){
     return;
   }
   multiGame.raceNumber = next;
-  doWipe(()=>{ resetToPrerace(); startRaceCycle(); });
+  doWipe(()=>{ resetToPrerace(); return startRaceCycle(); });
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -4008,7 +4109,7 @@ function startNextRaceCountdown(){
       } else if(multiGame.active){
         advanceAfterRace();
       } else {
-        doWipe(()=>{ resetToPrerace(); init(); });   // solo: fresh race
+        doWipe(()=>{ resetToPrerace(); return init(); });   // solo: fresh race
       }
     }
   }, 1000);
