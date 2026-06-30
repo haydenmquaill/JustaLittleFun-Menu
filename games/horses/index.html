@@ -448,8 +448,7 @@ body {
 .horse-grid thead th               { background:var(--dark); color:var(--white); font-family:'Oswald',sans-serif; font-size:1.6rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; padding:3px 6px; text-align:center; }
 .horse-grid thead th + th          { border-left:1px solid rgba(255,255,255,0.15); }
 .horse-grid thead th.name-col      { text-align:left; }
-.horse-grid thead th.odds-col,
-.horse-grid thead th.form-col      { width:1%; padding:6px 10px; }
+.horse-grid thead th.odds-col      { width:1%; padding:6px 10px; }
 
 /* Data rows — height controlled by silk size, padding:0 on all td */
 .horse-grid tbody td               { font-family:'Oswald',sans-serif; font-size:2rem; font-weight:600; color:var(--dark); vertical-align:middle; white-space:nowrap; border-bottom:1px solid #bbb; padding:0; }
@@ -462,11 +461,9 @@ body {
 /* Name column */
 .name-cell                         { text-transform:uppercase; padding:0 10px !important; }
 
-/* Odds + form columns */
-.horse-grid tbody td.odds-cell,
-.horse-grid tbody td.form-cell     { text-align:center; padding:0 10px; border-left:1px solid #bbb; background:linear-gradient(135deg, #f8f9ff 0%, #eef0f8 100%); }
+/* Odds columns */
+.horse-grid tbody td.odds-cell     { text-align:center; padding:0 10px; border-left:1px solid #bbb; background:linear-gradient(135deg, #f8f9ff 0%, #eef0f8 100%); }
 .horse-grid tbody td.odds-cell     { font-weight:700; }
-.horse-grid tbody td.form-cell     { font-size:1.8rem; font-weight:600; }
 
 .fav-tag { display:inline-block; background:var(--gold); color:#fff; font-size:0.65rem; font-weight:700; letter-spacing:1px; padding:1px 4px; margin-left:4px; text-transform:uppercase; font-family:'Oswald',sans-serif; }
 .style-badge { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:3px; color:#fff; font-size:0.7rem; font-weight:800; font-family:'Oswald',sans-serif; margin-left:6px; vertical-align:middle; }
@@ -1208,6 +1205,40 @@ let COURSES_DATA = [];
 let WEATHER_DATA = [];
 let _dataLoaded  = false;
 
+// Display copy. Defaults here are the built-in fallback; loadGameData()
+// overwrites this with ./data/phrases.json when present, so the strings are
+// editable without touching code.
+let PHRASE_DATA = {
+  wipeTransitions: [
+    "Just a little fun!","It's all good!","And they're off!","Who's your pick?",
+    "Back the right horse!","May the best horse win!","Place your bets!",
+    "Eyes on the track!","Next race loading...","It's a great day for racing!"
+  ],
+  milestones: {
+    start: "FIELD OF {field} — {distance}M {terrain} — {weather}",
+    quarter: "{leader} SHOWING EARLY",
+    half: "HALFWAY — {leader} TO THE FORE",
+    threeQuarter: "THREE QUARTERS — WATCH THE BACKMARKERS"
+  },
+  raceCalls: {
+    racing: "AND THEY ARE RACING",
+    firstPastPost: "{horse} — FIRST PAST THE POST",
+    down: "{horse} IS DOWN — RACE OVER FOR THEM",
+    photoNose: "PHOTO FINISH — STEWARDS WILL DETERMINE THE RESULT",
+    photoClose: "VERY CLOSE FINISH — REPLAY"
+  },
+  champion: {
+    subMany: "Top of the tote", subSolo: "Last one standing",
+    profitUp: "▲ Up ${amount} on the night",
+    profitDown: "▼ Down ${amount} — but still top",
+    profitFlat: "Finished right where they started"
+  }
+};
+// Fill {tokens} in a template string from a values object.
+function fillTokens(tpl, vals){
+  return String(tpl||'').replace(/\{(\w+)\}/g, (_,k)=> (vals && vals[k] != null) ? vals[k] : '');
+}
+
 async function loadGameData() {
   if(_dataLoaded) return;
 
@@ -1221,14 +1252,16 @@ async function loadGameData() {
     return r.json();
   }
 
-  const [horses, courses, weather] = await Promise.all([
+  const [horses, courses, weather, phrases] = await Promise.all([
     fetchJSON('horses.json'),
     fetchJSON('courses.json'),
     fetchJSON('weather.json'),
+    fetchJSON('phrases.json').catch(()=>null),   // optional; falls back to built-in copy
   ]);
   HORSE_POOL   = horses;
   COURSES_DATA = courses;
   WEATHER_DATA = weather;
+  if(phrases) PHRASE_DATA = phrases;
   _dataLoaded  = true;
 }
 
@@ -2294,7 +2327,7 @@ function tryDeath(horse, prog) {
     horse.dead = true;
     horse.chaosActive = 'DEATH';
     flashScreen('rgba(200,16,46,0.35)'); shakeViewport();
-    announce(`${horse.def.name.toUpperCase()} IS DOWN — RACE OVER FOR THEM`);
+    announce(fillTokens(PHRASE_DATA.raceCalls.down, {horse:horse.def.name.toUpperCase()}));
     dnfOrder.push(horse);
     updateDNFBoard();
     camShot='TAIL'; directorTick=0; directorDuration=220;
@@ -2628,7 +2661,7 @@ function raceTick(ts) {
     cameraX = Math.max(0, worldToStageX(gLeader.worldX) - VIEWPORT_W*0.65);
     applyCamera();
     updateProgressMap();
-    if(gateCountdown<=0){gatePhase=false; openGates(); announce("AND THEY ARE RACING");}
+    if(gateCountdown<=0){gatePhase=false; openGates(); announce(PHRASE_DATA.raceCalls.racing);}
     animFrame=requestAnimationFrame(raceTick); return;
   }
 
@@ -2724,7 +2757,7 @@ function raceTick(ts) {
       // when the second horse arrives. stopClusterRecording() re-confirms the final state.
       updateFinishBoard();
       if(horse.finishRank===0){
-        announce(`${horse.def.name.toUpperCase()} — FIRST PAST THE POST`);
+        announce(fillTokens(PHRASE_DATA.raceCalls.firstPastPost, {horse:horse.def.name.toUpperCase()}));
         flashScreen('rgba(200,151,26,0.4)'); shakeViewport();
       }
     }
@@ -2831,10 +2864,10 @@ function raceTick(ts) {
 
 
   // Milestones
-  if(tick>=1 && lastMilestone<0){lastMilestone=0;announce(`FIELD OF ${CONFIG.horsesPerRace} — ${RACE_DISTANCE}M ${RACE_TERRAIN} — ${RACE_WEATHER.label.toUpperCase()}`);}
-  if(leaderProgress>0.25&&lastMilestone<1){lastMilestone=1;announce(`${leader.def.name.toUpperCase()} SHOWING EARLY`);}
-  if(leaderProgress>0.5&&lastMilestone<2){lastMilestone=2;announce(`HALFWAY — ${leader.def.name.toUpperCase()} TO THE FORE`);}
-  if(leaderProgress>0.75&&lastMilestone<3){lastMilestone=3;announce(`THREE QUARTERS — WATCH THE BACKMARKERS`);}
+  if(tick>=1 && lastMilestone<0){lastMilestone=0;announce(fillTokens(PHRASE_DATA.milestones.start, {field:CONFIG.horsesPerRace, distance:RACE_DISTANCE, terrain:RACE_TERRAIN, weather:RACE_WEATHER.label.toUpperCase()}));}
+  if(leaderProgress>0.25&&lastMilestone<1){lastMilestone=1;announce(fillTokens(PHRASE_DATA.milestones.quarter, {leader:leader.def.name.toUpperCase()}));}
+  if(leaderProgress>0.5&&lastMilestone<2){lastMilestone=2;announce(fillTokens(PHRASE_DATA.milestones.half, {leader:leader.def.name.toUpperCase()}));}
+  if(leaderProgress>0.75&&lastMilestone<3){lastMilestone=3;announce(fillTokens(PHRASE_DATA.milestones.threeQuarter, {}));}
 
   updateProgressMap();
   recordReplayFrame();
@@ -2856,8 +2889,8 @@ function triggerFinishSequence() {
         const liveZoom = currentZoom;
         document.getElementById('progress-bar-overlay').style.display='none';
         announce(gapToLengths(replaySlot.gap, 4.3) <= 0.1
-          ? 'PHOTO FINISH — STEWARDS WILL DETERMINE THE RESULT'
-          : 'VERY CLOSE FINISH — REPLAY');
+          ? PHRASE_DATA.raceCalls.photoNose
+          : PHRASE_DATA.raceCalls.photoClose);
         document.getElementById('slowmo-overlay').style.display='flex';
         playReplayIn('race', replaySlot.frames, 1, REPLAY_INTERVAL_SLOW, ()=>{
           setTimeout(() => doWipe(() => {
@@ -2989,9 +3022,9 @@ function populatePostRace(placingsHidden, photoFinish) {
   tbody.innerHTML = '';
   finishOrder.slice(0,3).forEach((h,i)=>{
     const idx  = raceHorses.indexOf(h.def);
-    const win  = (odds[idx]?.win||0).toFixed(2);
-    const plc  = (odds[idx]?.place||0).toFixed(2);
-    const shw  = (odds[idx]?.show||0).toFixed(2);
+    const win  = fmtPrice(odds[idx]?.win);
+    const plc  = fmtPrice(odds[idx]?.place);
+    const shw  = fmtPrice(odds[idx]?.show);
     // Margin: how far this horse finished ahead of the next horse (i+1)
     const next    = finishOrder[i + 1];
     const marginGap = next && h.finishTick != null && next.finishTick != null
@@ -3034,24 +3067,13 @@ function populatePostRace(placingsHidden, photoFinish) {
 // ══════════════════════════════
 let countdownInterval=null;
 
-const PHRASES = [
-  "Just a little fun!",
-  "It's all good!",
-  "And they're off!",
-  "Who's your pick?",
-  "Back the right horse!",
-  "May the best horse win!",
-  "Place your bets!",
-  "Eyes on the track!",
-  "Next race loading...",
-  "It's a great day for racing!",
-];
-
 let _wipeCleanupId = null;
 function doWipe(callback) {
   const w = document.getElementById('wipe-overlay');
   const p = document.getElementById('wipe-phrase');
-  p.textContent = PHRASES[Math.floor(Math.random()*PHRASES.length)];
+  const phrases = (PHRASE_DATA && PHRASE_DATA.wipeTransitions && PHRASE_DATA.wipeTransitions.length)
+    ? PHRASE_DATA.wipeTransitions : ['Just a little fun!'];
+  p.textContent = phrases[Math.floor(Math.random()*phrases.length)];
   // Cancel any pending cleanup from a previous wipe
   if(_wipeCleanupId) { clearTimeout(_wipeCleanupId); _wipeCleanupId=null; }
   // Instantly position wipe off-screen left with no transition, then slide in
@@ -3177,13 +3199,6 @@ const STYLE_BADGE = {
   END_CLOSER:   { letter:'E', color:'#C0392B' },
 };
 
-function formString(horse) {
-  const form = horse.form || horse.def?.form;
-  if(!form || !form.length) return '—';
-  if(Array.isArray(form)) return form.slice(-5).map(f=>f.pos).join('-');
-  return String(form).split('-').slice(-5).join('-');
-}
-
 function buildGrids() {
   const minOdds = Math.min(...odds.map(o=>o.win));
   const half = Math.ceil(raceHorses.length / 2);
@@ -3201,9 +3216,9 @@ function buildGrids() {
         <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Oswald',sans-serif;font-size:1.6rem;font-weight:800;color:#fff;text-shadow:-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000;">${h.num}</span>
       </td>
       <td class="name-cell">${h.name}${styleBadge}${fav}</td>
-      <td class="odds-cell">${odds[i].win.toFixed(2)}</td>
-      <td class="odds-cell">${odds[i].place.toFixed(2)}</td>
-      <td class="odds-cell">${odds[i].show.toFixed(2)}</td>
+      <td class="odds-cell">${fmtPrice(odds[i].win)}</td>
+      <td class="odds-cell">${fmtPrice(odds[i].place)}</td>
+      <td class="odds-cell">${fmtPrice(odds[i].show)}</td>
     </tr>`;
     document.getElementById(i<half?'grid-left':'grid-right').querySelector('tbody').innerHTML+=row;
   });
@@ -3617,7 +3632,7 @@ const FIRST_RACE_HOLD_MS = 10000;   // hold the transition image before race 1
 lq('#lobby-start-game').addEventListener('click', async ()=>{
   const w = document.getElementById('wipe-overlay');
   const p = document.getElementById('wipe-phrase');
-  if(p) p.textContent = PHRASES[Math.floor(Math.random()*PHRASES.length)];
+  if(p){ const _ph=(PHRASE_DATA&&PHRASE_DATA.wipeTransitions&&PHRASE_DATA.wipeTransitions.length)?PHRASE_DATA.wipeTransitions:['Just a little fun!']; p.textContent=_ph[Math.floor(Math.random()*_ph.length)]; }
   // Slide the cover IN from the left (animated), the same wipe used between
   // races — rather than snapping it on. Position it fully off-screen-left with
   // no transition, force a reflow, then add .in WITH the transition active so it
@@ -3739,7 +3754,7 @@ lq('#btn-again').addEventListener('click', async ()=>{
   // screen appears. Cover instantly, hold while we reset, then slide off.
   const w = document.getElementById('wipe-overlay');
   const p = document.getElementById('wipe-phrase');
-  if(p) p.textContent = PHRASES[Math.floor(Math.random()*PHRASES.length)];
+  if(p){ const _ph=(PHRASE_DATA&&PHRASE_DATA.wipeTransitions&&PHRASE_DATA.wipeTransitions.length)?PHRASE_DATA.wipeTransitions:['Just a little fun!']; p.textContent=_ph[Math.floor(Math.random()*_ph.length)]; }
   if(_wipeCleanupId){ clearTimeout(_wipeCleanupId); _wipeCleanupId=null; }
   w.style.transition = 'none';
   w.classList.remove('out');
@@ -3857,8 +3872,22 @@ function rand(min, max){ return min + Math.random()*(max-min); }
    both); show slots in once the engine grows a show column. Exotics are NOT
    here — the phone derives those from these win figures at selection time.
    Keyed by horse number (1-based). */
+// Any price below this floor is NOT offered — it is omitted from the odds
+// table entirely, so both the host grid and the player card render it as "—"
+// and it can't be backed. Single source of truth for "too short to bet".
+const MIN_PRICE = 1.10;
+
+// Format a price for display: two decimals, or an em-dash when the price is
+// missing or below the floor (i.e. not offered). Used by the host grids so they
+// match exactly what the player card shows.
+function fmtPrice(v){
+  const n = Number(v);
+  if(!isFinite(n) || n < MIN_PRICE) return '—';
+  return n.toFixed(2);
+}
+
 function buildOddsTable(){
-  const table = { win:{}, place:{}, show:{}, names:{}, silks:{} };
+  const table = { win:{}, place:{}, show:{}, names:{}, silks:{}, trainers:{} };
   // Race meta — stored in the round so the phone can label bets with the course
   // (and so each bet can carry its course at placement, for big moments etc).
   table.course = {
@@ -3866,13 +3895,16 @@ function buildOddsTable(){
     distance:   RACE_DISTANCE || null,
     terrain:    RACE_TERRAIN || '',
     conditions: RACE_WEATHER ? `${RACE_WEATHER.label} (${RACE_WEATHER.railCondition})` : '',
+    runners:    raceHorses ? raceHorses.length : null,
   };
   raceHorses.forEach((h, i)=>{
     const o = odds[i] || {};
-    if(o.win   != null) table.win[h.num]   = o.win;
-    if(o.place != null) table.place[h.num] = o.place;
-    if(o.show  != null) table.show[h.num]  = o.show;
+    // Apply the price floor: only publish a price if it meets the minimum.
+    if(o.win   != null && o.win   >= MIN_PRICE) table.win[h.num]   = o.win;
+    if(o.place != null && o.place >= MIN_PRICE) table.place[h.num] = o.place;
+    if(o.show  != null && o.show  >= MIN_PRICE) table.show[h.num]  = o.show;
     table.names[h.num] = h.name;   // so the player view shows the real horse name
+    if(h.trainer) table.trainers[h.num] = h.trainer;   // grey runner metadata line
     // The silk object (background / accentColor / pattern) so the phone can
     // render the IDENTICAL silk with the same renderSilkSVG logic.
     if(h.silk) table.silks[h.num] = h.silk;
@@ -3916,6 +3948,11 @@ async function finaliseBets(){
   multiGame.awaitingSettle = true;
 
   setStatusText('Bets Closed — Race Starting Soon');
+
+  // Sweep any unconfirmed bet-slip rows (status='slip') so a slip a player left
+  // un-confirmed is discarded and never settled. Best-effort.
+  try { await sb.rpc('discard_session_slips', { p_session_id: lobby.session.id }); }
+  catch(e){ /* best-effort */ }
 
   // betting → starting: bets are locked, but the horses haven't jumped yet.
   const { error } = await sb.rpc('start_countdown', { p_session_id: lobby.session.id });
@@ -4048,12 +4085,22 @@ function computeBigMoments(bets, { names, getRoundMeta, startBank, max=BM_MAX_RO
 
     const swing = won ? netProfit : netLoss;
     const meta  = getRoundMeta ? getRoundMeta(b.round_number) : {};
+    // Resolve a full course meta object for the tile's info line. The round meta
+    // carries the authoritative {name,distance,terrain,conditions,runners}; the
+    // bet's stamped selection.course may be just a name (older bets) or an object.
+    const selCourse = sel.course;
+    const metaCourse = (meta && meta.course) || {};
+    const courseMeta = (selCourse && typeof selCourse === 'object') ? selCourse : metaCourse;
+    const courseName = (typeof selCourse === 'string' && selCourse)
+      ? selCourse
+      : (courseMeta && courseMeta.name) || '';
     moments.push({
       who:      (names && names[b.player_id]) || 'A punter',
       selection: sel,
       hmap:     (meta && meta.names)  || {},
       smap:     (meta && meta.silks)  || {},
-      course:   sel.course || (meta && meta.course && meta.course.name) || '',
+      course:   courseName,
+      courseMeta: courseMeta || {},
       race:     (Number(b.round_number)||0) + 1,
       odds,
       won,
@@ -4079,6 +4126,21 @@ function bmOrdinal(n){ const s=['th','st','nd','rd'],v=n%100; return n+(s[(v-20)
    (type, then the selection — straight on one line, exotics stacked with an
    ordinal per leg — then who), big win/loss amount on the right. `showCourse`
    adds the race/course line (used on detached leaderboard pages, not per-race). */
+/* Build a one-line course summary from a course meta object:
+   "Flemington · 2600m · Dirt · 12 runners · Heavy 10". Omits any missing piece. */
+function courseInfoLine(meta, raceNum){
+  const m = meta || {};
+  const bits = [];
+  if(raceNum != null) bits.push('R' + raceNum);
+  if(m.name)        bits.push(escapeHtml(m.name));
+  if(m.distance)    bits.push(m.distance + 'm');
+  if(m.terrain)     bits.push(escapeHtml(titleCase(m.terrain)));
+  if(m.runners)     bits.push(m.runners + ' runners');
+  if(m.conditions)  bits.push(escapeHtml(m.conditions));
+  return bits.join(' · ');
+}
+function titleCase(s){ return String(s||'').toLowerCase().replace(/\b\w/g, c=>c.toUpperCase()); }
+
 function bigMomentTileHTML(m, { showCourse = false } = {}){
   const sel    = m.selection || {};
   const isExo  = BM_EXOTIC_SET.has(sel.type);
@@ -4100,11 +4162,11 @@ function bigMomentTileHTML(m, { showCourse = false } = {}){
       : '—';
   }
   const typeLbl = BM_TYPE_LABEL[sel.type] || (sel.type||'Bet');
-  const oddsLbl = m.odds>=2 ? ` <span class="mq-odds">${m.odds.toFixed(1)}×</span>` : '';
+  // Odds now read as "@ X.XX" (two decimals), the effective return multiple.
+  const oddsLbl = m.odds>=2 ? ` <span class="mq-odds">@ ${m.odds.toFixed(2)}</span>` : '';
   const amt = (m.won ? '+$' : '−$') + fmtMoney(Math.abs(m.amount));
-  const courseLine = showCourse
-    ? `<span class="mq-course">R${m.race}${m.course ? ' · ' + escapeHtml(m.course) : ''}</span>`
-    : '';
+  // Full course info line, always shown on every tile.
+  const courseLine = `<span class="mq-course">${courseInfoLine(m.courseMeta, m.race)}</span>`;
   return `<div class="mq-tile ${m.won?'':'loss'}">
     <div class="mq-body">
       <div class="mq-sel"><span class="mq-type">${escapeHtml(typeLbl)}${oddsLbl}</span>${selHTML}</div>
@@ -4137,9 +4199,12 @@ async function showRaceBigMoments(roundNumber){
   const moments = computeBigMoments(bets, { names, getRoundMeta, startBank });
   if(!moments.length){ marquee.style.display='none'; return; }
 
-  // Duplicate the set so the scroll loops seamlessly (same as final marquee).
-  const html = moments.map(bigMomentTileHTML).join('');
+  // Repeat the set until it spans the marquee, THEN duplicate for the loop, so
+  // a sparse race's few moments don't pop in on the left mid-scroll.
+  const filled = fillMoments(moments, 6);
+  const html = filled.map(m => bigMomentTileHTML(m)).join('');
   track.innerHTML = html + html;
+  track._setCount = filled.length;
   marquee.style.display = 'block';
   startPostraceMarquee();
 }
@@ -4153,7 +4218,7 @@ function startPostraceMarquee(){
   _prMarqueeX = 0;
   let setW = 0;
   const measure = () => {
-    let half = 0; const kids = track.children; const n = kids.length/2;
+    let half = 0; const kids = track.children; const n = track._setCount || (kids.length/2);
     for(let i=0;i<n;i++){ half += kids[i].getBoundingClientRect().width / _pageScaleNow(); }
     half += n * 18; setW = half;
   };
@@ -4248,11 +4313,11 @@ async function showFinalLeaderboard(){
     document.getElementById('champ-balance-val').textContent = '$' + fmtMoney(champ.balance);
     const profit = (Number(champ.balance)||0) - startBal;
     const pEl = document.getElementById('champ-profit');
-    if(profit > 0){ pEl.textContent = '▲ Up $' + fmtMoney(profit) + ' on the night'; pEl.classList.remove('down'); }
-    else if(profit < 0){ pEl.textContent = '▼ Down $' + fmtMoney(-profit) + ' — but still top'; pEl.classList.add('down'); }
-    else { pEl.textContent = 'Finished right where they started'; pEl.classList.remove('down'); }
+    if(profit > 0){ pEl.textContent = fillTokens(PHRASE_DATA.champion.profitUp, {amount:fmtMoney(profit)}); pEl.classList.remove('down'); }
+    else if(profit < 0){ pEl.textContent = fillTokens(PHRASE_DATA.champion.profitDown, {amount:fmtMoney(-profit)}); pEl.classList.add('down'); }
+    else { pEl.textContent = PHRASE_DATA.champion.profitFlat; pEl.classList.remove('down'); }
     document.getElementById('champ-sub').textContent =
-      roster.length > 1 ? 'Top of the tote' : 'Last one standing';
+      roster.length > 1 ? PHRASE_DATA.champion.subMany : PHRASE_DATA.champion.subSolo;
   };
   // Hide the champion card contents until the reveal moment.
   const champCard = document.getElementById('champion-card');
@@ -4365,6 +4430,17 @@ function revealStandingsBottomUp(onWinner){
 }
 
 /* ── Big-moments marquee (final leaderboard) ── uses the canonical tile. */
+/* Repeat a list of moments enough times that one "set" reliably exceeds the
+   marquee's own width, so the seamless-loop duplicate never reveals a gap on
+   the left when there are only a few moments. minTiles is a conservative floor
+   based on the widest tiles (~420px min) versus a 1920px stage marquee. */
+function fillMoments(moments, minTiles){
+  if(!moments.length) return [];
+  const out = [];
+  while(out.length < minTiles){ out.push(...moments); }
+  return out;
+}
+
 function renderHighlightsMarquee(items){
   const track = document.getElementById('marquee-track');
   track.innerHTML = '';
@@ -4374,10 +4450,12 @@ function renderHighlightsMarquee(items){
     return;
   }
   marquee.style.display = 'block';
-  // Duplicate the set so the scroll loops seamlessly.
-  const html = items.map(m => bigMomentTileHTML(m, { showCourse:true })).join('');
+  // Repeat the set until it spans the marquee, THEN duplicate for the loop.
+  const filled = fillMoments(items, 6);
+  const html = filled.map(m => bigMomentTileHTML(m)).join('');
   track.innerHTML = html + html;
-  track._setWidth = 0;   // measured when the marquee starts
+  track._setCount = filled.length;   // tiles per set (for the loop measure)
+  track._setWidth = 0;               // measured when the marquee starts
 }
 
 let _marqueeRaf = null, _marqueeX = 0;
@@ -4386,11 +4464,11 @@ function startMarquee(){
   if(!track || !track.children.length) return;
   cancelAnimationFrame(_marqueeRaf);
   _marqueeX = 0;
-  // One full set is half the track (we duplicated it). Reset at that point.
+  // One full set is the first _setCount children (we duplicated the set).
   const measure = () => {
     let half = 0;
     const kids = track.children;
-    const n = kids.length / 2;
+    const n = track._setCount || (kids.length / 2);
     for(let i=0;i<n;i++){ half += kids[i].getBoundingClientRect().width / _pageScaleNow(); }
     half += (n) * 18;   // gaps
     track._setWidth = half;
