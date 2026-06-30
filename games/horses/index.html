@@ -514,15 +514,15 @@ body {
 /* ── POST-RACE UI ── */
 #postrace-ui              { display:none; flex-direction:column; width:100%; flex:1; min-height:0; opacity:0; transition:opacity 0.5s ease; }
 #postrace-ui.visible      { opacity:1; }
-#postrace-grid            { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:477px auto; gap:36px; flex:1; min-height:0; }
+#postrace-grid            { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:minmax(0,477px) auto; gap:36px; flex:1; min-height:0; }
 #postrace-logo            { background:var(--white); position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:24px; box-shadow:0 2px 12px rgba(0,0,0,0.4); }
 #postrace-cam             { background:#1a2a1a; position:relative; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.4); }
 /* Big-moments marquee — scrolls the race's standout bets along the bottom of
    the post-race screen, mirroring the final-leaderboard marquee. */
 #postrace-marquee {
-  flex-shrink:0; margin:28px -36px 0; padding:0;
+  flex-shrink:0; margin:18px -36px 0; padding:0;
   background:var(--blue); box-shadow:0 -2px 12px rgba(0,0,0,0.4);
-  overflow:hidden; position:relative; height:220px;
+  overflow:hidden; position:relative; height:188px;
   animation:bm-fade .4s ease-out;
 }
 @keyframes bm-fade { from{opacity:0;} to{opacity:1;} }
@@ -549,6 +549,13 @@ body {
 }
 #wipe-overlay.in  { left:0; }
 #wipe-overlay.out { left:100%; transition:left 0.7s cubic-bezier(0.4,0,0.2,1); }
+/* shorter wipe used for lobby menu swaps (edit/cancel/confirm/close) */
+#wipe-overlay.fast.in  { transition:left 0.32s cubic-bezier(0.4,0,0.2,1); left:0; }
+#wipe-overlay.fast.out { transition:left 0.32s cubic-bezier(0.4,0,0.2,1); left:100%; }
+/* hold wipe: slides the cover to centre-screen and parks it there (used for the
+   back-to-game-selection redirect, so the page change is masked behind it) */
+#wipe-overlay.hold { transition:left 0.4s cubic-bezier(0.3,0,0.2,1); }
+#wipe-overlay.hold.in { left:0; }
 #wipe-logo { width:40%; max-width:600px; object-fit:contain; }
 #wipe-phrase { font-family:'Barlow Condensed',sans-serif; font-size:3.5rem; font-weight:700; color:var(--blue); letter-spacing:3px; text-transform:uppercase; text-align:center; }
 
@@ -3109,6 +3116,51 @@ function doWipe(callback) {
   }, 2000);
 }
 
+/* Short wipe for lobby menu swaps: cover fast, run the swap while covered, uncover
+   fast. No long hold — just enough to hide the choppy screen change. */
+function doQuickWipe(callback){
+  const w = document.getElementById('wipe-overlay');
+  const p = document.getElementById('wipe-phrase');
+  if(p){ const ph=(PHRASE_DATA&&PHRASE_DATA.wipeTransitions&&PHRASE_DATA.wipeTransitions.length)?PHRASE_DATA.wipeTransitions:['Just a little fun!']; p.textContent=ph[Math.floor(Math.random()*ph.length)]; }
+  if(_wipeCleanupId){ clearTimeout(_wipeCleanupId); _wipeCleanupId=null; }
+  w.classList.add('fast');
+  w.style.transition='none';
+  w.classList.remove('out','in','hold');
+  void w.offsetWidth;
+  w.style.transition='';
+  w.classList.add('in');
+  setTimeout(()=>{
+    try{ callback&&callback(); }catch(e){}
+    w.classList.remove('in');
+    w.classList.add('out');
+    _wipeCleanupId=setTimeout(()=>{
+      w.style.transition='none';
+      w.classList.remove('out','fast');
+      void w.offsetWidth;
+      w.style.transition='';
+      _wipeCleanupId=null;
+    }, 360);
+  }, 360);
+}
+
+/* Cover the screen and PARK the wipe there (no slide-out). Used right before a
+   page redirect so the navigation happens behind the held cover. The optional
+   callback fires once the cover is fully in place. */
+function doWipeHold(callback){
+  const w = document.getElementById('wipe-overlay');
+  const p = document.getElementById('wipe-phrase');
+  if(p){ const ph=(PHRASE_DATA&&PHRASE_DATA.wipeTransitions&&PHRASE_DATA.wipeTransitions.length)?PHRASE_DATA.wipeTransitions:['Just a little fun!']; p.textContent=ph[Math.floor(Math.random()*ph.length)]; }
+  if(_wipeCleanupId){ clearTimeout(_wipeCleanupId); _wipeCleanupId=null; }
+  w.classList.add('hold');
+  w.style.transition='none';
+  w.classList.remove('out','in','fast');
+  void w.offsetWidth;
+  w.style.transition='';
+  w.classList.add('in');
+  // hold the cover, then fire the callback (e.g. the redirect)
+  setTimeout(()=>{ try{ callback&&callback(); }catch(e){} }, 460);
+}
+
 function startCountdown() {
   let secs=CONFIG.countdownSeconds;
   const el=document.getElementById('countdown-timer');
@@ -3495,25 +3547,30 @@ async function createSessionAndOpenLobby(){
   subscribePlayers();
 }
 
-/* Back to game selection (first page) → menu index. */
+/* Back to game selection (first page) → menu index. Cover the screen and redirect
+   behind the held wipe so the navigation isn't visibly choppy. */
 lq('#lobby-back-to-menu').addEventListener('click',()=>{
   // This page lives at games/horses/, so the menu index is two levels up.
-  window.location.href = '../../index.html';
+  doWipeHold(()=>{ window.location.href = '../../index.html'; });
 });
 
 /* Edit settings (room) → open the config editor pre-filled with current values. */
 lq('#lobby-edit-settings').addEventListener('click', ()=>{
-  syncStepperDisplays();
-  lq('#lobby-config-msg').textContent = '';
-  showStack('lobby-config');
+  doQuickWipe(()=>{
+    syncStepperDisplays();
+    lq('#lobby-config-msg').textContent = '';
+    showStack('lobby-config');
+  });
 });
 
 /* Cancel (config editor) → discard the on-screen edits and return to the room.
    We re-sync the steppers from lobby.cfg so a cancelled edit doesn't persist
    visually if they reopen the editor. */
 lq('#lobby-config-back').addEventListener('click', ()=>{
-  syncStepperDisplays();
-  showStack('lobby-room');
+  doQuickWipe(()=>{
+    syncStepperDisplays();
+    showStack('lobby-room');
+  });
 });
 
 /* Confirm (config editor) → push the chosen settings to the session in ONE
@@ -3535,7 +3592,7 @@ async function confirmConfig(){
   }
   lq('#lobby-config-msg').textContent = '';
   renderSettingsSummary();
-  showStack('lobby-room');
+  doQuickWipe(()=> showStack('lobby-room'));
 }
 
 /* live player list — INSERT/DELETE on players for this session */
@@ -3716,7 +3773,7 @@ lq('#lobby-close-session').addEventListener('click', async ()=>{
   if(grid) grid.innerHTML = '<div class="player-empty">No punters yet — share the code to fill the field</div>';
 
   // Back to the first menu page.
-  showStack('lobby-menu');
+  doQuickWipe(()=> showStack('lobby-menu'));
 
   btn.disabled = false;
   btn.textContent = 'Close session';
