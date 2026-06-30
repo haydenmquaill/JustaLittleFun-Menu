@@ -547,7 +547,23 @@ body {
 }
 #big-moments .bm-desc {
   flex:1; min-width:0; font-family:'Barlow Condensed',sans-serif; font-weight:600;
-  font-size:1.35rem; color:rgba(255,255,255,0.8); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  font-size:1.35rem; color:rgba(255,255,255,0.8);
+  display:flex; align-items:center; gap:7px; white-space:nowrap; overflow:hidden;
+}
+#big-moments .bm-type { color:rgba(255,255,255,0.6); text-transform:uppercase; letter-spacing:1px; flex-shrink:0; }
+#big-moments .bm-leg { display:inline-flex; align-items:center; gap:6px; min-width:0; }
+#big-moments .bm-hname { overflow:hidden; text-overflow:ellipsis; }
+#big-moments .bm-join { color:rgba(255,255,255,0.45); font-weight:800; flex-shrink:0; }
+#big-moments .bm-odds { color:var(--gold,#e8c466); font-weight:800; flex-shrink:0; }
+#big-moments .bm-silk {
+  width:26px; height:26px; flex-shrink:0; position:relative; overflow:hidden; border-radius:2px;
+}
+#big-moments .bm-silk img { display:block; width:26px; height:26px; }
+#big-moments .bm-silk.nosilk { background:#555; }
+#big-moments .bm-silk .ovl {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-family:'Oswald',sans-serif; font-weight:800; font-size:0.8rem; color:#fff;
+  text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;
 }
 #big-moments .bm-amt {
   flex:0 0 auto; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.9rem;
@@ -3947,6 +3963,23 @@ async function onRaceFinished(){
     };
   });
 
+  // Append the DNF runners so the phone's Placings tab matches the big screen.
+  // dnfOrder is first-to-die first; on the board the first death sits in LAST
+  // place (filled bottom-up), so we reverse it: the last horse to pull up shows
+  // directly beneath the final finisher, the first to die sits at the very
+  // bottom. DNF entries carry no finishing position (dnf:true) instead of a pos.
+  dnfOrder.slice().reverse().forEach(h => {
+    detail.push({
+      pos:    null,
+      dnf:    true,
+      num:    h.def.num,
+      name:   h.def.name,
+      silk:   h.def.silk || null,
+      margin: 'DNF',
+      time:   'DNF',
+    });
+  });
+
   // Was there an ACTUAL photo finish? photoFinishPositions is authoritative by
   // now (recomputed once all horses crossed). Pass it through so the phone can
   // word its banner correctly instead of always claiming a photo finish.
@@ -3994,7 +4027,18 @@ async function showRaceBigMoments(roundNumber){
   const names  = {};
   (players||[]).forEach(p => names[p.id] = p.display_name);
   const hmap   = (round && round.odds_table && round.odds_table.names) || {};
+  const smap   = (round && round.odds_table && round.odds_table.silks) || {};
   const startBank = Number(lobby.cfg.startingBalance) || 0;
+
+  // A silk chip with the horse number overlaid (the number lives inside the
+  // silk), matching how runners read everywhere else. Falls back to a plain
+  // numbered chip if this race has no silk for the runner.
+  const silkChip = n => {
+    const silk = smap[n];
+    return silk
+      ? `<span class="bm-silk"><img src="${silkDataUri(silk,26)}" width="26" height="26" alt=""><span class="ovl">${n}</span></span>`
+      : `<span class="bm-silk nosilk"><span class="ovl">${n}</span></span>`;
+  };
 
   const EXOTIC = new Set(['exacta','quinella','trifecta']);
   const TYPE_LABEL = { win:'Win', place:'Place', show:'Show', exacta:'Exacta', quinella:'Quinella', trifecta:'Trifecta' };
@@ -4015,20 +4059,25 @@ async function showRaceBigMoments(roundNumber){
     const isExotic   = EXOTIC.has(sel.type);
     if(!(isLongshot || isBigSwing || (isExotic && (won || swing > 0)))) return;
 
-    // Label the selection.
+    // Label the selection — silk chip(s) with the number inside, then name(s).
     const horses = sel.horses || [];
     const nm = n => hmap[n] ? hmap[n] : ('#'+n);
-    let pick;
+    let pickHTML;
     if(isExotic){
-      const join = sel.type === 'quinella' ? ' + ' : ' → ';
-      pick = horses.map(n=>'#'+n).join(join);
+      const join = sel.type === 'quinella'
+        ? '<span class="bm-join">+</span>'
+        : '<span class="bm-join">→</span>';
+      pickHTML = horses.map(n=>`<span class="bm-leg">${silkChip(n)}</span>`).join(join);
     } else {
-      pick = horses[0] != null ? ('#'+horses[0]+' '+nm(horses[0])) : '—';
+      pickHTML = horses[0] != null
+        ? `<span class="bm-leg">${silkChip(horses[0])}<span class="bm-hname">${escapeHtml(nm(horses[0]))}</span></span>`
+        : '—';
     }
     const typeLbl = TYPE_LABEL[sel.type] || (sel.type||'Bet');
+    const oddsLbl = odds>=2 ? ` <span class="bm-odds">${odds.toFixed(1)}×</span>` : '';
     moments.push({
       who: names[b.player_id] || 'A punter',
-      desc: `${typeLbl} · ${pick}${odds>=2 ? ` · ${odds.toFixed(1)}×` : ''}`,
+      descHTML: `<span class="bm-type">${escapeHtml(typeLbl)}</span> ${pickHTML}${oddsLbl}`,
       amount: won ? swing : -swing,
       won,
       score: Math.abs(swing) + (isLongshot ? odds*10 : 0),   // rank by impact
@@ -4048,7 +4097,7 @@ async function showRaceBigMoments(roundNumber){
       const amt = (m.won ? '+$' : '−$') + fmtMoney(Math.abs(m.amount));
       row.innerHTML =
         `<span class="bm-who">${escapeHtml(m.who)}</span>`+
-        `<span class="bm-desc">${escapeHtml(m.desc)}</span>`+
+        `<span class="bm-desc">${m.descHTML}</span>`+
         `<span class="bm-amt ${m.won?'win':'loss'}">${amt}</span>`;
       list.appendChild(row);
     });
