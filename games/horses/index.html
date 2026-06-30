@@ -39,7 +39,7 @@ body {
    Built only from the page palette + Barlow Condensed / Oswald.
 ══════════════════════════════ */
 #lobby-overlay {
-  position:fixed; inset:0; z-index:5000;
+  position:absolute; inset:0; z-index:5000;
   background:
     radial-gradient(ellipse at 20% 50%, rgba(30,125,58,0.15) 0%, transparent 60%),
     radial-gradient(ellipse at 80% 50%, rgba(26,46,90,0.2) 0%, transparent 60%),
@@ -185,6 +185,13 @@ body {
   padding:14px 18px; display:flex; align-items:center; gap:12px;
   box-shadow:0 2px 12px rgba(0,0,0,0.4);
   animation:chip-in .28s ease-out;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+/* Overflow chip: "+ N more" when the field exceeds the visible cap. */
+.player-chip.more {
+  background:transparent; color:var(--blue);
+  border:2px dashed rgba(26,46,90,0.5); box-shadow:none;
+  justify-content:center; font-weight:800;
 }
 @keyframes chip-in { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
 @media (prefers-reduced-motion:reduce){ .player-chip{animation:none;} }
@@ -510,8 +517,46 @@ body {
 /* ── POST-RACE UI ── */
 #postrace-ui              { display:none; grid-template-columns:1fr 1fr; grid-template-rows:477px auto; gap:36px; width:100%; flex:1; min-height:0; opacity:0; transition:opacity 0.5s ease; }
 #postrace-ui.visible      { opacity:1; }
-#postrace-logo            { background:var(--white); display:flex; align-items:center; justify-content:center; padding:24px; box-shadow:0 2px 12px rgba(0,0,0,0.4); }
+#postrace-logo            { background:var(--white); position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:24px; box-shadow:0 2px 12px rgba(0,0,0,0.4); }
 #postrace-cam             { background:#1a2a1a; position:relative; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.4); }
+/* Big-moments overlay — sits over the image (logo) tile, revealed after the result. */
+#big-moments {
+  position:absolute; inset:0; z-index:6;
+  background:linear-gradient(160deg, rgba(13,28,18,0.92), rgba(13,28,18,0.97));
+  display:flex; flex-direction:column; padding:22px 26px;
+  animation:bm-fade .4s ease-out;
+}
+@keyframes bm-fade { from{opacity:0;} to{opacity:1;} }
+#big-moments .bm-head {
+  font-family:'Oswald',sans-serif; font-weight:700; font-size:1.4rem;
+  letter-spacing:5px; text-transform:uppercase; color:var(--gold,#e8c466);
+  border-bottom:2px solid rgba(255,255,255,0.18); padding-bottom:10px; margin-bottom:14px; flex-shrink:0;
+}
+#big-moments .bm-list { display:flex; flex-direction:column; gap:10px; overflow:hidden; flex:1; min-height:0; }
+#big-moments .bm-row {
+  display:flex; align-items:center; gap:14px; background:rgba(255,255,255,0.06);
+  border-left:4px solid var(--mid); padding:11px 16px;
+  animation:bm-row-in .4s ease-out both;
+}
+#big-moments .bm-row.win  { border-left-color:#3ad07a; }
+#big-moments .bm-row.loss { border-left-color:#e0556a; }
+@keyframes bm-row-in { from{opacity:0;transform:translateX(-16px);} to{opacity:1;transform:translateX(0);} }
+#big-moments .bm-who {
+  font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.7rem;
+  color:#fff; flex:0 0 auto; max-width:34%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+#big-moments .bm-desc {
+  flex:1; min-width:0; font-family:'Barlow Condensed',sans-serif; font-weight:600;
+  font-size:1.35rem; color:rgba(255,255,255,0.8); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+#big-moments .bm-amt {
+  flex:0 0 auto; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.9rem;
+  font-variant-numeric:tabular-nums;
+}
+#big-moments .bm-amt.win  { color:#3ad07a; }
+#big-moments .bm-amt.loss { color:#e0556a; }
+#big-moments .bm-empty { color:rgba(255,255,255,0.4); font-family:'Barlow Condensed',sans-serif;
+  font-size:1.5rem; text-align:center; margin:auto; }
 #postrace-info-table,
 #podium-table             { align-self:start; }
 #horse-grid-wrap .horse-grid { align-self:flex-start; }
@@ -714,6 +759,11 @@ body {
   font-size:1.9rem; letter-spacing:2px; text-transform:uppercase; color:var(--green);
 }
 #champ-profit.down { color:var(--red); }
+/* Champion card stays blank until the 1st-place row lands (suspense). */
+#champion-card.pending #champ-name,
+#champion-card.pending #champ-balance-val,
+#champion-card.pending #champ-profit,
+#champion-card.pending #champ-sub { visibility:hidden; }
 
 /* ── Standings list (right) ── */
 #standings-wrap { flex:1; display:flex; flex-direction:column; min-height:0; }
@@ -723,7 +773,7 @@ body {
   letter-spacing:4px; text-transform:uppercase; color:var(--white);
   border-bottom:2px solid var(--blue-lt); padding-bottom:10px; margin-bottom:14px; flex-shrink:0;
 }
-#standings-list { display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+#standings-list { display:flex; flex-direction:column; gap:8px; overflow:hidden; flex:1; min-height:0; scroll-behavior:smooth; }
 .fl-row {
   display:flex; align-items:center; gap:18px; background:var(--white); color:var(--dark);
   padding:12px 22px; box-shadow:0 2px 10px rgba(0,0,0,0.35);
@@ -816,6 +866,8 @@ body {
 <!-- ══════════════════════════════
      LOBBY OVERLAY (pre-show) — sits above the race screen until the host starts.
 ══════════════════════════════ -->
+<div id="page-root">
+
 <div id="lobby-overlay">
 
   <!-- 1. MENU -->
@@ -918,7 +970,6 @@ body {
 
 </div>
 
-<div id="page-root">
 <div id="layout">
 
   <!-- PRE-RACE UI (sits behind track-stage on right half) -->
@@ -963,6 +1014,10 @@ body {
   <div id="postrace-ui">
     <div id="postrace-logo">
       <img src="assets/jalf_logo.png" alt="JustaLittleFun Racing" style="max-width:90%;max-height:90%;object-fit:contain;">
+      <div id="big-moments" style="display:none;">
+        <div class="bm-head">Big moments</div>
+        <div class="bm-list" id="bm-list"></div>
+      </div>
     </div>
     <div id="postrace-cam">
       <div id="postrace-replay-badge" style="display:none;">SLOW MO REPLAY</div>
@@ -2823,6 +2878,7 @@ function startPostRaceTransition(hadSlowmo) {
   pr.style.display='grid';
   document.getElementById('race-ui').style.display='none';
   document.getElementById('prerace-ui').style.display='none';
+  hideRaceBigMoments();   // clear any previous race's moments until this one settles
 
   pr.classList.add('visible');
   stageToPostrace();
@@ -3496,19 +3552,15 @@ function subscribePlayers(){
   }, 3000);
 }
 
+const LOBBY_VISIBLE_CAP = 12;   // 3-col grid × 4 rows fits the 1080 stage
 function renderPlayers(){
   const grid=lq('#lobby-players');
   const n=lobby.players.length;
   lq('#lobby-count').textContent = n+' joined';
   lq('#lobby-start-game').disabled = (n<1) || !lobby.gameDataReady;
 
-  // Incremental, keyed render: only add chips for new players and remove chips
-  // for players who left. Unchanged players are left untouched, so a reconcile
-  // that finds no change produces NO DOM mutation (no flash). Each chip is
-  // tagged with data-pid so we can diff against the current roster cheaply.
   const empty = grid.querySelector('.player-empty');
   if(n===0){
-    // Show the empty hint (only rebuild if it isn't already the sole child).
     if(!empty || grid.children.length !== 1){
       grid.innerHTML='<div class="player-empty">No punters yet — share the code to fill the field</div>';
     }
@@ -3516,15 +3568,20 @@ function renderPlayers(){
   }
   if(empty) empty.remove();
 
-  const want = new Map(lobby.players.map(p => [String(p.id), p]));
-  // Remove chips whose player is gone.
-  Array.from(grid.children).forEach(chip=>{
-    const pid = chip.getAttribute('data-pid');
-    if(!want.has(pid)) chip.remove();
+  // Decide which players get a visible chip. When the field exceeds the cap we
+  // show (cap-1) players + one "+ N more" chip, so the grid stays a tidy fixed
+  // block that never grows the layout past the TV resolution.
+  const overflow = n > LOBBY_VISIBLE_CAP;
+  const shown = overflow ? lobby.players.slice(0, LOBBY_VISIBLE_CAP - 1) : lobby.players;
+  const hiddenCount = overflow ? (n - (LOBBY_VISIBLE_CAP - 1)) : 0;
+
+  // Incremental, keyed diff for the shown players (no flash when unchanged).
+  const want = new Map(shown.map(p => [String(p.id), p]));
+  Array.from(grid.querySelectorAll('.player-chip[data-pid]')).forEach(chip=>{
+    if(!want.has(chip.getAttribute('data-pid'))) chip.remove();
   });
-  // Add chips for players not already shown.
-  const have = new Set(Array.from(grid.children).map(c=>c.getAttribute('data-pid')));
-  lobby.players.forEach(p=>{
+  const have = new Set(Array.from(grid.querySelectorAll('.player-chip[data-pid]')).map(c=>c.getAttribute('data-pid')));
+  shown.forEach(p=>{
     const pid = String(p.id);
     if(have.has(pid)) return;
     const chip=document.createElement('div'); chip.className='player-chip';
@@ -3533,6 +3590,21 @@ function renderPlayers(){
     chip.innerHTML='<span class="pn">'+init+'</span>'+escapeHtml(p.display_name);
     grid.appendChild(chip);
   });
+
+  // Maintain the single "+ N more" chip (kept last).
+  let moreChip = grid.querySelector('.player-chip.more');
+  if(hiddenCount > 0){
+    if(!moreChip){
+      moreChip = document.createElement('div');
+      moreChip.className = 'player-chip more';
+      grid.appendChild(moreChip);
+    } else {
+      grid.appendChild(moreChip);   // ensure it stays last
+    }
+    moreChip.textContent = '+ ' + hiddenCount + ' more';
+  } else if(moreChip){
+    moreChip.remove();
+  }
 }
 function escapeHtml(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -3881,6 +3953,108 @@ async function onRaceFinished(){
     p_result:      { order, detail, photo: hadPhotoFinish },
   });
   if(error){ console.error('settle_round failed:', error); }
+
+  // Surface this race's BIG MOMENTS on the postrace image tile. Best-effort; if
+  // the read fails we simply don't overlay anything.
+  showRaceBigMoments(multiGame.raceNumber).catch(()=>{});
+}
+
+/* ── Per-race big moments ──────────────────────────────────────────────────
+   A "big moment" is a standout bet outcome — NOT every settled bet. It earns a
+   spot if EITHER:
+     · Longshot: the bet's odds (payout ÷ stake) ≥ BM_LONGSHOT_ODDS — captures
+       winning on a dud and most exotics (which carry big multipliers), and
+     · Big swing: |profit or loss| ≥ BM_SWING_FRAC of the starting bank —
+       captures losing a lot on a "safe" bet, or any large stake moving.
+   Winning a small amount on a short-priced favourite qualifies as neither, so
+   it's correctly ignored. */
+const BM_LONGSHOT_ODDS = 5.0;   // ≥5× payout multiple = longshot
+const BM_SWING_FRAC    = 0.25;  // ≥25% of starting bank swung in one bet
+const BM_MAX_ROWS      = 5;     // how many to show on the tile
+
+async function showRaceBigMoments(roundNumber){
+  const box  = document.getElementById('big-moments');
+  const list = document.getElementById('bm-list');
+  if(!box || !list) return;
+  if(typeof multiGame === 'undefined' || !multiGame.active){ box.style.display='none'; return; }
+
+  // Pull this race's settled bets + the horse-name map for nicer labels.
+  const [{ data: bets }, { data: round }, { data: players }] = await Promise.all([
+    sb.from('bets').select('player_id, selection, stake, potential_payout, status')
+      .eq('session_id', lobby.session.id).eq('round_number', roundNumber),
+    sb.from('rounds').select('odds_table').eq('session_id', lobby.session.id)
+      .eq('round_number', roundNumber).single(),
+    sb.from('players').select('id, display_name').eq('session_id', lobby.session.id),
+  ]);
+  const names  = {};
+  (players||[]).forEach(p => names[p.id] = p.display_name);
+  const hmap   = (round && round.odds_table && round.odds_table.names) || {};
+  const startBank = Number(lobby.cfg.startingBalance) || 0;
+
+  const EXOTIC = new Set(['exacta','quinella','trifecta']);
+  const TYPE_LABEL = { win:'Win', place:'Place', show:'Show', exacta:'Exacta', quinella:'Quinella', trifecta:'Trifecta' };
+
+  const moments = [];
+  (bets||[]).forEach(b=>{
+    const stake = Number(b.stake)||0;
+    if(stake <= 0) return;
+    const sel   = b.selection || {};
+    const odds  = stake > 0 ? (Number(b.potential_payout)||0) / stake : 0;
+    const won   = b.status === 'won';
+    const lost  = b.status === 'lost';
+    if(!won && !lost) return;   // only settled bets
+
+    const swing = won ? ((Number(b.potential_payout)||0) - stake) : stake;
+    const isLongshot = odds >= BM_LONGSHOT_ODDS;
+    const isBigSwing = startBank > 0 && swing >= startBank * BM_SWING_FRAC;
+    const isExotic   = EXOTIC.has(sel.type);
+    if(!(isLongshot || isBigSwing || (isExotic && (won || swing > 0)))) return;
+
+    // Label the selection.
+    const horses = sel.horses || [];
+    const nm = n => hmap[n] ? hmap[n] : ('#'+n);
+    let pick;
+    if(isExotic){
+      const join = sel.type === 'quinella' ? ' + ' : ' → ';
+      pick = horses.map(n=>'#'+n).join(join);
+    } else {
+      pick = horses[0] != null ? ('#'+horses[0]+' '+nm(horses[0])) : '—';
+    }
+    const typeLbl = TYPE_LABEL[sel.type] || (sel.type||'Bet');
+    moments.push({
+      who: names[b.player_id] || 'A punter',
+      desc: `${typeLbl} · ${pick}${odds>=2 ? ` · ${odds.toFixed(1)}×` : ''}`,
+      amount: won ? swing : -swing,
+      won,
+      score: Math.abs(swing) + (isLongshot ? odds*10 : 0),   // rank by impact
+    });
+  });
+
+  moments.sort((a,b)=> b.score - a.score);
+  const top = moments.slice(0, BM_MAX_ROWS);
+
+  list.innerHTML = '';
+  if(!top.length){
+    list.innerHTML = '<div class="bm-empty">No standout bets this race.</div>';
+  } else {
+    top.forEach(m=>{
+      const row = document.createElement('div');
+      row.className = 'bm-row ' + (m.won ? 'win' : 'loss');
+      const amt = (m.won ? '+$' : '−$') + fmtMoney(Math.abs(m.amount));
+      row.innerHTML =
+        `<span class="bm-who">${escapeHtml(m.who)}</span>`+
+        `<span class="bm-desc">${escapeHtml(m.desc)}</span>`+
+        `<span class="bm-amt ${m.won?'win':'loss'}">${amt}</span>`;
+      list.appendChild(row);
+    });
+  }
+  box.style.display = 'flex';
+}
+
+/* Hide the big-moments overlay (called when staging a fresh race). */
+function hideRaceBigMoments(){
+  const box = document.getElementById('big-moments');
+  if(box) box.style.display = 'none';
 }
 
 /* Advance to the next race or finish the game. */
@@ -3941,9 +4115,11 @@ async function showFinalLeaderboard(){
 
   const highlights = buildHighlights(allBets || [], nameById, horseNamesByRace);
 
-  // 4) Paint the champion card.
+  // 4) Prepare (but DON'T yet show) the champion card — it's revealed only when
+  //    1st place lands, for suspense. Stash the data + a painter we call later.
   const champ = roster[0];
-  if(champ){
+  const paintChampion = ()=>{
+    if(!champ) return;
     document.getElementById('champ-name').textContent = champ.display_name || '—';
     document.getElementById('champ-balance-val').textContent = '$' + fmtMoney(champ.balance);
     const profit = (Number(champ.balance)||0) - startBal;
@@ -3951,23 +4127,43 @@ async function showFinalLeaderboard(){
     if(profit > 0){ pEl.textContent = '▲ Up $' + fmtMoney(profit) + ' on the night'; pEl.classList.remove('down'); }
     else if(profit < 0){ pEl.textContent = '▼ Down $' + fmtMoney(-profit) + ' — but still top'; pEl.classList.add('down'); }
     else { pEl.textContent = 'Finished right where they started'; pEl.classList.remove('down'); }
-    // A solo champion (everyone else broke) still reads fine.
     document.getElementById('champ-sub').textContent =
       roster.length > 1 ? 'Top of the tote' : 'Last one standing';
-  }
+  };
+  // Hide the champion card contents until the reveal moment.
+  const champCard = document.getElementById('champion-card');
+  if(champCard) champCard.classList.add('pending');
 
-  // 5) Render standings rows (hidden), build marquee, then reveal + confetti.
+  // 5) Render standings rows (hidden) + build the marquee (hidden until 1st).
   renderFinalStandings(roster, startBal);
   renderHighlightsMarquee(highlights);
+  const marquee = document.getElementById('final-marquee');
+  if(marquee) marquee.style.visibility = 'hidden';
 
   document.getElementById('final-overlay').classList.add('active');
 
-  // Reveal bottom→top: the suspense builds up to 1st place.
+  // Reveal bottom→top with growing suspense on the podium, climbing the list so
+  // higher ranks stay in view. When 1st lands: paint champion, confetti,
+  // marquee, AND signal the phones so each player sees their placement THEN.
   revealStandingsBottomUp(() => {
-    // Once the winner's row lands, fire confetti + start the marquee.
+    paintChampion();
+    if(champCard) champCard.classList.remove('pending');
+    if(marquee) marquee.style.visibility = '';
     launchConfetti();
     startMarquee();
+    signalFinalReveal();   // tell phones to reveal placements now
   });
+}
+
+/* Tell the phones the final placements are now revealed (fired exactly as the
+   1st-place row lands on the TV). We bump the session to a 'final_reveal' beat
+   via a lightweight RPC; phones watching the session row flip to their final
+   placement view at the same instant. Best-effort — the 'finished' status was
+   already set by finish_game, so phones still converge even if this misses. */
+async function signalFinalReveal(){
+  if(!lobby.session) return;
+  try { await sb.rpc('reveal_final', { p_session_id: lobby.session.id }); }
+  catch(e){ /* best-effort; the finished status is the fallback */ }
 }
 
 function fmtMoney(n){ return (Math.round(Number(n)||0)).toLocaleString(); }
@@ -4035,24 +4231,50 @@ function renderFinalStandings(roster, startBal){
   });
 }
 
-/* Reveal rows from the bottom of the list up to 1st place. onWinner fires
-   as the top (1st-place) row is revealed. */
+/* Reveal rows from the bottom of the list (last place) up to 1st place. The
+   list is a fixed-height viewport: as each lower-rank row reveals we scroll so
+   the freshly-revealed row sits at the bottom of the view, and earlier (lower)
+   reveals climb up and out the top — the "ladder climbs upward" effect, so no
+   matter how many players there are, the action stays on screen and ends on the
+   podium. The final three reveals (3rd, 2nd, 1st) use growing delays for
+   suspense. onWinner fires as the 1st-place row lands. */
 let _revealTimers = [];
 function revealStandingsBottomUp(onWinner){
   _revealTimers.forEach(t=>clearTimeout(t)); _revealTimers = [];
+  const list = document.getElementById('standings-list');
   const rows = Array.from(document.querySelectorAll('#standings-list .fl-row'));
   if(!rows.length){ if(onWinner) onWinner(); return; }
-  const STEP = 600;                 // ms between each row landing
-  const last = rows.length - 1;     // index of 1st-place row (top of the DOM list)
-  rows.forEach((row, domIdx)=>{
-    // domIdx 0 = 1st place (top). Reveal order: bottom row first.
-    const revealOrder = last - domIdx;   // bottom row → 0, top row → last
-    const t = setTimeout(()=>{
+
+  const last = rows.length - 1;     // DOM index of the 1st-place row (top)
+  const BASE_STEP = 520;            // ms between ordinary (non-podium) reveals
+  // Growing pauses BEFORE 3rd, 2nd, 1st land (added on top of the base cadence).
+  const PODIUM_EXTRA = { 3: 700, 2: 1100, 1: 1700 };
+
+  // Walk reveal order from bottom rank → top rank, accumulating the schedule so
+  // we can give the podium rows extra suspense without affecting earlier timing.
+  let t = 400;
+  // revealOrder 0 = bottom row (last place) … last = 1st place.
+  for(let order = 0; order <= last; order++){
+    const domIdx = last - order;          // which DOM row this reveal targets
+    const rank   = domIdx + 1;            // 1 = winner … n = last
+    // Add suspense pause before the podium rows.
+    if(PODIUM_EXTRA[rank]) t += PODIUM_EXTRA[rank];
+    const row = rows[domIdx];
+    const isWinner = (domIdx === 0);
+    const fireAt = t;
+    const timer = setTimeout(()=>{
       row.classList.add('revealed');
-      if(domIdx === 0 && onWinner) onWinner();   // the winner just landed
-    }, 400 + revealOrder * STEP);
-    _revealTimers.push(t);
-  });
+      // Climb: keep the just-revealed row at the bottom of the viewport so the
+      // ladder scrolls upward as we ascend the ranks.
+      if(list){
+        const target = row.offsetTop + row.offsetHeight - list.clientHeight;
+        list.scrollTop = Math.max(0, target);
+      }
+      if(isWinner && onWinner) onWinner();
+    }, fireAt);
+    _revealTimers.push(timer);
+    t += BASE_STEP;
+  }
 }
 
 /* ── Big-moments marquee ── */
