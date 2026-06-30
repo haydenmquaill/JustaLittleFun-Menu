@@ -3669,9 +3669,11 @@ lq('#lobby-close-session').addEventListener('click', async ()=>{
   btn.textContent = 'Closing…';
 
   if(lobby.session){
-    try { await sb.rpc('finish_game', { p_session_id: lobby.session.id }); } catch(e){}
+    // Host-initiated close (distinct from a card finishing naturally). This sets
+    // status=finished AND stamps config.closed_by_host so players land on a
+    // "session closed" screen rather than the end-of-night tally.
+    try { await sb.rpc('close_session', { p_session_id: lobby.session.id }); } catch(e){}
   }
-  // Tear down realtime + roster poll for the room we're leaving.
   if(lobby.channel){ try{ sb.removeChannel(lobby.channel); }catch(e){} lobby.channel = null; }
   if(_lobbyRosterPoll){ clearInterval(_lobbyRosterPoll); _lobbyRosterPoll = null; }
 
@@ -3801,9 +3803,12 @@ lq('#confirm-cancel').addEventListener('click', ()=>{
 });
 lq('#confirm-yes').addEventListener('click', async ()=>{
   const yes = lq('#confirm-yes'); yes.disabled = true;
-  // Best-effort close the session so phones know the night is over.
+  // Host returning to the menu after the card → close the session so phones
+  // leave their final-results screen and land on the "session closed" screen.
+  // close_session sets status=finished AND stamps config.closed_by_host without
+  // disturbing final balances (unlike apply_config, which would reset them).
   if(lobby.session){
-    try { await sb.rpc('finish_game', { p_session_id: lobby.session.id }); } catch(e){}
+    try { await sb.rpc('close_session', { p_session_id: lobby.session.id }); } catch(e){}
   }
   teardownFinalScreen();
   // This page lives at games/horses/, so the menu index is two levels up.
