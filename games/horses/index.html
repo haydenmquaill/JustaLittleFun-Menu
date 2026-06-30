@@ -913,9 +913,9 @@ body {
           </div>
           <div class="lobby-row">
             <span class="lab">Starting balance<small>Play money each punter begins with</small></span>
-            <div class="stepper" data-cfg="startingBalance" data-min="100" data-max="5000" data-step="100">
+            <div class="stepper" data-cfg="startingBalance" data-min="100" data-max="5000" data-step="50">
               <button data-dir="-1">–</button>
-              <span class="val"><span class="unit">$</span><span class="num">500</span></span>
+              <span class="val"><span class="unit">$</span><span class="num">200</span></span>
               <button data-dir="1">+</button>
             </div>
           </div>
@@ -956,7 +956,7 @@ body {
       <div class="settings-summary" id="lobby-settings-summary">
         <div class="ss-item"><span class="ss-lab">Races</span><span class="ss-val" id="ss-races">6</span></div>
         <div class="ss-item"><span class="ss-lab">Betting</span><span class="ss-val" id="ss-betting">60s</span></div>
-        <div class="ss-item"><span class="ss-lab">Balance</span><span class="ss-val" id="ss-balance">$500</span></div>
+        <div class="ss-item"><span class="ss-lab">Balance</span><span class="ss-val" id="ss-balance">$200</span></div>
       </div>
 
       <div class="lobby-actions">
@@ -3408,7 +3408,7 @@ const PLAYER_JOIN_URL = 'https://haydenmquaill.github.io/JustaLittleFun';
 const sb = _createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const lobby = {
-  cfg: { numRaces:6, bettingSeconds:60, startingBalance:500, payoutCeiling:5000 },
+  cfg: { numRaces:6, bettingSeconds:60, startingBalance:200, payoutCeiling:5000 },
   session: null,
   channel: null,
   players: [],
