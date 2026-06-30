@@ -192,6 +192,15 @@ body {
   display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.3rem; flex-shrink:0; }
 .player-empty { color:var(--mid); font-size:1.5rem; letter-spacing:1px; grid-column:1/-1; text-align:center; padding:30px 0; opacity:.6; }
 
+.settings-summary { width:100%; max-width:960px; margin-top:26px; display:flex; gap:14px; }
+.settings-summary .ss-item {
+  flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+  padding:14px 18px; display:flex; flex-direction:column; gap:4px; align-items:center;
+}
+.settings-summary .ss-lab { font-family:'Oswald',sans-serif; font-weight:600; font-size:0.95rem;
+  letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,0.55); }
+.settings-summary .ss-val { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:2rem; color:var(--white); line-height:1; }
+
 .lobby-actions { display:flex; gap:20px; align-items:center; margin-top:40px; }
 .lobby-msg { margin-top:18px; font-size:1.3rem; letter-spacing:1px; min-height:1.3rem; color:var(--blue); font-weight:600; text-transform:uppercase; }
 
@@ -861,8 +870,8 @@ body {
         </div>
       </div>
       <div class="lobby-actions">
-        <button class="lobby-btn ghost" id="lobby-config-back">Back</button>
-        <button class="lobby-btn gold" id="lobby-create" style="margin-top:0;">Create room</button>
+        <button class="lobby-btn ghost" id="lobby-config-back">Cancel</button>
+        <button class="lobby-btn gold" id="lobby-create" style="margin-top:0;">Confirm</button>
       </div>
       <div class="lobby-msg" id="lobby-config-msg"></div>
     </div>
@@ -891,9 +900,17 @@ body {
         </div>
       </div>
 
+      <!-- Current settings summary (editable via the Edit button). -->
+      <div class="settings-summary" id="lobby-settings-summary">
+        <div class="ss-item"><span class="ss-lab">Races</span><span class="ss-val" id="ss-races">6</span></div>
+        <div class="ss-item"><span class="ss-lab">Betting</span><span class="ss-val" id="ss-betting">60s</span></div>
+        <div class="ss-item"><span class="ss-lab">Balance</span><span class="ss-val" id="ss-balance">$500</span></div>
+      </div>
+
       <div class="lobby-actions">
         <button class="lobby-btn" id="lobby-start-game" disabled>Start game</button>
       </div>
+      <button class="lobby-btn ghost" id="lobby-edit-settings" style="margin-top:16px;">Edit settings</button>
       <button class="lobby-btn ghost" id="lobby-close-session" style="margin-top:16px;">Close session</button>
       <div class="lobby-msg" id="lobby-room-msg"></div>
     </div>
@@ -3350,7 +3367,8 @@ function showStack(id){
   document.getElementById(id).classList.add('active');
 }
 
-/* steppers */
+/* steppers — update the in-memory cfg + the on-screen number. Nothing is sent
+   to the DB here; the host taps Confirm to push a batch of changes. */
 document.querySelectorAll('.stepper').forEach(st=>{
   const key=st.dataset.cfg, min=+st.dataset.min, max=+st.dataset.max, step=+st.dataset.step;
   const numEl=st.querySelector('.num');
@@ -3363,60 +3381,89 @@ document.querySelectorAll('.stepper').forEach(st=>{
   });
 });
 
-/* menu → config → create */
-lq('#lobby-start-session').addEventListener('click',()=>showStack('lobby-config'));
-lq('#lobby-config-back').addEventListener('click',()=>showStack('lobby-menu'));
+/* Push lobby.cfg values into the stepper number displays (used when opening the
+   editor so it reflects the current settings, not stale DOM). */
+function syncStepperDisplays(){
+  document.querySelectorAll('.stepper').forEach(st=>{
+    const key=st.dataset.cfg, numEl=st.querySelector('.num');
+    if(numEl && lobby.cfg[key] != null) numEl.textContent = lobby.cfg[key];
+  });
+}
+
+/* Paint the room-screen settings summary from lobby.cfg. */
+function renderSettingsSummary(){
+  const r=lq('#ss-races'), b=lq('#ss-betting'), bal=lq('#ss-balance');
+  if(r)   r.textContent   = lobby.cfg.numRaces;
+  if(b)   b.textContent   = lobby.cfg.bettingSeconds + 's';
+  if(bal) bal.textContent = '$' + lobby.cfg.startingBalance;
+}
+
+/* Start session → create the session immediately with the default config and go
+   straight to the room screen. Config is edited from there (Edit settings). */
+lq('#lobby-start-session').addEventListener('click', createSessionAndOpenLobby);
+
+async function createSessionAndOpenLobby(){
+  const btn = lq('#lobby-start-session'); btn.disabled = true;
+  const oldLabel = btn.textContent; btn.textContent = 'Creating room…';
+  const { data, error } = await sb.rpc('create_session', {
+    p_game_mode:'horses', p_config: lobby.cfg,
+  });
+  if(error){
+    btn.disabled = false; btn.textContent = oldLabel;
+    alert('Could not create room: ' + (error.message||'unknown'));
+    return;
+  }
+  lobby.session = data;
+  lobby.rematch = false;
+  btn.disabled = false; btn.textContent = oldLabel;
+  lq('#lobby-code').textContent = data.room_code;
+  lq('#lobby-join-url').textContent = PLAYER_JOIN_URL;
+  renderSettingsSummary();
+  showStack('lobby-room');
+  subscribePlayers();
+}
+
+/* Back to game selection (first page) → menu index. */
 lq('#lobby-back-to-menu').addEventListener('click',()=>{
   // This page lives at games/horses/, so the menu index is two levels up.
   window.location.href = '../../index.html';
 });
 
-lq('#lobby-create').addEventListener('click', commitConfig);
+/* Edit settings (room) → open the config editor pre-filled with current values. */
+lq('#lobby-edit-settings').addEventListener('click', ()=>{
+  syncStepperDisplays();
+  lq('#lobby-config-msg').textContent = '';
+  showStack('lobby-config');
+});
 
-async function commitConfig(){
-  // Rematch: the session already exists (reset to a blank lobby). Re-apply the
-  // freshly-chosen config to the SAME session and re-stamp player balances,
-  // rather than creating a new room.
-  if(lobby.rematch && lobby.session){
-    const btn=lq('#lobby-create'); btn.disabled=true;
-    lq('#lobby-config-msg').textContent='Reopening lobby…';
-    const { error } = await sb.rpc('apply_config', {
-      p_session_id: lobby.session.id, p_config: lobby.cfg,
-    });
-    if(error){
-      btn.disabled=false;
-      lq('#lobby-config-msg').textContent = error.message || 'Could not apply settings';
-      return;
-    }
-    lobby.rematch = false;
-    btn.textContent = 'Create room';
-    lq('#lobby-config-msg').textContent='';
-    lq('#lobby-code').textContent = lobby.session.room_code;
-    lq('#lobby-join-url').textContent = PLAYER_JOIN_URL;
-    showStack('lobby-room');
-    // Resubscribe to player joins/leaves for the room screen, and repaint.
-    if(lobby.channel){ try{ sb.removeChannel(lobby.channel); }catch(e){} lobby.channel = null; }
-    subscribePlayers();
-    return;
-  }
-
-  // Fresh session.
-  const btn=lq('#lobby-create'); btn.disabled=true;
-  lq('#lobby-config-msg').textContent='Creating room…';
-  const { data, error } = await sb.rpc('create_session', {
-    p_game_mode:'horses', p_config: lobby.cfg,
-  });
-  if(error){
-    btn.disabled=false;
-    lq('#lobby-config-msg').textContent = error.message || 'Could not create room';
-    return;
-  }
-  lobby.session = data;
-  lq('#lobby-config-msg').textContent='';
-  lq('#lobby-code').textContent = data.room_code;
-  lq('#lobby-join-url').textContent = PLAYER_JOIN_URL;
+/* Cancel (config editor) → discard the on-screen edits and return to the room.
+   We re-sync the steppers from lobby.cfg so a cancelled edit doesn't persist
+   visually if they reopen the editor. */
+lq('#lobby-config-back').addEventListener('click', ()=>{
+  syncStepperDisplays();
   showStack('lobby-room');
-  subscribePlayers();
+});
+
+/* Confirm (config editor) → push the chosen settings to the session in ONE
+   write (apply_config), update the summary, and return to the room. Players see
+   the new values via their session realtime subscription. */
+lq('#lobby-create').addEventListener('click', confirmConfig);
+
+async function confirmConfig(){
+  if(!lobby.session){ showStack('lobby-room'); return; }
+  const btn = lq('#lobby-create'); btn.disabled = true;
+  const oldLabel = btn.textContent; btn.textContent = 'Saving…';
+  const { error } = await sb.rpc('apply_config', {
+    p_session_id: lobby.session.id, p_config: lobby.cfg,
+  });
+  btn.disabled = false; btn.textContent = oldLabel;
+  if(error){
+    lq('#lobby-config-msg').textContent = error.message || 'Could not apply settings';
+    return;
+  }
+  lq('#lobby-config-msg').textContent = '';
+  renderSettingsSummary();
+  showStack('lobby-room');
 }
 
 /* live player list — INSERT/DELETE on players for this session */
@@ -3454,13 +3501,34 @@ function renderPlayers(){
   const n=lobby.players.length;
   lq('#lobby-count').textContent = n+' joined';
   lq('#lobby-start-game').disabled = (n<1) || !lobby.gameDataReady;
+
+  // Incremental, keyed render: only add chips for new players and remove chips
+  // for players who left. Unchanged players are left untouched, so a reconcile
+  // that finds no change produces NO DOM mutation (no flash). Each chip is
+  // tagged with data-pid so we can diff against the current roster cheaply.
+  const empty = grid.querySelector('.player-empty');
   if(n===0){
-    grid.innerHTML='<div class="player-empty">No punters yet — share the code to fill the field</div>';
+    // Show the empty hint (only rebuild if it isn't already the sole child).
+    if(!empty || grid.children.length !== 1){
+      grid.innerHTML='<div class="player-empty">No punters yet — share the code to fill the field</div>';
+    }
     return;
   }
-  grid.innerHTML='';
+  if(empty) empty.remove();
+
+  const want = new Map(lobby.players.map(p => [String(p.id), p]));
+  // Remove chips whose player is gone.
+  Array.from(grid.children).forEach(chip=>{
+    const pid = chip.getAttribute('data-pid');
+    if(!want.has(pid)) chip.remove();
+  });
+  // Add chips for players not already shown.
+  const have = new Set(Array.from(grid.children).map(c=>c.getAttribute('data-pid')));
   lobby.players.forEach(p=>{
+    const pid = String(p.id);
+    if(have.has(pid)) return;
     const chip=document.createElement('div'); chip.className='player-chip';
+    chip.setAttribute('data-pid', pid);
     const init=(p.display_name||'?').trim().charAt(0).toUpperCase();
     chip.innerHTML='<span class="pn">'+init+'</span>'+escapeHtml(p.display_name);
     grid.appendChild(chip);
@@ -3541,11 +3609,14 @@ lq('#lobby-close-session').addEventListener('click', async ()=>{
   lobby.rematch = false;
   lobby.gameStarted = false;
 
-  // Reset the create button label (it may say "Reopen lobby" from a rematch).
-  lq('#lobby-create').textContent = 'Create room';
+  // Reset the config editor's primary button label + the player grid so a fresh
+  // Start session begins cleanly.
+  lq('#lobby-create').textContent = 'Confirm';
   lq('#lobby-create').disabled = false;
   lq('#lobby-config-msg').textContent = '';
   lq('#lobby-room-msg').textContent = '';
+  const grid = lq('#lobby-players');
+  if(grid) grid.innerHTML = '<div class="player-empty">No punters yet — share the code to fill the field</div>';
 
   // Back to the first menu page.
   showStack('lobby-menu');
@@ -3582,9 +3653,8 @@ lq('#btn-again').addEventListener('click', async ()=>{
   const btn = lq('#btn-again');
   btn.disabled = true;
 
-  // Cover the screen FIRST so the postrace/final screen doesn't flash before
-  // the config screen appears. Cover instantly (the final screen is already up),
-  // hold while we tear down + reset + swap to config, then slide the cover off.
+  // Cover the screen FIRST so the final screen doesn't flash before the room
+  // screen appears. Cover instantly, hold while we reset, then slide off.
   const w = document.getElementById('wipe-overlay');
   const p = document.getElementById('wipe-phrase');
   if(p) p.textContent = PHRASES[Math.floor(Math.random()*PHRASES.length)];
@@ -3595,8 +3665,7 @@ lq('#btn-again').addEventListener('click', async ()=>{
   void w.offsetWidth;
   w.style.transition = '';
 
-  const revealConfig = ()=>{
-    // Slide the cover off to reveal the config screen.
+  const revealRoom = ()=>{
     setTimeout(()=>{
       w.classList.remove('in');
       w.classList.add('out');
@@ -3612,54 +3681,42 @@ lq('#btn-again').addEventListener('click', async ()=>{
 
   teardownFinalScreen();
   resetEngineForNewRound();
-
-  // Reset the SAME session in place: wipe rounds + bets, clear config and
-  // current_round, set status back to 'lobby' — WITHOUT removing the player
-  // rows, so the current crew stays joined for the rematch.
-  if(lobby.session){
-    const { error } = await sb.rpc('reset_lobby', { p_session_id: lobby.session.id });
-    if(error){
-      console.error('reset_lobby failed:', error);
-      // Even on failure, set up rematch mode and re-enable the config screen so
-      // the host can pick the card and tap Reopen lobby to retry: that path runs
-      // apply_config, which re-stamps a valid config and reopens the lobby
-      // regardless. Do NOT strand the host.
-      lobby.rematch     = true;
-      lobby.gameStarted = false;
-      document.getElementById('lobby-overlay').style.display = 'flex';
-      lq('#lobby-create').textContent = 'Reopen lobby';
-      lq('#lobby-create').disabled = false;
-      lq('#lobby-config-msg').textContent =
-        'Couldn’t auto-reset the room (' + (error.message||'unknown') + '). Pick the card and tap Reopen lobby to try again, or use Main Menu.';
-      showStack('lobby-config');
-      btn.disabled = false;
-      revealConfig();
-      return;
-    }
-  }
-
-  // The session lives on; config must be set again. Mark rematch mode so the
-  // config screen commits via reset/apply rather than creating a new session.
-  lobby.rematch = true;
   lobby.gameStarted = false;
+  lobby.rematch     = false;
 
-  // Show the lobby overlay on the config screen so the host can re-pick the
-  // race card. Existing players remain subscribed; refresh the roster.
-  document.getElementById('lobby-overlay').style.display = 'flex';
-  lq('#lobby-config-msg').textContent = 'Set the card for the next round — your players are still here.';
-  lq('#lobby-create').textContent = 'Reopen lobby';
-  lq('#lobby-create').disabled = false;
-  showStack('lobby-config');
-
-  // Re-fetch the current players so the lobby-room screen is accurate once
-  // the host commits the config.
+  // Reset the SAME session in place: wipe rounds + bets, clear current_round,
+  // set status back to 'lobby' — WITHOUT removing the player rows, so the crew
+  // stays joined. reset_lobby blanks config, so we immediately re-apply the
+  // current in-memory settings (re-stamps balances + restores the card).
   if(lobby.session){
+    const { error: rErr } = await sb.rpc('reset_lobby', { p_session_id: lobby.session.id });
+    if(rErr){ console.error('reset_lobby failed:', rErr); }
+    const { error: aErr } = await sb.rpc('apply_config', {
+      p_session_id: lobby.session.id, p_config: lobby.cfg,
+    });
+    if(aErr){
+      console.error('apply_config failed:', aErr);
+      lq('#lobby-room-msg').textContent =
+        'Couldn’t fully reset the room (' + (aErr.message||'unknown') + '). Try Edit settings → Confirm, or Close session.';
+    } else {
+      lq('#lobby-room-msg').textContent = '';
+    }
+    // Refresh the roster so the board is accurate.
     const { data } = await sb.from('players').select('*').eq('session_id', lobby.session.id);
     lobby.players = data || [];
   }
 
+  // Straight back to the room screen — session already exists. Edit settings or
+  // Close session are both right there.
+  document.getElementById('lobby-overlay').style.display = 'flex';
+  lq('#lobby-create').textContent = 'Confirm';
+  lq('#lobby-create').disabled = false;
+  renderSettingsSummary();
+  renderPlayers();
+  showStack('lobby-room');
+
   btn.disabled = false;
-  revealConfig();
+  revealRoom();
 });
 
 /* MAIN MENU — confirm, then close the session and return to the host landing. */
