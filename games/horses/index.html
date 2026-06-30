@@ -893,6 +893,7 @@ body {
 
       <div class="lobby-actions">
         <button class="lobby-btn" id="lobby-start-game" disabled>Start game</button>
+        <button class="lobby-btn ghost" id="lobby-close-session">Close session</button>
       </div>
       <div class="lobby-msg" id="lobby-room-msg"></div>
     </div>
@@ -3471,6 +3472,7 @@ function escapeHtml(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&
    build the prerace underneath it, so the prerace never flashes before the
    transition. The wipe slides out only once startRaceCycle()'s init() has
    finished staging (its promise resolves). */
+const FIRST_RACE_HOLD_MS = 10000;   // hold the transition image before race 1
 lq('#lobby-start-game').addEventListener('click', async ()=>{
   const w = document.getElementById('wipe-overlay');
   const p = document.getElementById('wipe-phrase');
@@ -3482,20 +3484,27 @@ lq('#lobby-start-game').addEventListener('click', async ()=>{
   w.classList.remove('out');
   w.classList.add('in');
   void w.offsetWidth;
+  w.style.transition = '';
 
-  // Swap underneath the cover.
+  // Hide the lobby underneath the cover and mark game state.
   document.getElementById('lobby-overlay').style.display='none';
   lobby.gameStarted = true;
   multiGame.active = true;
   multiGame.raceNumber = 0;        // 0-indexed, matches sessions.current_round
   window._hasLoaded = true;        // legacy guard, kept truthy for safety
 
-  // Build race 0 (opens betting; init() stages the prerace), then slide the
-  // cover out once everything is ready.
+  // Hold the transition image for a beat BEFORE opening betting. We deliberately
+  // delay startRaceCycle() (which both stages the prerace AND calls open_betting)
+  // until the hold elapses, so the first betting window doesn't start the instant
+  // the host taps Start — and so the host's countdown and the phones' countdown
+  // begin together (open_betting stamps betting_closes_at at the same moment the
+  // host clock starts). The screen shows only the wipe image during the hold.
+  await new Promise(res => setTimeout(res, FIRST_RACE_HOLD_MS));
+
+  // Build race 0 (stages prerace + opens betting) under the cover, then reveal.
   await startRaceCycle();
 
-  // Hold a beat so the prerace is visibly settled, then slide the cover off.
-  w.style.transition = '';
+  // Short settle beat so the prerace is visibly in place, then slide the cover off.
   setTimeout(()=>{
     w.classList.remove('in');
     w.classList.add('out');
@@ -3506,14 +3515,44 @@ lq('#lobby-start-game').addEventListener('click', async ()=>{
       w.style.transition = '';
       _wipeCleanupId = null;
     }, 800);
-  }, 1200);
+  }, 600);
 });
 
-/* ════════════════════════════════════════════════════════════════
-   END-OF-NIGHT ACTIONS (final leaderboard header)
-   AGAIN     → reopen the lobby for another round with the same crew.
-   MAIN MENU → confirm, close the session, return to the host landing.
-════════════════════════════════════════════════════════════════ */
+/* Close session (room screen) → abandon the current session and return to the
+   first page (Start session / Back to game selection). Best-effort closes the
+   session on the DB so any joined phones know the room is gone, tears down the
+   lobby realtime + roster poll, and clears lobby state so a fresh Start session
+   creates a brand-new room. */
+lq('#lobby-close-session').addEventListener('click', async ()=>{
+  const btn = lq('#lobby-close-session');
+  btn.disabled = true;
+  btn.textContent = 'Closing…';
+
+  if(lobby.session){
+    try { await sb.rpc('finish_game', { p_session_id: lobby.session.id }); } catch(e){}
+  }
+  // Tear down realtime + roster poll for the room we're leaving.
+  if(lobby.channel){ try{ sb.removeChannel(lobby.channel); }catch(e){} lobby.channel = null; }
+  if(_lobbyRosterPoll){ clearInterval(_lobbyRosterPoll); _lobbyRosterPoll = null; }
+
+  // Clear lobby state back to a clean pre-session baseline.
+  lobby.session = null;
+  lobby.players = [];
+  lobby.rematch = false;
+  lobby.gameStarted = false;
+
+  // Reset the create button label (it may say "Reopen lobby" from a rematch).
+  lq('#lobby-create').textContent = 'Create room';
+  lq('#lobby-create').disabled = false;
+  lq('#lobby-config-msg').textContent = '';
+  lq('#lobby-room-msg').textContent = '';
+
+  // Back to the first menu page.
+  showStack('lobby-menu');
+
+  btn.disabled = false;
+  btn.textContent = 'Close session';
+});
 
 /* Stop every end-screen animation/timer so nothing keeps running underneath
    the lobby when we go again. */
@@ -3638,7 +3677,8 @@ lq('#confirm-yes').addEventListener('click', async ()=>{
     try { await sb.rpc('finish_game', { p_session_id: lobby.session.id }); } catch(e){}
   }
   teardownFinalScreen();
-  window.location.href = 'index-HOST.html';
+  // This page lives at games/horses/, so the menu index is two levels up.
+  window.location.href = '../../index.html';
 });
 
 /* ════════════════════════════════════════════════════════════════
