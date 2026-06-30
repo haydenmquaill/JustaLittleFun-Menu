@@ -542,20 +542,26 @@ body {
 
 /* ── WIPE TRANSITION ── */
 #wipe-overlay {
-  position:fixed; top:0; left:-100%; width:100%; height:100%;
+  position:fixed; top:0; left:-101%; width:101%; height:100%;
   background:#fff; z-index:9999;
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:32px;
   transition:left 0.7s cubic-bezier(0.4,0,0.2,1);
 }
 #wipe-overlay.in  { left:0; }
-#wipe-overlay.out { left:100%; transition:left 0.7s cubic-bezier(0.4,0,0.2,1); }
-/* shorter wipe used for lobby menu swaps (edit/cancel/confirm/close) */
-#wipe-overlay.fast.in  { transition:left 0.32s cubic-bezier(0.4,0,0.2,1); left:0; }
-#wipe-overlay.fast.out { transition:left 0.32s cubic-bezier(0.4,0,0.2,1); left:100%; }
+#wipe-overlay.out { left:101%; transition:left 0.7s cubic-bezier(0.4,0,0.2,1); }
+/* lobby menu swaps (edit/cancel/confirm/close/start): 0.4s slide */
+#wipe-overlay.fast.in  { transition:left 0.4s cubic-bezier(0.4,0,0.2,1); left:0; }
+#wipe-overlay.fast.out { transition:left 0.4s cubic-bezier(0.4,0,0.2,1); left:101%; }
 /* hold wipe: slides the cover to centre-screen and parks it there (used for the
    back-to-game-selection redirect, so the page change is masked behind it) */
 #wipe-overlay.hold { transition:left 0.4s cubic-bezier(0.3,0,0.2,1); }
 #wipe-overlay.hold.in { left:0; }
+/* lobby wipes hide the phrase text — just the clean logo */
+#wipe-overlay.no-phrase #wipe-phrase { display:none; }
+/* boot: the page opens fully covered, then wipes away (slightly longer slide) */
+#wipe-overlay.boot { transition:none; }
+#wipe-overlay.boot.in { left:0; }
+#wipe-overlay.boot.out { transition:left 0.5s cubic-bezier(0.4,0,0.2,1); left:101%; }
 #wipe-logo { width:40%; max-width:600px; object-fit:contain; }
 #wipe-phrase { font-family:'Barlow Condensed',sans-serif; font-size:3.5rem; font-weight:700; color:var(--blue); letter-spacing:3px; text-transform:uppercase; text-align:center; }
 
@@ -1136,7 +1142,7 @@ body {
     </div>
   </div>
 
-  <div id="wipe-overlay">
+  <div id="wipe-overlay" class="in no-phrase boot">
     <img src="assets/jalf_logo.png" alt="JALF" id="wipe-logo">
     <div id="wipe-phrase"></div>
   </div>
@@ -3116,14 +3122,12 @@ function doWipe(callback) {
   }, 2000);
 }
 
-/* Short wipe for lobby menu swaps: cover fast, run the swap while covered, uncover
-   fast. No long hold — just enough to hide the choppy screen change. */
+/* Lobby menu wipe: cover (0.4s), run the swap while covered, uncover (0.4s),
+   400ms hold. No phrase — just the clean logo. */
 function doQuickWipe(callback){
   const w = document.getElementById('wipe-overlay');
-  const p = document.getElementById('wipe-phrase');
-  if(p){ const ph=(PHRASE_DATA&&PHRASE_DATA.wipeTransitions&&PHRASE_DATA.wipeTransitions.length)?PHRASE_DATA.wipeTransitions:['Just a little fun!']; p.textContent=ph[Math.floor(Math.random()*ph.length)]; }
   if(_wipeCleanupId){ clearTimeout(_wipeCleanupId); _wipeCleanupId=null; }
-  w.classList.add('fast');
+  w.classList.add('fast','no-phrase');
   w.style.transition='none';
   w.classList.remove('out','in','hold');
   void w.offsetWidth;
@@ -3135,23 +3139,21 @@ function doQuickWipe(callback){
     w.classList.add('out');
     _wipeCleanupId=setTimeout(()=>{
       w.style.transition='none';
-      w.classList.remove('out','fast');
+      w.classList.remove('out','fast','no-phrase');
       void w.offsetWidth;
       w.style.transition='';
       _wipeCleanupId=null;
-    }, 360);
-  }, 360);
+    }, 400);
+  }, 400);
 }
 
 /* Cover the screen and PARK the wipe there (no slide-out). Used right before a
    page redirect so the navigation happens behind the held cover. The optional
-   callback fires once the cover is fully in place. */
+   callback fires once the cover is fully in place. No phrase — just the logo. */
 function doWipeHold(callback){
   const w = document.getElementById('wipe-overlay');
-  const p = document.getElementById('wipe-phrase');
-  if(p){ const ph=(PHRASE_DATA&&PHRASE_DATA.wipeTransitions&&PHRASE_DATA.wipeTransitions.length)?PHRASE_DATA.wipeTransitions:['Just a little fun!']; p.textContent=ph[Math.floor(Math.random()*ph.length)]; }
   if(_wipeCleanupId){ clearTimeout(_wipeCleanupId); _wipeCleanupId=null; }
-  w.classList.add('hold');
+  w.classList.add('hold','no-phrase');
   w.style.transition='none';
   w.classList.remove('out','in','fast');
   void w.offsetWidth;
@@ -3543,7 +3545,7 @@ async function createSessionAndOpenLobby(){
   lq('#lobby-code').textContent = data.room_code;
   lq('#lobby-join-url').textContent = PLAYER_JOIN_URL;
   renderSettingsSummary();
-  showStack('lobby-room');
+  doQuickWipe(()=> showStack('lobby-room'));
   subscribePlayers();
 }
 
@@ -4652,6 +4654,29 @@ loadGameData().then(()=>{
   console.error('Failed to load game data:', err);
   lq('#lobby-room-msg').textContent = 'Could not load race data (horses/courses/weather json)';
 });
+
+/* boot wipe: the page opens fully covered by the wipe overlay; hold it a touch
+   longer than the lobby transitions, then slide it away to reveal the lobby. */
+function revealOnBoot(){
+  const w = document.getElementById('wipe-overlay');
+  if(!w) return;
+  setTimeout(()=>{
+    w.classList.remove('in');
+    w.classList.add('out');
+    setTimeout(()=>{
+      w.style.transition='none';
+      w.classList.remove('out','boot','no-phrase');
+      void w.offsetWidth;
+      w.style.transition='';
+    }, 520);
+  }, 600);   // hold slightly longer than the 400ms lobby wipes
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', revealOnBoot);
+} else {
+  revealOnBoot();
+}
+
 </script>
 
 </div><!-- /page-root -->
