@@ -3633,14 +3633,21 @@ lq('#lobby-start-game').addEventListener('click', async ()=>{
   const w = document.getElementById('wipe-overlay');
   const p = document.getElementById('wipe-phrase');
   if(p) p.textContent = PHRASES[Math.floor(Math.random()*PHRASES.length)];
-  // Cover instantly (no slide-in — the lobby is already on screen, so we just
-  // need the cover in place before we swap what's underneath).
+  // Slide the cover IN from the left (animated), the same wipe used between
+  // races — rather than snapping it on. Position it fully off-screen-left with
+  // no transition, force a reflow, then add .in WITH the transition active so it
+  // wipes across the lobby.
   if(_wipeCleanupId){ clearTimeout(_wipeCleanupId); _wipeCleanupId=null; }
   w.style.transition = 'none';
   w.classList.remove('out');
-  w.classList.add('in');
+  w.classList.remove('in');
   void w.offsetWidth;
   w.style.transition = '';
+  w.classList.add('in');
+
+  // Wait for the wipe-in to finish covering the screen before swapping what's
+  // underneath, so the lobby→prerace swap stays hidden behind the cover.
+  await new Promise(res => setTimeout(res, 700));   // matches the 0.7s wipe slide
 
   // Hide the lobby underneath the cover and mark game state.
   document.getElementById('lobby-overlay').style.display='none';
@@ -3998,17 +4005,24 @@ async function onRaceFinished(){
 }
 
 /* ── Per-race big moments ──────────────────────────────────────────────────
-   A "big moment" is a standout bet outcome — NOT every settled bet. It earns a
-   spot if EITHER:
-     · Longshot: the bet's odds (payout ÷ stake) ≥ BM_LONGSHOT_ODDS — captures
-       winning on a dud and most exotics (which carry big multipliers), and
-     · Big swing: |profit or loss| ≥ BM_SWING_FRAC of the starting bank —
-       captures losing a lot on a "safe" bet, or any large stake moving.
-   Winning a small amount on a short-priced favourite qualifies as neither, so
-   it's correctly ignored. */
-const BM_LONGSHOT_ODDS = 5.0;   // ≥5× payout multiple = longshot
-const BM_SWING_FRAC    = 0.25;  // ≥25% of starting bank swung in one bet
-const BM_MAX_ROWS      = 5;     // how many to show on the tile
+   A "big moment" is a standout bet outcome — NOT every settled bet. The amount
+   shown and every threshold below are NET: a win's value is profit
+   (payout − stake), a loss's value is the stake risked. This matters — betting
+   your whole bank on a short-priced favourite and getting roughly your stake
+   back is NOT a big win, because the net profit is small.
+
+   A bet earns a spot if EITHER:
+     · Big win: it won AND net profit ≥ BM_PROFIT_FRAC of the starting bank.
+       A longshot win still has to clear a smaller net-profit floor
+       (BM_LONGSHOT_MIN_FRAC) so a few dollars off a big multiple doesn't count.
+     · Big loss: it lost AND the stake risked ≥ BM_LOSS_FRAC of the bank.
+   Winning a little on a short favourite, or winning a trivial amount on a
+   longshot, qualifies as neither and is correctly ignored. */
+const BM_LONGSHOT_ODDS      = 5.0;   // ≥5× payout multiple = longshot
+const BM_PROFIT_FRAC        = 0.25;  // win counts if NET PROFIT ≥ 25% of bank
+const BM_LONGSHOT_MIN_FRAC  = 0.10;  // a longshot win needs ≥10% net profit too
+const BM_LOSS_FRAC          = 0.25;  // loss counts if STAKE ≥ 25% of bank
+const BM_MAX_ROWS           = 5;     // how many to show on the tile
 
 async function showRaceBigMoments(roundNumber){
   const box  = document.getElementById('big-moments');
@@ -4048,16 +4062,34 @@ async function showRaceBigMoments(roundNumber){
     const stake = Number(b.stake)||0;
     if(stake <= 0) return;
     const sel   = b.selection || {};
-    const odds  = stake > 0 ? (Number(b.potential_payout)||0) / stake : 0;
     const won   = b.status === 'won';
     const lost  = b.status === 'lost';
     if(!won && !lost) return;   // only settled bets
 
-    const swing = won ? ((Number(b.potential_payout)||0) - stake) : stake;
+    const payout = Number(b.potential_payout) || 0;
+    // NET figures: a win's value is profit over stake; a loss's value is stake.
+    const netProfit = won ? (payout - stake) : 0;
+    const netLoss   = lost ? stake : 0;
+    const odds      = stake > 0 ? payout / stake : 0;
     const isLongshot = odds >= BM_LONGSHOT_ODDS;
-    const isBigSwing = startBank > 0 && swing >= startBank * BM_SWING_FRAC;
     const isExotic   = EXOTIC.has(sel.type);
-    if(!(isLongshot || isBigSwing || (isExotic && (won || swing > 0)))) return;
+
+    let qualifies = false;
+    if(won){
+      // A win must clear a real net-profit bar. Longshots get a lower bar (the
+      // long odds make even a modest net notable) but still need to clear it,
+      // so winning back roughly your stake never counts.
+      const floor = isLongshot
+        ? startBank * BM_LONGSHOT_MIN_FRAC
+        : startBank * BM_PROFIT_FRAC;
+      qualifies = startBank > 0 && netProfit >= floor && netProfit > 0;
+    } else if(lost){
+      qualifies = startBank > 0 && netLoss >= startBank * BM_LOSS_FRAC;
+    }
+    if(!qualifies) return;
+
+    // Net amount this bet swung the player's bank, for display + ranking.
+    const swing = won ? netProfit : netLoss;
 
     // Label the selection — silk chip(s) with the number inside, then name(s).
     const horses = sel.horses || [];
