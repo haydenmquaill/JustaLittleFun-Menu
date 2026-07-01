@@ -705,6 +705,250 @@
         "down/a30/2.mp3"
       ]
     },
+    "placeFirst": {
+      "a01": [
+        "place_first/a01/1.mp3",
+        "place_first/a01/2.mp3"
+      ],
+      "a02": [
+        "place_first/a02/1.mp3",
+        "place_first/a02/2.mp3"
+      ],
+      "a03": [
+        "place_first/a03/1.mp3",
+        "place_first/a03/2.mp3"
+      ],
+      "a04": [
+        "place_first/a04/1.mp3",
+        "place_first/a04/2.mp3"
+      ],
+      "a05": [
+        "place_first/a05/1.mp3",
+        "place_first/a05/2.mp3"
+      ],
+      "a06": [
+        "place_first/a06/1.mp3",
+        "place_first/a06/2.mp3"
+      ],
+      "a07": [
+        "place_first/a07/1.mp3",
+        "place_first/a07/2.mp3"
+      ],
+      "a08": [
+        "place_first/a08/1.mp3",
+        "place_first/a08/2.mp3"
+      ],
+      "a09": [
+        "place_first/a09/1.mp3",
+        "place_first/a09/2.mp3"
+      ],
+      "a10": [
+        "place_first/a10/1.mp3",
+        "place_first/a10/2.mp3"
+      ],
+      "a11": [
+        "place_first/a11/1.mp3",
+        "place_first/a11/2.mp3"
+      ],
+      "a12": [
+        "place_first/a12/1.mp3",
+        "place_first/a12/2.mp3"
+      ],
+      "a13": [
+        "place_first/a13/1.mp3",
+        "place_first/a13/2.mp3"
+      ],
+      "a14": [
+        "place_first/a14/1.mp3",
+        "place_first/a14/2.mp3"
+      ],
+      "a15": [
+        "place_first/a15/1.mp3",
+        "place_first/a15/2.mp3"
+      ],
+      "a16": [
+        "place_first/a16/1.mp3",
+        "place_first/a16/2.mp3"
+      ],
+      "a17": [
+        "place_first/a17/1.mp3",
+        "place_first/a17/2.mp3"
+      ],
+      "a18": [
+        "place_first/a18/1.mp3",
+        "place_first/a18/2.mp3"
+      ],
+      "a19": [
+        "place_first/a19/1.mp3",
+        "place_first/a19/2.mp3"
+      ],
+      "a20": [
+        "place_first/a20/1.mp3",
+        "place_first/a20/2.mp3"
+      ],
+      "a21": [
+        "place_first/a21/1.mp3",
+        "place_first/a21/2.mp3"
+      ],
+      "a22": [
+        "place_first/a22/1.mp3",
+        "place_first/a22/2.mp3"
+      ],
+      "a23": [
+        "place_first/a23/1.mp3",
+        "place_first/a23/2.mp3"
+      ],
+      "a24": [
+        "place_first/a24/1.mp3",
+        "place_first/a24/2.mp3"
+      ],
+      "a25": [
+        "place_first/a25/1.mp3",
+        "place_first/a25/2.mp3"
+      ],
+      "a26": [
+        "place_first/a26/1.mp3",
+        "place_first/a26/2.mp3"
+      ],
+      "a27": [
+        "place_first/a27/1.mp3",
+        "place_first/a27/2.mp3"
+      ],
+      "a28": [
+        "place_first/a28/1.mp3",
+        "place_first/a28/2.mp3"
+      ],
+      "a29": [
+        "place_first/a29/1.mp3",
+        "place_first/a29/2.mp3"
+      ],
+      "a30": [
+        "place_first/a30/1.mp3",
+        "place_first/a30/2.mp3"
+      ]
+    },
+    "placeFirstPhoto": {
+      "a01": [
+        "place_first_photo/a01/1.mp3",
+        "place_first_photo/a01/2.mp3"
+      ],
+      "a02": [
+        "place_first_photo/a02/1.mp3",
+        "place_first_photo/a02/2.mp3"
+      ],
+      "a03": [
+        "place_first_photo/a03/1.mp3",
+        "place_first_photo/a03/2.mp3"
+      ],
+      "a04": [
+        "place_first_photo/a04/1.mp3",
+        "place_first_photo/a04/2.mp3"
+      ],
+      "a05": [
+        "place_first_photo/a05/1.mp3",
+        "place_first_photo/a05/2.mp3"
+      ],
+      "a06": [
+        "place_first_photo/a06/1.mp3",
+        "place_first_photo/a06/2.mp3"
+      ],
+      "a07": [
+        "place_first_photo/a07/1.mp3",
+        "place_first_photo/a07/2.mp3"
+      ],
+      "a08": [
+        "place_first_photo/a08/1.mp3",
+        "place_first_photo/a08/2.mp3"
+      ],
+      "a09": [
+        "place_first_photo/a09/1.mp3",
+        "place_first_photo/a09/2.mp3"
+      ],
+      "a10": [
+        "place_first_photo/a10/1.mp3",
+        "place_first_photo/a10/2.mp3"
+      ],
+      "a11": [
+        "place_first_photo/a11/1.mp3",
+        "place_first_photo/a11/2.mp3"
+      ],
+      "a12": [
+        "place_first_photo/a12/1.mp3",
+        "place_first_photo/a12/2.mp3"
+      ],
+      "a13": [
+        "place_first_photo/a13/1.mp3",
+        "place_first_photo/a13/2.mp3"
+      ],
+      "a14": [
+        "place_first_photo/a14/1.mp3",
+        "place_first_photo/a14/2.mp3"
+      ],
+      "a15": [
+        "place_first_photo/a15/1.mp3",
+        "place_first_photo/a15/2.mp3"
+      ],
+      "a16": [
+        "place_first_photo/a16/1.mp3",
+        "place_first_photo/a16/2.mp3"
+      ],
+      "a17": [
+        "place_first_photo/a17/1.mp3",
+        "place_first_photo/a17/2.mp3"
+      ],
+      "a18": [
+        "place_first_photo/a18/1.mp3",
+        "place_first_photo/a18/2.mp3"
+      ],
+      "a19": [
+        "place_first_photo/a19/1.mp3",
+        "place_first_photo/a19/2.mp3"
+      ],
+      "a20": [
+        "place_first_photo/a20/1.mp3",
+        "place_first_photo/a20/2.mp3"
+      ],
+      "a21": [
+        "place_first_photo/a21/1.mp3",
+        "place_first_photo/a21/2.mp3"
+      ],
+      "a22": [
+        "place_first_photo/a22/1.mp3",
+        "place_first_photo/a22/2.mp3"
+      ],
+      "a23": [
+        "place_first_photo/a23/1.mp3",
+        "place_first_photo/a23/2.mp3"
+      ],
+      "a24": [
+        "place_first_photo/a24/1.mp3",
+        "place_first_photo/a24/2.mp3"
+      ],
+      "a25": [
+        "place_first_photo/a25/1.mp3",
+        "place_first_photo/a25/2.mp3"
+      ],
+      "a26": [
+        "place_first_photo/a26/1.mp3",
+        "place_first_photo/a26/2.mp3"
+      ],
+      "a27": [
+        "place_first_photo/a27/1.mp3",
+        "place_first_photo/a27/2.mp3"
+      ],
+      "a28": [
+        "place_first_photo/a28/1.mp3",
+        "place_first_photo/a28/2.mp3"
+      ],
+      "a29": [
+        "place_first_photo/a29/1.mp3",
+        "place_first_photo/a29/2.mp3"
+      ],
+      "a30": [
+        "place_first_photo/a30/1.mp3",
+        "place_first_photo/a30/2.mp3"
+      ]
+    },
     "placeSecond": {
       "a01": [
         "place_second/a01/1.mp3",
@@ -827,6 +1071,128 @@
         "place_second/a30/2.mp3"
       ]
     },
+    "placeSecondPhoto": {
+      "a01": [
+        "place_second_photo/a01/1.mp3",
+        "place_second_photo/a01/2.mp3"
+      ],
+      "a02": [
+        "place_second_photo/a02/1.mp3",
+        "place_second_photo/a02/2.mp3"
+      ],
+      "a03": [
+        "place_second_photo/a03/1.mp3",
+        "place_second_photo/a03/2.mp3"
+      ],
+      "a04": [
+        "place_second_photo/a04/1.mp3",
+        "place_second_photo/a04/2.mp3"
+      ],
+      "a05": [
+        "place_second_photo/a05/1.mp3",
+        "place_second_photo/a05/2.mp3"
+      ],
+      "a06": [
+        "place_second_photo/a06/1.mp3",
+        "place_second_photo/a06/2.mp3"
+      ],
+      "a07": [
+        "place_second_photo/a07/1.mp3",
+        "place_second_photo/a07/2.mp3"
+      ],
+      "a08": [
+        "place_second_photo/a08/1.mp3",
+        "place_second_photo/a08/2.mp3"
+      ],
+      "a09": [
+        "place_second_photo/a09/1.mp3",
+        "place_second_photo/a09/2.mp3"
+      ],
+      "a10": [
+        "place_second_photo/a10/1.mp3",
+        "place_second_photo/a10/2.mp3"
+      ],
+      "a11": [
+        "place_second_photo/a11/1.mp3",
+        "place_second_photo/a11/2.mp3"
+      ],
+      "a12": [
+        "place_second_photo/a12/1.mp3",
+        "place_second_photo/a12/2.mp3"
+      ],
+      "a13": [
+        "place_second_photo/a13/1.mp3",
+        "place_second_photo/a13/2.mp3"
+      ],
+      "a14": [
+        "place_second_photo/a14/1.mp3",
+        "place_second_photo/a14/2.mp3"
+      ],
+      "a15": [
+        "place_second_photo/a15/1.mp3",
+        "place_second_photo/a15/2.mp3"
+      ],
+      "a16": [
+        "place_second_photo/a16/1.mp3",
+        "place_second_photo/a16/2.mp3"
+      ],
+      "a17": [
+        "place_second_photo/a17/1.mp3",
+        "place_second_photo/a17/2.mp3"
+      ],
+      "a18": [
+        "place_second_photo/a18/1.mp3",
+        "place_second_photo/a18/2.mp3"
+      ],
+      "a19": [
+        "place_second_photo/a19/1.mp3",
+        "place_second_photo/a19/2.mp3"
+      ],
+      "a20": [
+        "place_second_photo/a20/1.mp3",
+        "place_second_photo/a20/2.mp3"
+      ],
+      "a21": [
+        "place_second_photo/a21/1.mp3",
+        "place_second_photo/a21/2.mp3"
+      ],
+      "a22": [
+        "place_second_photo/a22/1.mp3",
+        "place_second_photo/a22/2.mp3"
+      ],
+      "a23": [
+        "place_second_photo/a23/1.mp3",
+        "place_second_photo/a23/2.mp3"
+      ],
+      "a24": [
+        "place_second_photo/a24/1.mp3",
+        "place_second_photo/a24/2.mp3"
+      ],
+      "a25": [
+        "place_second_photo/a25/1.mp3",
+        "place_second_photo/a25/2.mp3"
+      ],
+      "a26": [
+        "place_second_photo/a26/1.mp3",
+        "place_second_photo/a26/2.mp3"
+      ],
+      "a27": [
+        "place_second_photo/a27/1.mp3",
+        "place_second_photo/a27/2.mp3"
+      ],
+      "a28": [
+        "place_second_photo/a28/1.mp3",
+        "place_second_photo/a28/2.mp3"
+      ],
+      "a29": [
+        "place_second_photo/a29/1.mp3",
+        "place_second_photo/a29/2.mp3"
+      ],
+      "a30": [
+        "place_second_photo/a30/1.mp3",
+        "place_second_photo/a30/2.mp3"
+      ]
+    },
     "placeThird": {
       "a01": [
         "place_third/a01/1.mp3",
@@ -947,6 +1313,128 @@
       "a30": [
         "place_third/a30/1.mp3",
         "place_third/a30/2.mp3"
+      ]
+    },
+    "placeThirdPhoto": {
+      "a01": [
+        "place_third_photo/a01/1.mp3",
+        "place_third_photo/a01/2.mp3"
+      ],
+      "a02": [
+        "place_third_photo/a02/1.mp3",
+        "place_third_photo/a02/2.mp3"
+      ],
+      "a03": [
+        "place_third_photo/a03/1.mp3",
+        "place_third_photo/a03/2.mp3"
+      ],
+      "a04": [
+        "place_third_photo/a04/1.mp3",
+        "place_third_photo/a04/2.mp3"
+      ],
+      "a05": [
+        "place_third_photo/a05/1.mp3",
+        "place_third_photo/a05/2.mp3"
+      ],
+      "a06": [
+        "place_third_photo/a06/1.mp3",
+        "place_third_photo/a06/2.mp3"
+      ],
+      "a07": [
+        "place_third_photo/a07/1.mp3",
+        "place_third_photo/a07/2.mp3"
+      ],
+      "a08": [
+        "place_third_photo/a08/1.mp3",
+        "place_third_photo/a08/2.mp3"
+      ],
+      "a09": [
+        "place_third_photo/a09/1.mp3",
+        "place_third_photo/a09/2.mp3"
+      ],
+      "a10": [
+        "place_third_photo/a10/1.mp3",
+        "place_third_photo/a10/2.mp3"
+      ],
+      "a11": [
+        "place_third_photo/a11/1.mp3",
+        "place_third_photo/a11/2.mp3"
+      ],
+      "a12": [
+        "place_third_photo/a12/1.mp3",
+        "place_third_photo/a12/2.mp3"
+      ],
+      "a13": [
+        "place_third_photo/a13/1.mp3",
+        "place_third_photo/a13/2.mp3"
+      ],
+      "a14": [
+        "place_third_photo/a14/1.mp3",
+        "place_third_photo/a14/2.mp3"
+      ],
+      "a15": [
+        "place_third_photo/a15/1.mp3",
+        "place_third_photo/a15/2.mp3"
+      ],
+      "a16": [
+        "place_third_photo/a16/1.mp3",
+        "place_third_photo/a16/2.mp3"
+      ],
+      "a17": [
+        "place_third_photo/a17/1.mp3",
+        "place_third_photo/a17/2.mp3"
+      ],
+      "a18": [
+        "place_third_photo/a18/1.mp3",
+        "place_third_photo/a18/2.mp3"
+      ],
+      "a19": [
+        "place_third_photo/a19/1.mp3",
+        "place_third_photo/a19/2.mp3"
+      ],
+      "a20": [
+        "place_third_photo/a20/1.mp3",
+        "place_third_photo/a20/2.mp3"
+      ],
+      "a21": [
+        "place_third_photo/a21/1.mp3",
+        "place_third_photo/a21/2.mp3"
+      ],
+      "a22": [
+        "place_third_photo/a22/1.mp3",
+        "place_third_photo/a22/2.mp3"
+      ],
+      "a23": [
+        "place_third_photo/a23/1.mp3",
+        "place_third_photo/a23/2.mp3"
+      ],
+      "a24": [
+        "place_third_photo/a24/1.mp3",
+        "place_third_photo/a24/2.mp3"
+      ],
+      "a25": [
+        "place_third_photo/a25/1.mp3",
+        "place_third_photo/a25/2.mp3"
+      ],
+      "a26": [
+        "place_third_photo/a26/1.mp3",
+        "place_third_photo/a26/2.mp3"
+      ],
+      "a27": [
+        "place_third_photo/a27/1.mp3",
+        "place_third_photo/a27/2.mp3"
+      ],
+      "a28": [
+        "place_third_photo/a28/1.mp3",
+        "place_third_photo/a28/2.mp3"
+      ],
+      "a29": [
+        "place_third_photo/a29/1.mp3",
+        "place_third_photo/a29/2.mp3"
+      ],
+      "a30": [
+        "place_third_photo/a30/1.mp3",
+        "place_third_photo/a30/2.mp3"
       ]
     }
   },
@@ -1138,6 +1626,11 @@
         "roll_call/position/10/3.mp3"
       ]
     },
+    "favourite": [
+      "roll_call/favourite/1.mp3",
+      "roll_call/favourite/2.mp3",
+      "roll_call/favourite/3.mp3"
+    ],
     "horseName": {
       "a01": [
         "roll_call/name/a01/1.mp3",
