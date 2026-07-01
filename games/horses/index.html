@@ -1187,10 +1187,14 @@ const CONFIG = {
   // so the target holds regardless of how many runners there are. Dry weather ids not
   // listed here just use deathChance. Tune these freely — they're the real knobs.
   // Keys are weather ids (see weather.json): w03=Light Rain, w04=Heavy Rain, w06=Thunderstorm.
+  // Snow tiers mirror the rain tiers exactly (w09/w10/w11 ≈ w03/w04/w06).
   weatherFallTarget: {
     "w03": 0.20,   // Light Rain
     "w04": 0.60,   // Heavy Rain
     "w06": 0.90,   // Thunderstorm
+    "w09": 0.20,   // Light Snow   (≈ Light Rain)
+    "w10": 0.60,   // Heavy Snow   (≈ Heavy Rain)
+    "w11": 0.90,   // Blizzard     (≈ Thunderstorm)
   },
   weatherFallEligibleTicks: 1800, // ~death-eligible ticks per race (prog 0.08–0.90 window);
                                   // used only to convert a target into a per-tick chance.
@@ -1324,7 +1328,15 @@ function horseEffectiveRating(horseDef, terrain, distance, weather) {
 }
 
 function selectField(course, terrain, distance, weather, fieldSize) {
-  const scored = HORSE_POOL.map(h => ({
+  // Only horses from the course's country may run. Fall back to the full pool if
+  // that country somehow can't fill the field, so a race is never left short.
+  const country = course && course.country;
+  let pool = HORSE_POOL;
+  if(country){
+    const local = HORSE_POOL.filter(h => (h.country || 'AU') === country);
+    if(local.length >= fieldSize) pool = local;
+  }
+  const scored = pool.map(h => ({
     def: h,
     rating: horseEffectiveRating(h, terrain, distance, weather),
   }));
@@ -1383,10 +1395,24 @@ function generateOdds(fieldWithRatings) {
   });
 }
 
+/* Weighted weather roll. If an event has a `countryWeight` map, the weight for
+   the current course's country is used (letting the same list yield seasonal /
+   snow weather at JP courses and the original mix at AU); otherwise its plain
+   `weight` applies to every country. A country weight of 0 excludes an event
+   there — that's how, e.g., cherry blossom never appears outside Japan. */
+function weatherWeightFor(w, country){
+  if(w.countryWeight && Object.prototype.hasOwnProperty.call(w.countryWeight, country)){
+    return w.countryWeight[country];
+  }
+  return w.weight || 0;
+}
 function rollWeather() {
-  const total = WEATHER_DATA.reduce((a,w)=>a+w.weight,0);
+  const country = (RACECOURSE && RACECOURSE.country) || 'AU';
+  const weights = WEATHER_DATA.map(w=>weatherWeightFor(w, country));
+  const total = weights.reduce((a,x)=>a+x,0);
+  if(total <= 0) return WEATHER_DATA[0];          // safety: nothing eligible
   let r = Math.random()*total;
-  for(const w of WEATHER_DATA) { r-=w.weight; if(r<=0) return w; }
+  for(let i=0;i<WEATHER_DATA.length;i++){ r-=weights[i]; if(r<=0) return WEATHER_DATA[i]; }
   return WEATHER_DATA[0];
 }
 
@@ -1426,6 +1452,7 @@ function setupRace() {
 function renderSilkSVG(silk, size=40) {
   const bg = silk.background;
   const ac = silk.accentColor || '#ffffff';
+  const ac2 = silk.accentColor2 || ac;   // optional 2nd accent (tri-bands etc.)
   const p  = silk.pattern || 'SOLID';
   const h  = size, w = size;
   let pattern = '';
@@ -1445,7 +1472,7 @@ function renderSilkSVG(silk, size=40) {
       pattern = `<rect x="0" y="${h*0.25}" width="${w}" height="${h*0.15}" fill="${ac}"/>
                  <rect x="0" y="${h*0.6}" width="${w}" height="${h*0.15}" fill="${ac}"/>`;
       break;
-    case 'STAR':
+    case 'STAR': {
       const cx=w/2, cy=h/2, r1=w*0.38, r2=w*0.16, pts=5;
       let starPts = '';
       for(let i=0;i<pts*2;i++){
@@ -1455,6 +1482,7 @@ function renderSilkSVG(silk, size=40) {
       }
       pattern = `<polygon points="${starPts.trim()}" fill="${ac}"/>`;
       break;
+    }
     case 'CIRCLE':
       pattern = `<circle cx="${w/2}" cy="${h/2}" r="${w*0.28}" fill="${ac}"/>`;
       break;
@@ -1465,6 +1493,166 @@ function renderSilkSVG(silk, size=40) {
     case 'DIAMOND':
       pattern = `<polygon points="${w/2},${h*0.1} ${w*0.9},${h/2} ${w/2},${h*0.9} ${w*0.1},${h/2}" fill="${ac}"/>`;
       break;
+
+    // ── added for the AU roster ──────────────────────────────────────────
+    case 'HORSESHOE': {
+      // open-bottom U made from a thick arc
+      const cx=w/2, cy=h*0.46, r=w*0.28, sw=w*0.13;
+      pattern = `<path d="M ${cx-r} ${cy+r*0.6} A ${r} ${r} 0 1 1 ${cx+r} ${cy+r*0.6}" fill="none" stroke="${ac}" stroke-width="${sw}" stroke-linecap="round"/>`;
+      break;
+    }
+    case 'DICE_DIAGONAL': {
+      // three dots on the leading diagonal (a 3-sided "die")
+      const r=w*0.09;
+      const p1=[w*0.28,h*0.72], p2=[w*0.5,h*0.5], p3=[w*0.72,h*0.28];
+      pattern = [p1,p2,p3].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${ac}"/>`).join('');
+      break;
+    }
+    case 'EYES': {
+      // two almond "eye" shapes with a clear gap between them
+      const eye=(cx)=>`<ellipse cx="${cx}" cy="${h*0.5}" rx="${w*0.15}" ry="${h*0.095}" fill="${ac}"/>`;
+      pattern = eye(w*0.28)+eye(w*0.72);
+      break;
+    }
+    case 'SPLATTER': {
+      // scattered irregular blobs
+      const blobs=[[0.3,0.35,0.11],[0.62,0.28,0.07],[0.7,0.6,0.12],[0.4,0.68,0.08],[0.52,0.48,0.05],[0.24,0.58,0.06]];
+      pattern = blobs.map(([x,y,r])=>`<circle cx="${w*x}" cy="${h*y}" r="${w*r}" fill="${ac}"/>`).join('');
+      break;
+    }
+    case 'ARROW_UP': {
+      const cx=w/2;
+      pattern = `<polygon points="${cx},${h*0.15} ${w*0.78},${h*0.5} ${w*0.6},${h*0.5} ${w*0.6},${h*0.85} ${w*0.4},${h*0.85} ${w*0.4},${h*0.5} ${w*0.22},${h*0.5}" fill="${ac}"/>`;
+      break;
+    }
+    case 'ARROW_DOWN': {
+      const cx=w/2;
+      pattern = `<polygon points="${cx},${h*0.85} ${w*0.78},${h*0.5} ${w*0.6},${h*0.5} ${w*0.6},${h*0.15} ${w*0.4},${h*0.15} ${w*0.4},${h*0.5} ${w*0.22},${h*0.5}" fill="${ac}"/>`;
+      break;
+    }
+    case 'ARROW_REPEAT': {
+      // two stacked chevron-arrows pointing right (a "repeat/refresh" feel)
+      const arr=(y)=>`<polyline points="${w*0.32},${y-h*0.12} ${w*0.6},${y} ${w*0.32},${y+h*0.12}" fill="none" stroke="${ac}" stroke-width="${w*0.1}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      pattern = arr(h*0.36)+arr(h*0.64);
+      break;
+    }
+    case 'COLUMN': {
+      // thin vertical centred bar, full height
+      pattern = `<rect x="${w*0.44}" y="0" width="${w*0.12}" height="${h}" fill="${ac}"/>`;
+      break;
+    }
+    case 'OFFSET_STRIPE': {
+      // vertical strip offset right of centre, ~double width
+      pattern = `<rect x="${w*0.54}" y="0" width="${w*0.30}" height="${h}" fill="${ac}"/>`;
+      break;
+    }
+    case 'TRICOLUMN': {
+      // three vertical columns (ac / ac2 / ac) over the bottom — used with a top band bg
+      const topFrac = silk.topFrac || 0;   // if set, columns occupy below topFrac
+      const y = h*topFrac, ch = h-(h*topFrac), cw = w/3;
+      pattern = `<rect x="0" y="${y}" width="${cw}" height="${ch}" fill="${ac}"/>
+                 <rect x="${cw}" y="${y}" width="${cw}" height="${ch}" fill="${ac2}"/>
+                 <rect x="${cw*2}" y="${y}" width="${cw}" height="${ch}" fill="${ac}"/>`;
+      break;
+    }
+    case 'TRIBAND_H': {
+      // three horizontal bands of uneven size: parts from silk.bands [f1,f2,f3] colors [c1,c2,c3]
+      const bands = silk.bands || [[0.166,ac],[0.5,ac2],[0.334,bg]];
+      let y=0, out='';
+      for(const [frac,col] of bands){ out += `<rect x="0" y="${y}" width="${w}" height="${h*frac+0.5}" fill="${col}"/>`; y += h*frac; }
+      pattern = out;
+      break;
+    }
+    case 'SWOOSH': {
+      // Boeing-style sweeping double curve
+      pattern = `<path d="M ${w*0.05} ${h*0.7} Q ${w*0.5} ${h*0.15} ${w*0.95} ${h*0.42} Q ${w*0.5} ${h*0.4} ${w*0.05} ${h*0.7} Z" fill="${ac}"/>`;
+      break;
+    }
+    case 'TRIANGLE_WEDGE': {
+      // right triangle, hypotenuse on the left, point touching right edge
+      pattern = `<polygon points="0,0 ${w},${h/2} 0,${h}" fill="${ac}"/>`;
+      break;
+    }
+    case 'POLKA': {
+      const r=w*0.07; let out='';
+      for(let yy=0.2; yy<0.95; yy+=0.28){
+        for(let xx=0.18; xx<0.95; xx+=0.28){
+          const ox = (Math.round(yy/0.28)%2)? 0.14:0;   // brick offset
+          out += `<circle cx="${w*(xx+ox)}" cy="${h*yy}" r="${r}" fill="${ac}"/>`;
+        }
+      }
+      pattern = out;
+      break;
+    }
+    case 'HEXAGON': {
+      // point-top hexagon
+      const cx=w/2, cy=h/2, r=w*0.32;
+      let pts='';
+      for(let i=0;i<6;i++){ const a=(Math.PI/3)*i - Math.PI/2; pts += `${cx+r*Math.cos(a)},${cy+r*Math.sin(a)} `; }
+      pattern = `<polygon points="${pts.trim()}" fill="${ac}"/>`;
+      break;
+    }
+    case 'DIAGONAL_LINE': {
+      pattern = `<line x1="0" y1="${h}" x2="${w}" y2="0" stroke="${ac}" stroke-width="${w*0.12}"/>`;
+      break;
+    }
+    case 'SEMICIRCLE': {
+      // centred semicircle arching upward
+      const cx=w/2, cy=h*0.62, r=w*0.3;
+      pattern = `<path d="M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy} Z" fill="${ac}"/>`;
+      break;
+    }
+    case 'TSHAPE': {
+      // top band (quarter height) + centred vertical column of matching thickness
+      const band=h*0.25;
+      pattern = `<rect x="0" y="0" width="${w}" height="${band}" fill="${ac}"/>
+                 <rect x="${(w-band)/2}" y="${band}" width="${band}" height="${h-band}" fill="${ac}"/>`;
+      break;
+    }
+    case 'HEART': {
+      const cx=w/2, cy=h*0.44, s=w*0.40;
+      pattern = `<path d="M ${cx} ${cy+s*0.9}
+                 C ${cx} ${cy+s*0.5}, ${cx-s} ${cy+s*0.35}, ${cx-s} ${cy-s*0.1}
+                 C ${cx-s} ${cy-s*0.55}, ${cx-s*0.35} ${cy-s*0.6}, ${cx} ${cy-s*0.2}
+                 C ${cx+s*0.35} ${cy-s*0.6}, ${cx+s} ${cy-s*0.55}, ${cx+s} ${cy-s*0.1}
+                 C ${cx+s} ${cy+s*0.35}, ${cx} ${cy+s*0.5}, ${cx} ${cy+s*0.9} Z" fill="${ac}"/>`;
+      break;
+    }
+    case 'LIGHTNING': {
+      pattern = `<polygon points="${w*0.56},${h*0.1} ${w*0.3},${h*0.55} ${w*0.47},${h*0.55} ${w*0.4},${h*0.9} ${w*0.72},${h*0.42} ${w*0.53},${h*0.42}" fill="${ac}"/>`;
+      break;
+    }
+    case 'RING': {
+      pattern = `<circle cx="${w/2}" cy="${h/2}" r="${w*0.28}" fill="none" stroke="${ac}" stroke-width="${w*0.07}"/>`;
+      break;
+    }
+    case 'CENTER_BAND': {
+      // horizontal central band
+      pattern = `<rect x="0" y="${h*0.4}" width="${w}" height="${h*0.2}" fill="${ac}"/>`;
+      break;
+    }
+    case 'CENTER_RECT': {
+      // centred rectangle 3/4 wide, 1/4 tall, sitting on the top edge
+      pattern = `<rect x="${w*0.125}" y="0" width="${w*0.75}" height="${h*0.25}" fill="${ac}"/>`;
+      break;
+    }
+    case 'CROSSHATCH': {
+      const sw=w*0.04; let out='';
+      for(let o=-1; o<=1; o+=0.5){
+        out += `<line x1="${w*(0+o)}" y1="0" x2="${w*(1+o)}" y2="${h}" stroke="${ac}" stroke-width="${sw}"/>`;
+        out += `<line x1="${w*(0+o)}" y1="${h}" x2="${w*(1+o)}" y2="0" stroke="${ac}" stroke-width="${sw}"/>`;
+      }
+      pattern = out;
+      break;
+    }
+    case 'CROSS_X': {
+      // single bold X, corner to corner
+      const sw=w*0.16;
+      pattern = `<line x1="0" y1="0" x2="${w}" y2="${h}" stroke="${ac}" stroke-width="${sw}" stroke-linecap="round"/>
+                 <line x1="0" y1="${h}" x2="${w}" y2="0" stroke="${ac}" stroke-width="${sw}" stroke-linecap="round"/>`;
+      break;
+    }
+
     default:
       pattern = '';
   }
@@ -1542,7 +1730,25 @@ let WORLD_W = RACE_LENGTH + VIEWPORT_W*3 + Math.abs(WALK_UP_START); // recompute
 function applyTrackTheme() {
   const track = document.getElementById('track-layer');
   const grass = document.getElementById('grass-layer');
-  if(RACE_TERRAIN === 'DIRT') {
+  const vis   = RACE_WEATHER && RACE_WEATHER.visual;
+  const snowy = vis && vis.particleType === 'snow';
+
+  if(snowy){
+    // Snow-covered ground. Deliberately a cooler, faintly blue-grey white
+    // (#e3ebf2 / #d5e0ea) so it sits DISTINCT from the pure-white falling
+    // particles (rgba(255,255,255)) — the flakes read as brighter on top.
+    // Heavier snow lays a whiter, flatter blanket; light snow keeps a hint of
+    // the lane striping showing through.
+    const heavy = (vis.particleIntensity || 0) >= 0.7;
+    if(heavy){
+      track.style.background = 'repeating-linear-gradient(180deg,#eef3f8 0,#eef3f8 34px,#e2ebf2 34px,#e2ebf2 36px)';
+      grass.style.background = 'linear-gradient(180deg,#f2f6fa 0%,#e6eef4 45%,#d8e3ec 100%)';
+    } else {
+      // light snow: thinner cover, lane lines faintly visible beneath
+      track.style.background = 'repeating-linear-gradient(180deg,#e6edf3 0,#e6edf3 34px,#d5e0ea 34px,#d5e0ea 36px)';
+      grass.style.background = 'linear-gradient(180deg,#e9f0f6 0%,#dde8f0 45%,#cdd9e4 100%)';
+    }
+  } else if(RACE_TERRAIN === 'DIRT') {
     track.style.background = 'repeating-linear-gradient(180deg,#c8a96e 0,#c8a96e 34px,#b8976a 34px,#b8976a 36px)';
     grass.style.background  = 'linear-gradient(180deg,#5a9e50 0%,#4a8a3a 40%,#3a7030 100%)';
   } else {
@@ -1554,11 +1760,8 @@ function applyTrackTheme() {
   if(RACE_WEATHER) {
     const sky = document.getElementById('sky-layer');
     sky.style.background = `linear-gradient(180deg,${RACE_WEATHER.visual.skyTop} 0%,${RACE_WEATHER.visual.skyBottom} 100%)`;
-    if(RACE_WEATHER.visual.trackTint) {
-      track.style.filter = `brightness(${RACE_WEATHER.visual.ambientBrightness})`;
-    } else {
-      track.style.filter = `brightness(${RACE_WEATHER.visual.ambientBrightness || 1})`;
-    }
+    // Snow ground is already bright; don't also darken it with ambientBrightness.
+    track.style.filter = snowy ? 'none' : `brightness(${RACE_WEATHER.visual.ambientBrightness || 1})`;
   }
 }
 
@@ -1576,7 +1779,10 @@ function initWeatherParticles() {
   if(!canvas || !RACE_WEATHER) return;
 
   const vis = RACE_WEATHER.visual;
-  const intensity = vis.rainIntensity || 0;
+  const pType = vis.particleType || (vis.rainIntensity > 0 ? 'rain' : null);
+  // Rain uses rainIntensity; the softer particle types carry particleIntensity.
+  const intensity = pType === 'rain' ? (vis.rainIntensity || 0) : (vis.particleIntensity || 0);
+  const wind = vis.wind || 0;
   const fogDensity = vis.fogDensity || 0;
 
   // Fog overlay
@@ -1587,13 +1793,26 @@ function initWeatherParticles() {
     fog.style.display = 'none';
   }
 
-  if(intensity <= 0) return;
+  if(!pType || intensity <= 0) return;
 
-  // Spawn rain drops
   const ctx = canvas.getContext('2d');
   const W = 1848, H = 1050;
   canvas.width = W; canvas.height = H;
 
+  if(pType === 'rain'){
+    drawRainParticles(ctx, W, H, intensity);
+  } else {
+    drawDriftParticles(ctx, W, H, intensity, wind, pType);
+  }
+
+  // Lightning for storm (rain only; snow/blizzard carry no lightning)
+  if(vis.lightningEnabled) {
+    scheduleLightning(vis.lightningIntervalMs || [3000, 8000]);
+  }
+}
+
+/* Rain: near-vertical streaks, fast, slight wind lean. (Original behaviour.) */
+function drawRainParticles(ctx, W, H, intensity){
   const dropCount = Math.floor(intensity * 400);
   _rainDrops = Array.from({length: dropCount}, () => ({
     x: Math.random() * W,
@@ -1602,7 +1821,6 @@ function initWeatherParticles() {
     speed: 6 + Math.random() * 8 * intensity,
     opacity: 0.25 + Math.random() * 0.35 * intensity,
   }));
-
   let _rainLastTs = 0;
   function drawRain(ts) {
     if(!ts) ts = performance.now();
@@ -1627,11 +1845,78 @@ function initWeatherParticles() {
     _weatherRaf = requestAnimationFrame(drawRain);
   }
   drawRain();
+}
 
-  // Lightning for storm
-  if(vis.lightningEnabled) {
-    scheduleLightning(vis.lightningIntervalMs || [3000, 8000]);
+/* Drifting particles: snow (small pale dots), petals (pink ovals) and leaves
+   (amber flakes). They fall slower than rain, sway sideways on the wind, and
+   spin gently — the same simulation with per-type colour, size and drift. */
+function drawDriftParticles(ctx, W, H, intensity, wind, pType){
+  const PALETTE = {
+    snow:  ['rgba(255,255,255,', 2.2, 3.8],
+    petal: ['rgba(255,190,214,', 4.0, 6.5],
+    leaf:  ['rgba(206,140,60,',  4.5, 7.5],
+  };
+  const [rgbaHead, sizeMin, sizeMax] = PALETTE[pType] || PALETTE.snow;
+  const count = Math.floor(intensity * (pType === 'snow' ? 520 : 180));
+  const baseFall = pType === 'snow' ? 1.4 : 1.1;           // px/frame-ish, scaled below
+  const swayAmp  = 0.6 + wind * 1.8;                        // horizontal sway strength
+  const driftX   = (0.4 + wind * 2.2);                     // steady sideways push
+
+  _rainDrops = Array.from({length: count}, () => ({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    r: sizeMin + Math.random() * (sizeMax - sizeMin),
+    speed: (baseFall + Math.random() * 1.6) * (0.7 + intensity * 0.8),
+    phase: Math.random() * Math.PI * 2,
+    swaySpeed: 0.02 + Math.random() * 0.05,
+    spin: Math.random() * Math.PI * 2,
+    spinRate: (Math.random() - 0.5) * 0.2,
+    opacity: 0.55 + Math.random() * 0.45,
+  }));
+
+  let lastTs = 0;
+  function draw(ts){
+    if(!ts) ts = performance.now();
+    let dt = lastTs ? (ts - lastTs) / FRAME_MS : 1.0;
+    lastTs = ts;
+    if(dt > MAX_DT) dt = MAX_DT;
+    ctx.clearRect(0, 0, W, H);
+    _rainDrops.forEach(p => {
+      p.phase += p.swaySpeed * dt;
+      p.spin  += p.spinRate * dt;
+      const sway = Math.sin(p.phase) * swayAmp;
+      p.y += p.speed * dt;
+      p.x += (driftX + sway) * dt;
+      if(p.y > H){ p.y = -p.r; p.x = Math.random() * W; }
+      if(p.x > W) p.x = 0; else if(p.x < 0) p.x = W;
+
+      ctx.globalAlpha = p.opacity;
+      ctx.fillStyle = rgbaHead + '1)';
+      if(pType === 'snow'){
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fill();
+      } else {
+        // petal / leaf: a small rotated oval so it tumbles as it falls
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.spin);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, p.r, p.r * 0.55, 0, 0, Math.PI*2);
+        ctx.fill();
+        if(pType === 'leaf'){                 // faint midrib
+          ctx.globalAlpha = p.opacity * 0.5;
+          ctx.strokeStyle = 'rgba(120,70,20,1)';
+          ctx.lineWidth = 0.6;
+          ctx.beginPath(); ctx.moveTo(-p.r,0); ctx.lineTo(p.r,0); ctx.stroke();
+        }
+        ctx.restore();
+      }
+    });
+    ctx.globalAlpha = 1;
+    _weatherRaf = requestAnimationFrame(draw);
   }
+  draw();
 }
 
 function scheduleLightning(intervalMs) {
@@ -2901,6 +3186,10 @@ function raceTick(ts) {
   if(leaderProgress>0.25&&lastMilestone<1){lastMilestone=1;playVoice('quarter', { horse: leader.def.id });}
   if(leaderProgress>0.5&&lastMilestone<2){lastMilestone=2;playVoice('half', { horse: leader.def.id });}
   if(leaderProgress>0.75&&lastMilestone<3){lastMilestone=3;setCrowd('finish',2.5);playVoice('threeQ');}
+  // Into the final bend, then into the home straight — two extra beats of drive
+  // before the line. finalStraight names the leader; lastCorner is generic.
+  if(leaderProgress>0.82&&lastMilestone<4){lastMilestone=4;playVoice('lastCorner');}
+  if(leaderProgress>0.90&&lastMilestone<5){lastMilestone=5;playVoice('finalStraight', { horse: leader.def.id });}
   // Leader driving for the line. Fire once the leader is inside the finish window
   // (same 400px band the photo-finish detector uses), so this runs in a frame
   // where isRecording already reflects whether a podium cluster is brewing —
@@ -2909,8 +3198,8 @@ function raceTick(ts) {
   // modest cheer, so the tight ones actually stand out.
   {
     const leaderToLine = (START_X + RACE_LENGTH) - leader.worldX;   // px remaining
-    if(leaderToLine < CONFIG.recordingWindowPx && lastMilestone<4){
-      lastMilestone=4;
+    if(leaderToLine < CONFIG.recordingWindowPx && lastMilestone<6){
+      lastMilestone=6;
       playSound('cheer', { volume: isRecording ? 1.0 : 0.45 });
     }
   }
@@ -3016,6 +3305,8 @@ function startPostRaceTransition(hadSlowmo) {
     const revealTimer = setTimeout(() => {
       // The review has finalised: fill in the contested podium rows…
       populatePostRace(false, false);
+      // …name 2nd and 3rd now that the review has settled the placings…
+      playPodiumPlacers(finishOrder);
       // …and ONLY NOW settle on the DB. settle_round flips the session to
       // 'settling', which is the phones' cue to reveal placings + payouts —
       // simultaneously with the board filling in here, so nothing spoils early.
@@ -3036,6 +3327,8 @@ function startPostRaceTransition(hadSlowmo) {
     // and settle immediately (status → 'settling'), then run the winner trot cam.
     populatePostRace(false, false);
     if(typeof multiGame !== 'undefined' && multiGame.active){ onRaceFinished(); }
+    // Name 2nd and 3rd shortly after the winner call settles.
+    setTimeout(()=>playPodiumPlacers(finishOrder), 1200);
     startWinnerTrotCam();
   }
 }
@@ -3238,6 +3531,9 @@ function beginRace() {
   stageToRace(true);
   playSound('postTrumpet', { volume:0.9 });   // "Call to the Post" as we enter race view and hold for the off
   startLoop('gateRattle', { volume:0.55, fade:0.6 });   // stalls shuffle under the hold; killed the instant gates open
+  // C1 hands over to the race-caller during the held pre-off window — they talk
+  // over the trumpet/settle beat. Delayed so the bugle rings out first.
+  setTimeout(()=>playVoice('handover'), 1600);
 
   // Set camera to leader-follow position immediately so gate phase uses same camera logic
   const sh = getRaceStageH();
@@ -4331,6 +4627,10 @@ async function showRaceBigMoments(roundNumber){
   const moments = computeBigMoments(bets, { names, getRoundMeta, startBank });
   if(!moments.length){ marquee.style.display='none'; return; }
 
+  // Voice the standout moment — a win gets a congratulation, a loss a consoling
+  // "get 'em next time". Delayed so it follows the podium placers, not over them.
+  setTimeout(()=>playBigMomentVoice(moments), 3200);
+
   // Repeat the set until it spans the marquee, THEN duplicate for the loop, so
   // a sparse race's few moments don't pop in on the left mid-scroll.
   const filled = fillMoments(moments, 6);
@@ -4476,6 +4776,7 @@ async function showFinalLeaderboard(){
     playSound('cheer', { volume:1.0 });
     playSound('fanfare', { volume:0.9 });
     playVoice('winner');
+    _voiceAfter('winner', 'closing', 400);   // general sign-off: congrats to our champion, hope you had fun
     startMarquee();
     signalFinalReveal();   // tell phones to reveal placements now
   });
@@ -4783,6 +5084,8 @@ let SOUND_MANIFEST = {
   menuMusic: { url:'audio/menu_music.mp3', bus:'music',   loop:true }, // lobby / pre-show music
   rainLight: { url:'audio/rain_light.mp3', bus:'weather', loop:true }, // light rain bed
   rainHeavy: { url:'audio/rain_heavy.mp3', bus:'weather', loop:true }, // heavy rain bed
+  breeze:    { url:'audio/breeze.mp3',     bus:'weather', loop:true }, // soft wind — petals / leaves / light snow
+  windHowl:  { url:'audio/wind_howl.mp3',  bus:'weather', loop:true }, // howling wind — blizzard
 };
 /* Set of loop names, rebuilt whenever SOUND_MANIFEST changes (initial parse +
    after the external manifest overlays). Not currently read by the engine —
@@ -4795,39 +5098,63 @@ function _rebuildLoopNames(){
 _rebuildLoopNames();
 let _soundManifestLoaded = null;   // Promise, so initAudio can await a single load
 
-/* ElevenLabs announcer clips. The real manifest is loaded from
-   audio/vo/vo-manifest.json (see loadVoiceManifest). Until that resolves — or if
-   it fails — these placeholders keep every key defined so nothing is undefined.
+/* ElevenLabs announcer clips. The real manifests are loaded per-language from
+   audio/vo/<lang>/vo-manifest.json (see loadVoiceManifest / setVoiceLanguage),
+   chosen from the current course's country. Until the first resolves — or if it
+   fails — these placeholders keep every key defined so nothing is undefined.
    All three structures below are rebuilt from the JSON with basePath prepended:
      VOICE_MANIFEST    generic per-event pools            (key -> [urls])
      VOICE_HORSE_LINES personalised per-horse pools       (key -> horseId -> [urls])
      VOICE_ROLLCALL    pre-race roster clips              ({position:{gate:[urls]}, horseName:{horseId:[urls]}}) */
 let VOICE_MANIFEST = {
-  preraceIntro:['audio/vo/prerace_intro/1.mp3'], fieldSize:['audio/vo/field_size/1.mp3'],
-  course:['audio/vo/course/1.mp3'], conditions:['audio/vo/conditions/1.mp3'],
-  bettingClosed:['audio/vo/betting_closed/1.mp3'],
-  intro:['audio/vo/intro/1.mp3'], theyreOff:['audio/vo/theyre_off/1.mp3'],
-  quarter:['audio/vo/quarter/1.mp3'], half:['audio/vo/half/1.mp3'],
-  threeQ:['audio/vo/three_quarter/1.mp3'], firstPastPost:['audio/vo/first_past_post/1.mp3'],
-  down:['audio/vo/down/1.mp3'], photoClose:['audio/vo/photo_close/1.mp3'],
-  photoNose:['audio/vo/photo_nose/1.mp3'], finish:['audio/vo/finish/1.mp3'],
-  winner:['audio/vo/winner/1.mp3'],
+  preraceIntro:['audio/vo/en/prerace_intro/1.mp3'], fieldSize:['audio/vo/en/field_size/1.mp3'],
+  course:['audio/vo/en/course/1.mp3'], conditions:['audio/vo/en/conditions/1.mp3'],
+  bettingClosed:['audio/vo/en/betting_closed/1.mp3'], handover:['audio/vo/en/handover/1.mp3'],
+  intro:['audio/vo/en/intro/1.mp3'], theyreOff:['audio/vo/en/theyre_off/1.mp3'],
+  quarter:['audio/vo/en/quarter/1.mp3'], half:['audio/vo/en/half/1.mp3'],
+  threeQ:['audio/vo/en/three_quarter/1.mp3'], lastCorner:['audio/vo/en/last_corner/1.mp3'],
+  finalStraight:['audio/vo/en/final_straight/1.mp3'], firstPastPost:['audio/vo/en/first_past_post/1.mp3'],
+  down:['audio/vo/en/down/1.mp3'], photoClose:['audio/vo/en/photo_close/1.mp3'],
+  photoNose:['audio/vo/en/photo_nose/1.mp3'], finish:['audio/vo/en/finish/1.mp3'],
+  placeSecond:['audio/vo/en/place_second/1.mp3'], placeThird:['audio/vo/en/place_third/1.mp3'],
+  bigWin:['audio/vo/en/big_win/1.mp3'], bigLoss:['audio/vo/en/big_loss/1.mp3'],
+  winner:['audio/vo/en/winner/1.mp3'], closing:['audio/vo/en/closing/1.mp3'],
 };
 let VOICE_HORSE_LINES = {};
+let VOICE_COURSE_LINES = {};   // courseId -> [urls]; named per-course "course" clips
 let VOICE_ROLLCALL = { position:{}, horseName:{} };
-let _voiceManifestLoaded = null;   // Promise, so initAudio can await a single load
 
-/* Fetch + parse audio/vo/vo-manifest.json and rebuild the three structures with
-   basePath prepended. Skips _comment / _tokens keys. Idempotent: repeated calls
-   return the same promise. On any failure the placeholders above remain. */
-function loadVoiceManifest(){
-  if(_voiceManifestLoaded) return _voiceManifestLoaded;
-  _voiceManifestLoaded = (async ()=>{
+/* ── Voice language routing ──────────────────────────────────────────────────
+   Each racecourse carries a `country` (see courses.json). That maps to a voice
+   language, which maps to a subfolder under audio/vo/ holding a full set of
+   announcer clips in that language. So an AU course plays audio/vo/en/… and a
+   JP course plays audio/vo/ja/…, using the very same manifest paths underneath.
+   Add a country here (and a matching folder + vo-manifest) to support more. */
+const COUNTRY_LANG = { AU:'en', GB:'en', US:'en', IE:'en', NZ:'en', JP:'ja' };
+const LANG_FOLDER  = { en:'en', ja:'ja' };
+const DEFAULT_LANG = 'en';
+function langForCountry(country){ return COUNTRY_LANG[country] || DEFAULT_LANG; }
+function courseLang(){ return langForCountry(RACECOURSE && RACECOURSE.country); }
+
+let _voiceLang = DEFAULT_LANG;                 // language the loaded manifest is for
+const _voiceManifestByLang = {};               // lang -> load promise (one per language)
+
+/* Fetch + parse the voice manifest for a given language and rebuild the three
+   voice structures, with the language folder injected into basePath (so
+   audio/vo/<folder>/…). Skips _comment / _tokens keys. Cached per language, so
+   each pack loads once and switching courses just swaps which pack is active.
+   On any failure the current structures are left in place (placeholders on the
+   very first load). Sets _voiceLang to the language actually applied. */
+function loadVoiceManifest(lang = DEFAULT_LANG){
+  if(_voiceManifestByLang[lang]) return _voiceManifestByLang[lang];
+  _voiceManifestByLang[lang] = (async ()=>{
+    const folder = LANG_FOLDER[lang] || LANG_FOLDER[DEFAULT_LANG];
     try{
-      const res = await fetch('audio/vo/vo-manifest.json');
+      const res = await fetch(`audio/vo/${folder}/vo-manifest.json`);
       if(!res.ok) throw new Error(res.status);
       const m = await res.json();
-      const base = m.basePath || 'audio/vo/';
+      // basePath in the JSON is relative to its own language folder; prepend it.
+      const base = `audio/vo/${folder}/` + (m.basePath || '');
       const pre = (p)=> base + p;
       const clean = (obj)=> Object.fromEntries(Object.entries(obj||{}).filter(([k])=>k[0] !== '_'));
 
@@ -4848,6 +5175,13 @@ function loadVoiceManifest(){
         }
         VOICE_HORSE_LINES = out;
       }
+      if(m.courseLines){
+        const out = {};
+        for(const [cid, arr] of Object.entries(clean(m.courseLines))){
+          if(Array.isArray(arr)) out[cid] = arr.map(pre);
+        }
+        VOICE_COURSE_LINES = out;
+      }
       if(m.rollCall){
         const rc = { position:{}, horseName:{} };
         for(const [gate, arr] of Object.entries(clean(m.rollCall.position))){
@@ -4858,9 +5192,19 @@ function loadVoiceManifest(){
         }
         VOICE_ROLLCALL = rc;
       }
-    }catch(e){ /* keep placeholders; game runs regardless */ }
+      _voiceLang = lang;   // this pack is now the active one
+    }catch(e){ /* keep whatever is loaded; game runs regardless */ }
   })();
-  return _voiceManifestLoaded;
+  return _voiceManifestByLang[lang];
+}
+
+/* Switch the active announcer language to match the given course's country,
+   loading that language's pack (and preloading its clips) if not already done.
+   Safe to call every race; a no-op when the language is already active. */
+async function setVoiceLanguage(lang){
+  if(lang === _voiceLang && _voiceManifestByLang[lang]) return;
+  await loadVoiceManifest(lang);
+  await preloadVoiceClips();   // decode this language's files (missing ones skip)
 }
 
 /* Fetch + parse audio/sfx-manifest.json and overlay it onto SOUND_MANIFEST with
@@ -4901,10 +5245,31 @@ function _allVoiceUrls(){
   Object.values(VOICE_MANIFEST).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
   Object.values(VOICE_HORSE_LINES).forEach(byHorse=>
     Object.values(byHorse||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u))));
+  Object.values(VOICE_COURSE_LINES).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
   Object.values(VOICE_ROLLCALL.position||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
   Object.values(VOICE_ROLLCALL.horseName||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
   return urls;
 }
+
+/* Fetch + decode a set of URLs into Audio_.buffers, skipping any already loaded
+   and silently ignoring missing files. Shared by initial load and per-language
+   voice preloads. */
+async function _decodeUrls(urls){
+  if(!Audio_.ctx) return;
+  await Promise.all([...urls].map(async url=>{
+    if(Audio_.buffers[url]) return;                 // already decoded
+    try{
+      const res = await fetch(url);
+      if(!res.ok) throw new Error(res.status);
+      const buf = await res.arrayBuffer();
+      Audio_.buffers[url] = await Audio_.ctx.decodeAudioData(buf);
+    }catch(e){ /* a missing file just stays silent — never blocks the game */ }
+  }));
+}
+
+/* Decode the clips for whichever voice pack is currently loaded. Called on the
+   initial load and again whenever the language switches to a new course. */
+async function preloadVoiceClips(){ await _decodeUrls(_allVoiceUrls()); }
 
 async function initAudio(){
   if(Audio_.ctx) return;
@@ -4922,22 +5287,15 @@ async function initAudio(){
   // Crowd starts silent; setCrowd() ramps it from the lobby onward.
   Audio_.buses.crowd.gain.value = 0;
 
-  // Make sure both manifests are in before we build the preload list, so any
-  // externally-defined clips (voice + sfx) are decoded up front.
-  await Promise.all([loadVoiceManifest(), loadSoundManifest()]);
+  // Load the SFX manifest and the voice pack for the current course's language
+  // (falls back to the default language before any course is chosen).
+  await Promise.all([loadVoiceManifest(courseLang()), loadSoundManifest()]);
 
-  // Preload + decode every file (SFX + voice). Keyed by URL; missing files skip.
+  // Preload + decode SFX + the active voice pack. Keyed by URL; missing skip.
   const urls = new Set();
   Object.values(SOUND_MANIFEST).forEach(s=>_specUrls(s).forEach(u=>urls.add(u)));
   _allVoiceUrls().forEach(u=>urls.add(u));
-  await Promise.all([...urls].map(async url=>{
-    try{
-      const res = await fetch(url);
-      if(!res.ok) throw new Error(res.status);
-      const buf = await res.arrayBuffer();
-      Audio_.buffers[url] = await Audio_.ctx.decodeAudioData(buf);
-    }catch(e){ /* a missing file just stays silent — never blocks the game */ }
-  }));
+  await _decodeUrls(urls);
   Audio_.ready = true;
 }
 
@@ -5028,21 +5386,34 @@ function ensureCrowdBed(){
 }
 
 /* ── Weather beds ─────────────────────────────────────────
-   Start the rain/storm loop that matches RACE_WEATHER.id, and stop any that
-   don't. Thunder one-shots are fired from the lightning scheduler.
+   Pick the single weather loop that matches RACE_WEATHER and stop the others.
+   Rain → rain patter beds. Snow is (realistically) near-silent, so snow rides
+   the WIND beds instead of rain: light/heavy snow → breeze, blizzard → howling
+   wind. Cosmetic petals / autumn leaves get a soft breeze. Thunder one-shots
+   still fire from the lightning scheduler (storm only).
    Weather ids are opaque pks (see weather.json); named here for readability. */
-const WEATHER_ID = { LIGHT_RAIN:'w03', HEAVY_RAIN:'w04', STORM:'w06' };
+const WEATHER_ID = {
+  LIGHT_RAIN:'w03', HEAVY_RAIN:'w04', STORM:'w06',
+  PETAL:'w07', LEAF:'w08', LIGHT_SNOW:'w09', HEAVY_SNOW:'w10', BLIZZARD:'w11',
+};
+const WEATHER_BEDS = ['rainLight','rainHeavy','breeze','windHowl'];
 function updateWeatherAudio(weatherId){
-  const wants = weatherId === WEATHER_ID.LIGHT_RAIN ? 'rainLight'
-              : (weatherId === WEATHER_ID.HEAVY_RAIN || weatherId === WEATHER_ID.STORM) ? 'rainHeavy'
-              : null;
-  ['rainLight','rainHeavy'].forEach(n=>{ if(n !== wants) stopLoop(n, 0.8); });
-  if(wants){
-    const vol = weatherId === WEATHER_ID.STORM ? 1.0 : (weatherId === WEATHER_ID.HEAVY_RAIN ? 0.9 : 0.55);
-    startLoop(wants, { volume:vol, fade:1.2 });
+  // Map the weather to (bed, volume). null bed = silent (e.g. sunny/overcast/fog).
+  let wants = null, vol = 0;
+  switch(weatherId){
+    case WEATHER_ID.LIGHT_RAIN:  wants='rainLight'; vol=0.55; break;
+    case WEATHER_ID.HEAVY_RAIN:  wants='rainHeavy'; vol=0.9;  break;
+    case WEATHER_ID.STORM:       wants='rainHeavy'; vol=1.0;  break;
+    case WEATHER_ID.PETAL:       wants='breeze';    vol=0.4;  break;
+    case WEATHER_ID.LEAF:        wants='breeze';    vol=0.5;  break;
+    case WEATHER_ID.LIGHT_SNOW:  wants='breeze';    vol=0.55; break;
+    case WEATHER_ID.HEAVY_SNOW:  wants='windHowl';  vol=0.7;  break;
+    case WEATHER_ID.BLIZZARD:    wants='windHowl';  vol=1.0;  break;
   }
+  WEATHER_BEDS.forEach(n=>{ if(n !== wants) stopLoop(n, 0.8); });
+  if(wants) startLoop(wants, { volume:vol, fade:1.2 });
 }
-function stopWeatherAudio(){ stopLoop('rainLight',0.8); stopLoop('rainHeavy',0.8); }
+function stopWeatherAudio(){ WEATHER_BEDS.forEach(n=>stopLoop(n, 0.8)); }
 
 /* ── Menu / lobby music ── */
 function startMenuMusic(){ startLoop('menuMusic', { volume:1.0, fade:1.5 }); }
@@ -5160,6 +5531,54 @@ async function playRollCall(runners, { gapMs=120, betweenMs=260 } = {}){
 }
 function _wait(ms){ return new Promise(r=>setTimeout(r, ms)); }
 
+/* Play `nextKey` shortly after `afterKey`'s clip would have finished, so two
+   generic lines (e.g. bettingClosed → handover) play back-to-back without
+   overlapping. Estimates the first clip's length from its decoded buffer; falls
+   back to a fixed gap if it isn't loaded. Best-effort and non-blocking. */
+function _voiceAfter(afterKey, nextKey, gapMs=250){
+  const arr = VOICE_MANIFEST[afterKey];
+  const url = Array.isArray(arr) ? arr[0] : arr;
+  const b = url ? _buf(url) : null;
+  const delay = (b ? b.duration*1000 : 1400) + gapMs;
+  setTimeout(()=>playVoice(nextKey), delay);
+}
+
+/* Post-race podium read-out. The winner was already called at the line
+   (firstPastPost), so this announces SECOND then THIRD. Each placement is a
+   single per-horse clip with the name baked in (placeSecond / placeThird resolve
+   through VOICE_HORSE_LINES by the placer's id) — same treatment as the in-race
+   horse events, so the name can sit anywhere in the sentence and sound alive.
+   Sequenced so 2nd finishes before 3rd. Interruptible by the roll-call token. */
+async function playPodiumPlacers(placers){
+  if(!Audio_.ready || Audio_.muted || !placers || placers.length < 2) return;
+  const token = ++_rollCallToken;
+  const say = async (key, horse)=>{
+    if(token !== _rollCallToken || !horse) return;
+    const cand = _voiceCandidates(key, horse.def && horse.def.id);
+    if(cand && cand.length){
+      await _playVoiceUrl(Array.isArray(cand) ? cand[(Math.random()*cand.length)|0] : cand);
+      await _wait(260);
+    }
+  };
+  _duck(true);
+  try{
+    await say('placeSecond', placers[1]);
+    if(token === _rollCallToken) await say('placeThird', placers[2]);
+  } finally {
+    _duck(false);
+  }
+}
+
+/* Post-race betting-outcome flourish. Given the computed big moments for the
+   race just run, play a single congratulate/console line: bigWin if the top
+   moment is a win, bigLoss if it's a loss. No-op when there were no standout
+   moments. Kept generic (no name) so it needs no personalisation. */
+function playBigMomentVoice(moments){
+  if(!Audio_.ready || Audio_.muted || !moments || !moments.length) return;
+  const top = moments[0];
+  playVoice(top.won ? 'bigWin' : 'bigLoss');
+}
+
 /* Orchestrates the full pre-race announcer sequence during betting:
    preraceIntro → fieldSize → course → conditions → roster roll-call.
    Voice-only; each step no-ops if its clip is missing. Bails cleanly if audio
@@ -5169,7 +5588,8 @@ async function playPreRaceSequence(){
   // Give the wipe reveal a beat, and let audio finish initialising.
   await _wait(900);
   if(typeof phase !== 'undefined' && phase !== 'prerace') return;
-  try{ await loadVoiceManifest(); }catch(e){}
+  // Match the announcer language to this course's country before speaking.
+  try{ await setVoiceLanguage(courseLang()); }catch(e){}
   if(!Audio_.ready || Audio_.muted) return;
   if(typeof phase !== 'undefined' && phase !== 'prerace') return;
 
@@ -5189,9 +5609,30 @@ async function playPreRaceSequence(){
     return true;
   };
 
+  /* Per-course variant of `step`: if the current course has named clips, play
+     one of those; otherwise fall back to the generic `course` pool. Keeps the
+     same pacing/duck behaviour as step(). */
+  const stepCourse = async ()=>{
+    if(typeof phase !== 'undefined' && phase !== 'prerace') return false;
+    const cid = RACECOURSE && RACECOURSE.id;
+    const arr = (cid && VOICE_COURSE_LINES[cid] && VOICE_COURSE_LINES[cid].length)
+                ? VOICE_COURSE_LINES[cid]
+                : VOICE_MANIFEST['course'];
+    if(arr && arr.length){
+      await new Promise(res=>{
+        const url = arr[(Math.random()*arr.length)|0];
+        const s = _playVoiceUrl(url);   // returns a promise; but keep uniform timing below
+        const b = _buf(url);
+        setTimeout(res, b ? (b.duration*1000)+200 : 400);
+      });
+      await _wait(150);
+    }
+    return true;
+  };
+
   if(!(await step('preraceIntro'))) return;
   if(!(await step('fieldSize')))    return;
-  if(!(await step('course')))       return;
+  if(!(await stepCourse()))         return;
   if(!(await step('conditions')))   return;
 
   // Roll call: gate order, position clip then horse-name clip per runner.
