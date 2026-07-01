@@ -2901,6 +2901,8 @@ function raceTick(ts) {
   if(leaderProgress>0.25&&lastMilestone<1){lastMilestone=1;playVoice('quarter', { horse: leader.def.id });}
   if(leaderProgress>0.5&&lastMilestone<2){lastMilestone=2;playVoice('half', { horse: leader.def.id });}
   if(leaderProgress>0.75&&lastMilestone<3){lastMilestone=3;setCrowd('finish',2.5);playVoice('threeQ');}
+  // Leader driving for the line — the house comes up now, not after the field trails in.
+  if(leaderProgress>0.90&&lastMilestone<4){lastMilestone=4;playSound('cheer', { volume:1.0 });}
 
   updateProgressMap();
   recordReplayFrame();
@@ -2918,7 +2920,6 @@ function triggerFinishSequence() {
   if(replaySlot) {
     // A blanket / photo finish — everyone's on their feet.
     setCrowd('climax', 0.4);
-    playSound('cheer', { volume:1.0 });
     setTimeout(() => {
       doWipe(() => {
         if(animFrame) { cancelAnimationFrame(animFrame); animFrame=null; }
@@ -2943,9 +2944,8 @@ function triggerFinishSequence() {
       });
     }, CONFIG.finishHoldMs);
   } else {
-    // Clear winner — a solid cheer, crowd stays up into the result.
+    // Clear winner — crowd bed stays up into the result.
     setCrowd('finish', 0.4);
-    playSound('cheer', { volume:0.85 });
     setTimeout(() => doWipe(() => startPostRaceTransition(false)), CONFIG.finishHoldMs);
   }
 }
