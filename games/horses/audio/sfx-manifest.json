@@ -18,10 +18,11 @@
       "_comment": "horse cry on a fall; random take"
     },
     "thunder": {
-      "url": ["thunder1.mp3", "thunder2.mp3", "thunder3.mp3"],
+      "url": ["thunder1.mp3", "thunder2.mp3"],
       "bus": "weather",
       "_comment": "thunderclap on storm lightning; random take"
     },
+    "uiWhoosh":    { "url": "ui_whoosh.mp3", "bus": "sfx", "_comment": "screen-wipe transition whoosh" },
 
     "crowd":      { "url": "crowd.mp3", "bus": "crowd", "loop": true, "_comment": "continuous ambience bed" },
     "hooves":     { "url": "hooves.mp3", "bus": "sfx", "loop": true, "_comment": "galloping, only while racing" },
