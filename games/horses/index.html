@@ -1167,6 +1167,10 @@ const CONFIG = {
   photoFinishMaxLengths: 0.25,
   photoFinishMaxPlaces: 4, // only the top N board rows can be flagged PHOTO FINISH
   recordingWindowPx: 400,
+  // Global race-pace multiplier. <1 slows every horse (longer races, more room
+  // between the milestone/condition voice calls); >1 speeds them up. 1.0 = the
+  // original tuning. Applies uniformly so relative finishes are unchanged.
+  racePaceScale: 0.8,
   finishHoldMs: 2500,
   slowmoSpeed: 0.25,
   forceSlowmo: false,
@@ -2479,7 +2483,7 @@ function buildRaceParams(horseDef, raceLuck) {
 
   // Map rolls to actual values
   const rawTopSpeed = 3.4 + topSpeedRoll * 1.8;  // 3.4–5.2 px/frame
-  const topSpeed    = rawTopSpeed * RACE_WEATHER.speedModifier * raceLuck;
+  const topSpeed    = rawTopSpeed * RACE_WEATHER.speedModifier * raceLuck * (CONFIG.racePaceScale || 1);
 
   const styleAccelBoost = horseDef.style === 'END_CLOSER'  ? 1.3 :
                           horseDef.style === 'LATE_SURGER' ? 2.5 : 1.0;
@@ -3095,7 +3099,11 @@ function raceTick(ts) {
       // when the second horse arrives. stopClusterRecording() re-confirms the final state.
       updateFinishBoard();
       if(horse.finishRank===0){
-        playVoice('firstPastPost', { horse: horse.def.id });
+        // Winner's name is NOT announced here: at the instant of crossing we can't
+        // yet know whether 1st is part of a photo cluster (the trailing horse of a
+        // tight pair may not have crossed). The firstPastPost voice is deferred to
+        // the reveal in startPostRaceTransition — called live there only if 1st is
+        // NOT in a photo cluster, otherwise held until the podium placers settle.
         flashScreen('rgba(200,151,26,0.4)'); shakeViewport();
       }
     }
@@ -3311,6 +3319,15 @@ function startPostRaceTransition(hadSlowmo) {
     // window elapses and the podium rows are populated below.
     if(typeof multiGame !== 'undefined' && multiGame.active){ enterPhotoReview(); }
 
+    // Winner announcement: only 1st being IN the photo cluster suppresses the live
+    // call. If the photo is elsewhere (e.g. a 3rd/4th battle), 1st is a clear
+    // winner and is announced now, at the reveal. If 1st IS contested, the winner
+    // is held and named later, when the review settles (see playPodiumPlacers).
+    const firstIsPhoto = isPhotoFinishPosition(0);
+    if(!firstIsPhoto && finishOrder[0]){
+      playVoice('firstPastPost', { horse: finishOrder[0].def.id });
+    }
+
     // Stop raceTick so it doesn't fight replay over camera/positions
     if(animFrame) { cancelAnimationFrame(animFrame); animFrame=null; }
     const livePostSnap = snapshotHorses();
@@ -3330,7 +3347,9 @@ function startPostRaceTransition(hadSlowmo) {
     const revealTimer = setTimeout(() => {
       // The review has finalised: fill in the contested podium rows…
       populatePostRace(false, false);
-      // …name 2nd and 3rd now that the review has settled the placings…
+      // …then the formal ascending recap (3rd → 2nd → 1st). If 1st was contested
+      // its live call was held at the reveal, so this recap is where the winner is
+      // first named; contested positions use their photo-variant lines.
       playPodiumPlacers(finishOrder);
       // …and ONLY NOW settle on the DB. settle_round flips the session to
       // 'settling', which is the phones' cue to reveal placings + payouts —
@@ -3352,7 +3371,9 @@ function startPostRaceTransition(hadSlowmo) {
     // and settle immediately (status → 'settling'), then run the winner trot cam.
     populatePostRace(false, false);
     if(typeof multiGame !== 'undefined' && multiGame.active){ onRaceFinished(); }
-    // Name 2nd and 3rd shortly after the winner call settles.
+    // No photo anywhere, so 1st is a clear winner: announce the winner now, at the
+    // board reveal, then name 2nd and 3rd shortly after.
+    if(finishOrder[0]) playVoice('firstPastPost', { horse: finishOrder[0].def.id });
     setTimeout(()=>playPodiumPlacers(finishOrder), 1200);
     startWinnerTrotCam();
   }
@@ -4217,70 +4238,54 @@ lq('#btn-again').addEventListener('click', async ()=>{
   const btn = lq('#btn-again');
   btn.disabled = true;
 
-  // Cover the screen FIRST so the final screen doesn't flash before the room
-  // screen appears. Cover instantly, hold while we reset, then slide off.
-  const w = document.getElementById('wipe-overlay');
-  const p = document.getElementById('wipe-phrase');
-  if(p){ const _ph=(PHRASE_DATA&&PHRASE_DATA.wipeTransitions&&PHRASE_DATA.wipeTransitions.length)?PHRASE_DATA.wipeTransitions:['Just a little fun!']; p.textContent=_ph[Math.floor(Math.random()*_ph.length)]; }
-  if(_wipeCleanupId){ clearTimeout(_wipeCleanupId); _wipeCleanupId=null; }
-  w.style.transition = 'none';
-  w.classList.remove('out');
-  w.classList.add('in');
-  void w.offsetWidth;
-  w.style.transition = '';
+  // AGAIN is a transition back to the room screen — use the standard doWipe so
+  // it's covered like every other transition. The async callback resets the
+  // session while the cover is held (doWipe waits for the promise), so the room
+  // never flashes in half-built.
+  doWipe(async ()=>{
+    teardownFinalScreen();
+    resetEngineForNewRound();
+    lobby.gameStarted = false;
+    lobby.rematch     = false;
 
-  const revealRoom = ()=>{
-    setTimeout(()=>{
-      w.classList.remove('in');
-      w.classList.add('out');
-      _wipeCleanupId = setTimeout(()=>{
-        w.style.transition = 'none';
-        w.classList.remove('out');
-        void w.offsetWidth;
-        w.style.transition = '';
-        _wipeCleanupId = null;
-      }, 800);
-    }, 600);
-  };
-
-  teardownFinalScreen();
-  resetEngineForNewRound();
-  lobby.gameStarted = false;
-  lobby.rematch     = false;
-
-  // Reset the SAME session in place: wipe rounds + bets, clear current_round,
-  // set status back to 'lobby' — WITHOUT removing the player rows, so the crew
-  // stays joined. reset_lobby blanks config, so we immediately re-apply the
-  // current in-memory settings (re-stamps balances + restores the card).
-  if(lobby.session){
-    const { error: rErr } = await sb.rpc('reset_lobby', { p_session_id: lobby.session.id });
-    if(rErr){ console.error('reset_lobby failed:', rErr); }
-    const { error: aErr } = await sb.rpc('apply_config', {
-      p_session_id: lobby.session.id, p_config: lobby.cfg,
-    });
-    if(aErr){
-      console.error('apply_config failed:', aErr);
-      lq('#lobby-room-msg').textContent =
-        'Couldn’t fully reset the room (' + (aErr.message||'unknown') + '). Try Edit settings → Confirm, or Close session.';
-    } else {
-      lq('#lobby-room-msg').textContent = '';
+    // Reset the SAME session in place: wipe rounds + bets, clear current_round,
+    // set status back to 'lobby' — WITHOUT removing the player rows, so the crew
+    // stays joined. reset_lobby blanks config, so we immediately re-apply the
+    // current in-memory settings (re-stamps balances + restores the card).
+    if(lobby.session){
+      const { error: rErr } = await sb.rpc('reset_lobby', { p_session_id: lobby.session.id });
+      if(rErr){ console.error('reset_lobby failed:', rErr); }
+      const { error: aErr } = await sb.rpc('apply_config', {
+        p_session_id: lobby.session.id, p_config: lobby.cfg,
+      });
+      if(aErr){
+        console.error('apply_config failed:', aErr);
+        lq('#lobby-room-msg').textContent =
+          'Couldn’t fully reset the room (' + (aErr.message||'unknown') + '). Try Edit settings → Confirm, or Close session.';
+      } else {
+        lq('#lobby-room-msg').textContent = '';
+      }
+      // Refresh the roster so the board is accurate.
+      const { data } = await sb.from('players').select('*').eq('session_id', lobby.session.id);
+      lobby.players = data || [];
     }
-    // Refresh the roster so the board is accurate.
-    const { data } = await sb.from('players').select('*').eq('session_id', lobby.session.id);
-    lobby.players = data || [];
-  }
 
-  // Straight back to the room screen — session already exists. Edit settings or
-  // Close session are both right there.
-  document.getElementById('lobby-overlay').style.display = 'flex';
-  lq('#lobby-create').textContent = 'Confirm';
-  lq('#lobby-create').disabled = false;
-  renderSettingsSummary();
-  renderPlayers();
-  showStack('lobby-room');
+    // Straight back to the room screen — session already exists. Edit settings or
+    // Close session are both right there.
+    document.getElementById('lobby-overlay').style.display = 'flex';
+    lq('#lobby-create').textContent = 'Confirm';
+    lq('#lobby-create').disabled = false;
+    renderSettingsSummary();
+    renderPlayers();
+    showStack('lobby-room');
+    btn.disabled = false;
 
-  btn.disabled = false;
-  revealRoom();
+    // Back in the lobby: bring the pre-show music back and settle the crowd to a
+    // low murmur (the leaderboard left it dimmed, but be explicit).
+    startMenuMusic();
+    ensureCrowdBed();
+    onAudioReady(()=>setCrowd('idle', 2.0));
+  });
 });
 
 /* MAIN MENU — confirm, then close the session and return to the host landing. */
@@ -4293,6 +4298,7 @@ lq('#confirm-cancel').addEventListener('click', ()=>{
 });
 lq('#confirm-yes').addEventListener('click', async ()=>{
   const yes = lq('#confirm-yes'); yes.disabled = true;
+  confirmOverlay.classList.remove('active');
   // Host returning to the menu after the card → close the session so phones
   // leave their final-results screen and land on the "session closed" screen.
   // close_session sets status=finished AND stamps config.closed_by_host without
@@ -4301,8 +4307,13 @@ lq('#confirm-yes').addEventListener('click', async ()=>{
     try { await sb.rpc('close_session', { p_session_id: lobby.session.id }); } catch(e){}
   }
   teardownFinalScreen();
-  // This page lives at games/horses/, so the menu index is two levels up.
-  window.location.href = '../../index.html';
+  stopMenuMusic(0.4); stopWeatherAudio(); setCrowd('idle', 0.4);
+  // Cover the screen for the redirect (doWipeHold parks the cover, masking the
+  // page change) — a transition like any other, not an abrupt jump.
+  doWipeHold(()=>{
+    // This page lives at games/horses/, so the menu index is two levels up.
+    window.location.href = '../../index.html';
+  });
 });
 
 /* ════════════════════════════════════════════════════════════════
@@ -4821,6 +4832,9 @@ async function showFinalLeaderboard(){
     _voiceAfter('winner', 'closing', 400);   // general sign-off: congrats to our champion, hope you had fun
     startMarquee();
     signalFinalReveal();   // tell phones to reveal placements now
+    // Let the roar + fanfare land, then settle the house to a low murmur so the
+    // leaderboard sits quiet (and AGAIN / MAIN MENU don't start from a loud bed).
+    setTimeout(()=>setCrowd('idle', 3.0), 4000);
   });
 }
 
@@ -5150,8 +5164,7 @@ let _soundManifestLoaded = null;   // Promise, so initAudio can await a single l
      VOICE_HORSE_LINES personalised per-horse pools       (key -> horseId -> [urls])
      VOICE_ROLLCALL    pre-race roster clips              ({position:{gate:[urls]}, horseName:{horseId:[urls]}}) */
 let VOICE_MANIFEST = {
-  preraceIntro:['audio/vo/en/prerace_intro/1.mp3'], fieldSize:['audio/vo/en/field_size/1.mp3'],
-  course:['audio/vo/en/course/1.mp3'], conditions:['audio/vo/en/conditions/1.mp3'],
+  preraceIntro:['audio/vo/en/prerace_intro/1.mp3'],
   bettingClosed:['audio/vo/en/betting_closed/1.mp3'], handover:['audio/vo/en/handover/1.mp3'],
   intro:['audio/vo/en/intro/1.mp3'], theyreOff:['audio/vo/en/theyre_off/1.mp3'],
   quarter:['audio/vo/en/quarter/1.mp3'], half:['audio/vo/en/half/1.mp3'],
@@ -5159,14 +5172,16 @@ let VOICE_MANIFEST = {
   finalStraight:['audio/vo/en/final_straight/1.mp3'], firstPastPost:['audio/vo/en/first_past_post/1.mp3'],
   down:['audio/vo/en/down/1.mp3'], photoClose:['audio/vo/en/photo_close/1.mp3'],
   photoNose:['audio/vo/en/photo_nose/1.mp3'],
+  placeFirst:['audio/vo/en/place_first/1.mp3'], placeFirstPhoto:['audio/vo/en/place_first_photo/1.mp3'],
   placeSecond:['audio/vo/en/place_second/1.mp3'], placeThird:['audio/vo/en/place_third/1.mp3'],
+  placeSecondPhoto:['audio/vo/en/place_second_photo/1.mp3'], placeThirdPhoto:['audio/vo/en/place_third_photo/1.mp3'],
   bigWin:['audio/vo/en/big_win/1.mp3'], bigLoss:['audio/vo/en/big_loss/1.mp3'],
   winner:['audio/vo/en/winner/1.mp3'], closing:['audio/vo/en/closing/1.mp3'],
 };
 let VOICE_HORSE_LINES = {};
 let VOICE_COURSE_LINES = {};   // courseId -> [urls]; named per-course "course" clips
 let VOICE_CONDITION_LINES = { weather:{}, distance:{}, field:{} };   // weather by id, distance/field by band
-let VOICE_ROLLCALL = { position:{}, horseName:{} };
+let VOICE_ROLLCALL = { position:{}, favourite:[], horseName:{} };
 
 /* ── Voice language routing ──────────────────────────────────────────────────
    Each racecourse carries a `country` (see courses.json). That maps to a voice
@@ -5205,7 +5220,7 @@ function loadVoiceManifest(lang = DEFAULT_LANG){
 
       // Parse into a self-contained data object (don't touch globals yet), then
       // cache it so switching back to this language can re-apply without refetch.
-      const data = { lines:{}, horseLines:{}, courseLines:{}, conditionLines:{weather:{},distance:{},field:{}}, rollCall:{position:{},horseName:{}} };
+      const data = { lines:{}, horseLines:{}, courseLines:{}, conditionLines:{weather:{},distance:{},field:{}}, rollCall:{position:{},favourite:[],horseName:{}} };
       if(m.lines){
         for(const [ev, arr] of Object.entries(clean(m.lines))){
           if(Array.isArray(arr)) data.lines[ev] = arr.map(pre);
@@ -5235,6 +5250,7 @@ function loadVoiceManifest(lang = DEFAULT_LANG){
         for(const [gate, arr] of Object.entries(clean(m.rollCall.position))){
           if(Array.isArray(arr)) data.rollCall.position[gate] = arr.map(pre);
         }
+        if(Array.isArray(m.rollCall.favourite)) data.rollCall.favourite = m.rollCall.favourite.map(pre);
         for(const [hid, arr] of Object.entries(clean(m.rollCall.horseName))){
           if(Array.isArray(arr)) data.rollCall.horseName[hid] = arr.map(pre);
         }
@@ -5336,6 +5352,7 @@ function _allVoiceUrls(){
   ['weather','distance','field'].forEach(grp=>
     Object.values((VOICE_CONDITION_LINES||{})[grp]||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u))));
   Object.values(VOICE_ROLLCALL.position||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  (VOICE_ROLLCALL.favourite||[]).forEach(u=>urls.add(u));
   Object.values(VOICE_ROLLCALL.horseName||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
   return urls;
 }
@@ -5636,25 +5653,70 @@ function stopRollCall(){ _rollCallToken++; }
 
 /* Pre-race roster read-out. For each runner in gate order, play the position
    clip for its gate then the horse-name clip for its id, back to back. `runners`
-   is an array of { gate, horseId } in the order to announce. The crowd holds at
-   a low murmur underneath (caller can set the level; we just duck lightly).
-   Interruptible via stopRollCall() (e.g. if the race jumps early). */
-async function playRollCall(runners, { gapMs=120, betweenMs=260 } = {}){
+   is an array of { gate, horseId } in the order to announce; `favHorseId` is the
+   favourite's id (or null).
+
+   Three behaviours layered in:
+   1. POSITION STYLE is locked for the whole race — one take index chosen once and
+      reused for every gate — so the numbering language stays consistent (all
+      "in gate N", or all "from the N", never a mix within one read-out).
+   2. FAVOURITE gets an extra clip: its stitch becomes Position → Favourite → Name,
+      using the shared (name-free) roll_call/favourite pool. No-ops if unrecorded.
+   3. NAME take: take 1 is the plain name; take 2 is a characterful "colour" line
+      with the name baked in. A random subset of runners uses take 2 — each an
+      independent coin-flip, hard-capped at half the field — and the favourite
+      always gets its colour line. Everyone else gets the plain take 1.
+
+   The crowd holds at a low murmur underneath. Interruptible via stopRollCall(). */
+async function playRollCall(runners, favHorseId=null, { gapMs=120, betweenMs=260 } = {}){
   if(!Audio_.ready || Audio_.muted || !runners || !runners.length) return;
   const token = ++_rollCallToken;
+
+  // 1. Lock one position style index for the whole race.
+  const styleIdx = (Math.random()*3)|0;   // 3 takes per gate; clamped per-gate below
+
+  // 3. Decide which runners get the take-2 colour line. Independent 50/50 each,
+  //    but capped at floor(field/2). The favourite is always included (added
+  //    first so it survives the cap).
+  const cap = Math.floor(runners.length / 2);
+  const colour = new Set();
+  if(favHorseId) colour.add(favHorseId);
+  const shuffled = runners.map(r=>r.horseId).filter(id=>id && id!==favHorseId);
+  for(let i=shuffled.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]; }
+  for(const id of shuffled){
+    if(colour.size >= cap) break;
+    if(Math.random() < 0.5) colour.add(id);
+  }
+
   _duck(true);
   try{
     for(const r of runners){
       if(token !== _rollCallToken) break;                 // cancelled
+
+      // Position (locked style, clamped in case a gate has fewer takes).
       const posArr = VOICE_ROLLCALL.position[String(r.gate)];
       if(posArr && posArr.length){
-        await _playVoiceUrl(posArr[(Math.random()*posArr.length)|0]);
+        await _playVoiceUrl(posArr[Math.min(styleIdx, posArr.length-1)]);
         await _wait(gapMs);
       }
       if(token !== _rollCallToken) break;
+
+      // Favourite tag, only for the favourite runner.
+      if(favHorseId && r.horseId === favHorseId){
+        const favArr = VOICE_ROLLCALL.favourite;
+        if(favArr && favArr.length){
+          await _playVoiceUrl(favArr[(Math.random()*favArr.length)|0]);
+          await _wait(gapMs);
+        }
+        if(token !== _rollCallToken) break;
+      }
+
+      // Name: take 2 (colour) for the chosen subset, else take 1 (plain).
       const nameArr = VOICE_ROLLCALL.horseName[r.horseId];
       if(nameArr && nameArr.length){
-        await _playVoiceUrl(nameArr[(Math.random()*nameArr.length)|0]);
+        const wantColour = colour.has(r.horseId) && nameArr.length >= 2;
+        const url = wantColour ? nameArr[1] : nameArr[0];
+        await _playVoiceUrl(url);
       }
       if(token !== _rollCallToken) break;
       await _wait(betweenMs);
@@ -5677,15 +5739,41 @@ function _voiceAfter(afterKey, nextKey, gapMs=250){
   setTimeout(()=>playVoice(nextKey), delay);
 }
 
-/* Post-race podium read-out. The winner was already called at the line
-   (firstPastPost), so this announces SECOND then THIRD. Each placement is a
-   single per-horse clip with the name baked in (placeSecond / placeThird resolve
-   through VOICE_HORSE_LINES by the placer's id) — same treatment as the in-race
-   horse events, so the name can sit anywhere in the sentence and sound alive.
-   Sequenced so 2nd finishes before 3rd. Interruptible by the roll-call token. */
+/* Post-race podium read-out. Always names all three placings in ASCENDING order
+   — THIRD, then SECOND, then FIRST — as a formal recap, regardless of whether the
+   winner was already called live at the reveal. This uses the placeFirst/Second/
+   Third family, distinct from the excitable live firstPastPost call, so the live
+   "at the line" moment and the formal podium recap never play the same clip. Each
+   placement is a single per-horse clip with the name baked in, resolved through
+   VOICE_HORSE_LINES by the placer's id — same treatment as the in-race horse
+   events, so the name can sit anywhere in the sentence and sound alive.
+
+   Per-position photo variants: if a given position was part of the photo cluster
+   (isPhotoFinishPosition(index)), that placing uses its *Photo variant key
+   (placeFirstPhoto / placeSecondPhoto / placeThirdPhoto) — a differently-worded
+   take for a nervy, judged finish. If that horse has no photo variant recorded, it
+   falls back to the horse's normal placement line. So in a race where 1st/2nd was a
+   photo but 3rd cruised in, 1st and 2nd get photo lines and 3rd gets a normal line.
+   Interruptible by the roll-call token. */
 async function playPodiumPlacers(placers){
   if(!Audio_.ready || Audio_.muted || !placers || placers.length < 2) return;
   const token = ++_rollCallToken;
+
+  // Pick the photo-variant key for a position when it's contested and that horse
+  // actually has photo clips; otherwise the normal key. `photoKey` may be null for
+  // events with no photo variant.
+  const keyFor = (index, normalKey, photoKey)=>{
+    const horse = placers[index];
+    const id = horse && horse.def && horse.def.id;
+    if(photoKey && isPhotoFinishPosition(index)
+       && typeof VOICE_HORSE_LINES !== 'undefined'
+       && VOICE_HORSE_LINES[photoKey] && id
+       && VOICE_HORSE_LINES[photoKey][id] && VOICE_HORSE_LINES[photoKey][id].length){
+      return photoKey;
+    }
+    return normalKey;
+  };
+
   const say = async (key, horse)=>{
     if(token !== _rollCallToken || !horse) return;
     const cand = _voiceCandidates(key, horse.def && horse.def.id);
@@ -5694,10 +5782,19 @@ async function playPodiumPlacers(placers){
       await _wait(260);
     }
   };
+
   _duck(true);
   try{
-    await say('placeSecond', placers[1]);
-    if(token === _rollCallToken) await say('placeThird', placers[2]);
+    // Ascending recap: 3rd → 2nd → 1st, building to the winner.
+    if(placers[2] && token === _rollCallToken){
+      await say(keyFor(2, 'placeThird', 'placeThirdPhoto'), placers[2]);
+    }
+    if(placers[1] && token === _rollCallToken){
+      await say(keyFor(1, 'placeSecond', 'placeSecondPhoto'), placers[1]);
+    }
+    if(placers[0] && token === _rollCallToken){
+      await say(keyFor(0, 'placeFirst', 'placeFirstPhoto'), placers[0]);
+    }
   } finally {
     _duck(false);
   }
@@ -5714,7 +5811,8 @@ function playBigMomentVoice(moments){
 }
 
 /* Orchestrates the full pre-race announcer sequence during betting:
-   preraceIntro → fieldSize → course → conditions → roster roll-call.
+   preraceIntro → course (named per-course clips) → condition remarks
+   (weather/distance shuffled, then field band last) → roster roll-call.
    Voice-only; each step no-ops if its clip is missing. Bails cleanly if audio
    isn't ready or we're no longer in the prerace phase. Runs off the main flow
    (not awaited by init) so it never delays staging. */
@@ -5743,15 +5841,15 @@ async function playPreRaceSequence(){
     return true;
   };
 
-  /* Per-course variant of `step`: if the current course has named clips, play
-     one of those; otherwise fall back to the generic `course` pool. Keeps the
-     same pacing/duck behaviour as step(). */
+  /* Per-course variant of `step`: play one of the current course's named clips.
+     No-ops if this course has no clips. Keeps the same pacing/duck behaviour as
+     step(). */
   const stepCourse = async ()=>{
     if(typeof phase !== 'undefined' && phase !== 'prerace') return false;
     const cid = RACECOURSE && RACECOURSE.id;
     const arr = (cid && VOICE_COURSE_LINES[cid] && VOICE_COURSE_LINES[cid].length)
                 ? VOICE_COURSE_LINES[cid]
-                : VOICE_MANIFEST['course'];
+                : null;
     if(arr && arr.length){
       await new Promise(res=>{
         const url = arr[(Math.random()*arr.length)|0];
@@ -5765,11 +5863,10 @@ async function playPreRaceSequence(){
   };
 
   /* Play one clip from an explicit URL array, same pacing/duck as step().
-     Used by the condition remarks (weather/distance/field). Falls back to the
-     generic `conditions` pool if the specific band/weather has no clips. */
+     Used by the condition remarks (weather/distance/field). No-ops if the
+     specific band/weather has no clips. */
   const stepUrls = async (arr)=>{
     if(typeof phase !== 'undefined' && phase !== 'prerace') return false;
-    if(!(arr && arr.length)) arr = VOICE_MANIFEST['conditions'];
     if(arr && arr.length){
       await new Promise(res=>{
         const url = arr[(Math.random()*arr.length)|0];
@@ -5783,21 +5880,21 @@ async function playPreRaceSequence(){
   };
 
   if(!(await step('preraceIntro'))) return;
-  if(!(await step('fieldSize')))    return;
   if(!(await stepCourse()))         return;
 
-  // Three condition remarks — weather (by weather id), distance band, field band
-  // — played in a random order each race so it never sounds like a fixed script.
+  // Condition remarks — weather (by weather id) and distance band play in a
+  // random order each race so it never sounds like a fixed script, then the
+  // field band always plays last, leading into the roster roll call.
   {
     const cl = VOICE_CONDITION_LINES || {};
     const wid = RACE_WEATHER && RACE_WEATHER.id;
-    const remarks = [
+    const shuffled = [
       (cl.weather  || {})[wid],
       (cl.distance || {})[distanceBand()],
-      (cl.field    || {})[fieldBand()],
     ];
-    // Fisher–Yates shuffle
-    for(let i=remarks.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [remarks[i],remarks[j]]=[remarks[j],remarks[i]]; }
+    // Fisher–Yates shuffle (weather + distance only)
+    for(let i=shuffled.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]; }
+    const remarks = [...shuffled, (cl.field || {})[fieldBand()]];
     for(const arr of remarks){ if(!(await stepUrls(arr))) return; }
   }
 
@@ -5808,7 +5905,14 @@ async function playPreRaceSequence(){
       .map(h => ({ gate: (h.def && h.def.num) || 0, horseId: h.def && h.def.id }))
       .filter(r => r.gate && r.horseId)
       .sort((a,b)=> a.gate - b.gate);
-    await playRollCall(runners);
+    // Favourite = shortest win price. odds[] is index-parallel with raceHorses[].
+    let favHorseId = null;
+    if(Array.isArray(odds) && odds.length && Array.isArray(raceHorses) && raceHorses.length){
+      let bi = 0;
+      for(let i=1;i<odds.length;i++){ if((odds[i]?.win ?? 1e9) < (odds[bi]?.win ?? 1e9)) bi = i; }
+      favHorseId = raceHorses[bi] && raceHorses[bi].id;
+    }
+    await playRollCall(runners, favHorseId);
   }
 }
 
