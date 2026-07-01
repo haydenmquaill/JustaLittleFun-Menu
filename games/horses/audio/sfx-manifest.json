@@ -18,7 +18,7 @@
       "_comment": "horse cry on a fall; random take"
     },
     "thunder": {
-      "url": ["thunder1.mp3", "thunder2.mp3"],
+      "url": ["thunder1.mp3", "thunder2.mp3", "thunder3.mp3"],
       "bus": "weather",
       "_comment": "thunderclap on storm lightning; random take"
     },
