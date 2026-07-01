@@ -5335,6 +5335,26 @@ function unlockAudio(){
   if(Audio_.ctx && Audio_.ctx.state === 'suspended'){ Audio_.ctx.resume(); }
 }
 
+/* Browsers keep a fresh AudioContext "suspended" until the user interacts with
+   the page. Rather than relying on specific buttons calling unlockAudio(), arm
+   a one-time listener on the whole document so the FIRST click / tap / key —
+   whatever it is — resumes audio. Once fired it removes itself. This is why the
+   player previously had to toggle mute to kick sound into life; now any first
+   interaction does it. */
+(function armFirstGestureUnlock(){
+  const kick = ()=>{
+    unlockAudio();
+    // If the context resumed, we're done; otherwise leave the listeners armed
+    // for the next gesture (some browsers need the gesture to fully settle).
+    if(Audio_.ctx && Audio_.ctx.state === 'running'){
+      ['pointerdown','touchstart','keydown','click'].forEach(ev=>
+        document.removeEventListener(ev, kick, true));
+    }
+  };
+  ['pointerdown','touchstart','keydown','click'].forEach(ev=>
+    document.addEventListener(ev, kick, true));
+})();
+
 function _buf(url){ return Audio_.buffers[url] || null; }
 function _spec(name){ return SOUND_MANIFEST[name] || null; }
 
