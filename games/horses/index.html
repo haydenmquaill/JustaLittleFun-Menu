@@ -3129,14 +3129,20 @@ function raceTick(ts) {
     const nextPlaceIsPodium = finishOrder.length < eligiblePlaces;
     // Start: eligible spot open, 2+ horses approaching, no replay saved yet
     const shouldStart = podiumOpen && nextPlaceIsPodium && approaching.length >= 2 && !replaySlot;
-    // Stop: all cluster members have crossed the finish line
+    // Stop when EITHER the podium is full (4 crossed — nothing below 4th can be a
+    // photo finish, so never record past that) OR every current member has
+    // crossed. The podium-full check is what prevents the cluster ballooning to
+    // the back of the field.
+    const podiumFull = finishOrder.length >= eligiblePlaces;
     const shouldStop = isRecording && activeSlot &&
-      [...activeSlot.members].every(h => h.finished || h.dead);
+      (podiumFull || [...activeSlot.members].every(h => h.finished || h.dead));
 
     if(shouldStart && !isRecording) {
       startClusterRecording(new Set(approaching));
-    } else if(isRecording && activeSlot && approaching.length > 0) {
-      // Absorb any horse that joins the cluster window mid-approach
+    } else if(isRecording && activeSlot && approaching.length > 0 && !podiumFull) {
+      // Absorb a horse joining the window mid-approach ONLY while a podium spot is
+      // still open — a runner that can at best finish 5th can't be in a photo
+      // finish, so it must never be recorded into the cluster.
       approaching.forEach(h => activeSlot.members.add(h));
     }
 
@@ -3438,7 +3444,14 @@ function populatePostRace(placingsHidden, photoFinish) {
 let countdownInterval=null;
 
 let _wipeCleanupId = null;
-function doWipe(callback, holdMs=2000) {
+const WIPE_SLIDE_MS = 700;   // must match the CSS slide-in duration (#wipe-overlay transition)
+/* holdMs = EXTRA time to stay covered AFTER the cover has fully slid in, on top
+   of the slide itself. Default 0: the swap happens the instant the screen is
+   covered and we slide straight back out — no dead air. Pass a larger value only
+   when the covered moment is wanted for its own sake (e.g. prerace→race passes
+   5000 so the handover audio plays under the cover). Async callbacks still hold
+   the cover until they resolve regardless, so a half-built page never shows. */
+function doWipe(callback, holdMs=0) {
   const w = document.getElementById('wipe-overlay');
   const p = document.getElementById('wipe-phrase');
   const phrases = (PHRASE_DATA && PHRASE_DATA.wipeTransitions && PHRASE_DATA.wipeTransitions.length)
@@ -3454,6 +3467,9 @@ function doWipe(callback, holdMs=2000) {
   w.style.transition = '';
   w.classList.add('in');
   playSound('uiWhoosh', { volume:0.6 });   // transition whoosh as the cover sweeps in
+  // Fire the swap the moment the cover has fully slid in (WIPE_SLIDE_MS), plus
+  // any requested extra hold. This removes the old dead time between "covered"
+  // and "swap".
   setTimeout(() => {
     // Run the scene swap while fully covered. If the callback is async (returns
     // a thenable — e.g. init() waiting on loadSheets()), HOLD the cover until it
@@ -3477,7 +3493,7 @@ function doWipe(callback, holdMs=2000) {
     } else {
       slideOut();
     }
-  }, holdMs);   // covered duration (default 2000; prerace→race passes 5000 for the handover)
+  }, WIPE_SLIDE_MS + holdMs);   // covered from full-cover; +holdMs only when a lingering cover is wanted
 }
 
 /* Lobby menu wipe: cover (0.4s), run the swap while covered, uncover (0.4s),
@@ -3740,7 +3756,7 @@ function init() {
         playVoice('bettingClosed');
         setTimeout(()=>{
           playVoice('handover');              // host hands over AS the wipe begins
-          doWipe(beginRace, 5000);            // long cover so the handover clip finishes
+          doWipe(beginRace, 4300);            // ~5s covered (700ms slide + 4300ms hold) so the handover clip plays under it
         }, rand(5, 10) * 1000);
       }, soloCloseMs);
     }
@@ -4417,7 +4433,7 @@ async function finaliseBets(){
     const { error: rErr } = await sb.rpc('start_racing', { p_session_id: lobby.session.id });
     if(rErr){ console.error('start_racing failed:', rErr); }
     playVoice('handover');              // host hands over AS the wipe begins
-    doWipe(beginRace, 5000);            // long cover so the handover clip finishes
+    doWipe(beginRace, 4300);            // ~5s covered (700ms slide + 4300ms hold) so the handover clip plays under it
   }, rand(5, 10) * 1000);
 }
 
