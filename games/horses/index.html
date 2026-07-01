@@ -351,7 +351,6 @@ body {
 }
 
 /* Stage overlays */
-@keyframes recBlink { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
 
 #chaos-flash { position:absolute; inset:0; pointer-events:none; z-index:25; background:transparent; transition:background 0.05s; }
 
@@ -500,13 +499,16 @@ body {
   transition:left 0.1s linear; z-index:2;
   font-family:'Oswald',sans-serif;
 }
-#announcer-box {
-  background:var(--dark); color:var(--white); padding:7px 16px;
-  display:flex; align-items:center; gap:10px; min-height:34px;
-  border-top:2px solid var(--blue); height:36px; flex-shrink:0;
+#mute-btn {
+  position:fixed; top:14px; right:14px; z-index:9000;
+  width:52px; height:52px; border:none; cursor:pointer;
+  background:var(--blue); color:#fff; font-size:1.6rem; line-height:1;
+  box-shadow:0 2px 10px rgba(0,0,0,0.5); border-radius:6px;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0.55; transition:opacity .15s, transform .07s;
 }
-#announcer-dot { width:8px; height:8px; background:var(--red); border-radius:50%; flex-shrink:0; animation:recBlink 1s ease-in-out infinite; }
-#announcer-text { font-size:0.85rem; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; }
+#mute-btn:hover { opacity:1; }
+#mute-btn:active { transform:translateY(2px); }
 
 /* ══════════════════════════════
    POST-RACE UI
@@ -878,6 +880,8 @@ body {
 </head>
 <body>
 
+<button id="mute-btn" aria-label="Mute" onclick="unlockAudio(); toggleMute();">🔊</button>
+
 <!-- ══════════════════════════════
      LOBBY OVERLAY (pre-show) — sits above the race screen until the host starts.
 ══════════════════════════════ -->
@@ -1018,10 +1022,6 @@ body {
       <div id="progress-bar-overlay">
         <div id="prog-single-track"></div>
       </div>
-    </div>
-    <div id="announcer-box">
-      <div id="announcer-dot"></div>
-      <div id="announcer-text">Waiting for jump...</div>
     </div>
   </div>
 
@@ -1186,10 +1186,11 @@ const CONFIG = {
   // each target is solved at race start from the actual field size (see weatherFallChance),
   // so the target holds regardless of how many runners there are. Dry weather ids not
   // listed here just use deathChance. Tune these freely — they're the real knobs.
+  // Keys are weather ids (see weather.json): w03=Light Rain, w04=Heavy Rain, w06=Thunderstorm.
   weatherFallTarget: {
-    light_rain: 0.20,
-    heavy_rain: 0.60,
-    storm:      0.90,
+    "w03": 0.20,   // Light Rain
+    "w04": 0.60,   // Heavy Rain
+    "w06": 0.90,   // Thunderstorm
   },
   weatherFallEligibleTicks: 1800, // ~death-eligible ticks per race (prog 0.08–0.90 window);
                                   // used only to convert a target into a per-tick chance.
@@ -1251,6 +1252,16 @@ let PHRASE_DATA = {
 function fillTokens(tpl, vals){
   return String(tpl||'').replace(/\{(\w+)\}/g, (_,k)=> (vals && vals[k] != null) ? vals[k] : '');
 }
+
+/* Phrase pools: a phrases.json value may be a single string or an ARRAY of
+   interchangeable variants. pickPhrase() returns one at random (or the string
+   as-is); fillPhrase() then fills {tokens}. Use fillPhrase everywhere a phrase
+   is displayed so arrays and legacy strings both work. */
+function pickPhrase(v){
+  if(Array.isArray(v)) return v.length ? v[(Math.random()*v.length)|0] : '';
+  return v != null ? v : '';
+}
+function fillPhrase(v, vals){ return fillTokens(pickPhrase(v), vals); }
 
 async function loadGameData() {
   if(_dataLoaded) return;
@@ -1630,6 +1641,8 @@ function scheduleLightning(intervalMs) {
     flashScreen('rgba(220,230,255,0.85)');
     // Double flash
     setTimeout(() => flashScreen('rgba(220,230,255,0.6)'), 80);
+    // Thunder trails the flash by a short, slightly random beat.
+    setTimeout(() => playSound('thunder', { volume:0.9, rate:0.95 + Math.random()*0.1 }), 250 + Math.random()*500);
     scheduleLightning(intervalMs);
   }, delay);
 }
@@ -2129,8 +2142,6 @@ function updateProgressMap() {
 // ══════════════════════════════
 //  ANNOUNCER
 // ══════════════════════════════
-function announce(t) { const el=document.getElementById('announcer-text'); if(el) el.textContent=t; }
-
 function flashScreen(c) {
   const f=document.getElementById('chaos-flash');
   f.style.background=c; setTimeout(()=>{f.style.background='transparent';},120);
@@ -2340,7 +2351,9 @@ function tryDeath(horse, prog) {
     horse.dead = true;
     horse.chaosActive = 'DEATH';
     flashScreen('rgba(200,16,46,0.35)'); shakeViewport();
-    announce(fillTokens(PHRASE_DATA.raceCalls.down, {horse:horse.def.name.toUpperCase()}));
+    playSound('stumble', { volume:0.85 });
+    playSound('whinny', { volume:0.8, rate:0.96 + Math.random()*0.08 });
+    playVoice('down', { horse: horse.def.id });
     dnfOrder.push(horse);
     updateDNFBoard();
     camShot='TAIL'; directorTick=0; directorDuration=220;
@@ -2674,7 +2687,14 @@ function raceTick(ts) {
     cameraX = Math.max(0, worldToStageX(gLeader.worldX) - VIEWPORT_W*0.65);
     applyCamera();
     updateProgressMap();
-    if(gateCountdown<=0){gatePhase=false; openGates(); announce(PHRASE_DATA.raceCalls.racing);}
+    if(gateCountdown<=0){
+      gatePhase=false; openGates();
+      playSound('bell', { volume:0.9 });
+      playSound('gates', { volume:0.7 });
+      startLoop('hooves', { volume:0.7 });
+      setCrowd('race', 1.5);              // crowd bed swells as they jump
+      playVoice('theyreOff');
+    }
     animFrame=requestAnimationFrame(raceTick); return;
   }
 
@@ -2770,7 +2790,7 @@ function raceTick(ts) {
       // when the second horse arrives. stopClusterRecording() re-confirms the final state.
       updateFinishBoard();
       if(horse.finishRank===0){
-        announce(fillTokens(PHRASE_DATA.raceCalls.firstPastPost, {horse:horse.def.name.toUpperCase()}));
+        playVoice('firstPastPost', { horse: horse.def.id });
         flashScreen('rgba(200,151,26,0.4)'); shakeViewport();
       }
     }
@@ -2876,11 +2896,11 @@ function raceTick(ts) {
   applyCamera();
 
 
-  // Milestones
-  if(tick>=1 && lastMilestone<0){lastMilestone=0;announce(fillTokens(PHRASE_DATA.milestones.start, {field:CONFIG.horsesPerRace, distance:RACE_DISTANCE, terrain:RACE_TERRAIN, weather:RACE_WEATHER.label.toUpperCase()}));}
-  if(leaderProgress>0.25&&lastMilestone<1){lastMilestone=1;announce(fillTokens(PHRASE_DATA.milestones.quarter, {leader:leader.def.name.toUpperCase()}));}
-  if(leaderProgress>0.5&&lastMilestone<2){lastMilestone=2;announce(fillTokens(PHRASE_DATA.milestones.half, {leader:leader.def.name.toUpperCase()}));}
-  if(leaderProgress>0.75&&lastMilestone<3){lastMilestone=3;announce(fillTokens(PHRASE_DATA.milestones.threeQuarter, {}));}
+  // Milestones (voice-only now; text captions were removed with the announcer bar)
+  if(tick>=1 && lastMilestone<0){lastMilestone=0;playVoice('intro');}
+  if(leaderProgress>0.25&&lastMilestone<1){lastMilestone=1;playVoice('quarter', { horse: leader.def.id });}
+  if(leaderProgress>0.5&&lastMilestone<2){lastMilestone=2;playVoice('half', { horse: leader.def.id });}
+  if(leaderProgress>0.75&&lastMilestone<3){lastMilestone=3;setCrowd('finish',2.5);playVoice('threeQ');}
 
   updateProgressMap();
   recordReplayFrame();
@@ -2892,8 +2912,13 @@ function raceTick(ts) {
 // ══════════════════════════════
 function triggerFinishSequence() {
   stopReplayRecording();
+  // Runners are home: cut the hooves bed and let the crowd roar.
+  stopLoop('hooves', 0.3);
 
   if(replaySlot) {
+    // A blanket / photo finish — everyone's on their feet.
+    setCrowd('climax', 0.4);
+    playSound('cheer', { volume:1.0 });
     setTimeout(() => {
       doWipe(() => {
         if(animFrame) { cancelAnimationFrame(animFrame); animFrame=null; }
@@ -2901,9 +2926,10 @@ function triggerFinishSequence() {
         const liveCamX = cameraX;
         const liveZoom = currentZoom;
         document.getElementById('progress-bar-overlay').style.display='none';
-        announce(gapToLengths(replaySlot.gap, 4.3) <= 0.1
-          ? PHRASE_DATA.raceCalls.photoNose
-          : PHRASE_DATA.raceCalls.photoClose);
+        const isNose = gapToLengths(replaySlot.gap, 4.3) <= 0.1;
+        // Photo review: hush the house, expectant.
+        setCrowd('review', 1.5);
+        playVoice(isNose ? 'photoNose' : 'photoClose');
         document.getElementById('slowmo-overlay').style.display='flex';
         playReplayIn('race', replaySlot.frames, 1, REPLAY_INTERVAL_SLOW, ()=>{
           setTimeout(() => doWipe(() => {
@@ -2917,6 +2943,9 @@ function triggerFinishSequence() {
       });
     }, CONFIG.finishHoldMs);
   } else {
+    // Clear winner — a solid cheer, crowd stays up into the result.
+    setCrowd('finish', 0.4);
+    playSound('cheer', { volume:0.85 });
     setTimeout(() => doWipe(() => startPostRaceTransition(false)), CONFIG.finishHoldMs);
   }
 }
@@ -2926,6 +2955,9 @@ function triggerFinishSequence() {
 // ══════════════════════════════
 
 function startPostRaceTransition(hadSlowmo) {
+  stopLoop('hooves', 0.4);
+  stopWeatherAudio();                 // rain/storm belongs to the race just run
+  setCrowd('podium', 0.5);            // results are in — the celebratory roar
   const pr=document.getElementById('postrace-ui');
   pr.style.display='flex';
   document.getElementById('race-ui').style.display='none';
@@ -2935,6 +2967,8 @@ function startPostRaceTransition(hadSlowmo) {
   pr.classList.add('visible');
   stageToPostrace();
   ['postrace-info-table','podium-table'].forEach(id=>document.getElementById(id).classList.add('visible'));
+  // Let the celebration ease back to a between-races murmur.
+  setTimeout(()=>setCrowd('idle', 3.0), 3500);
 
   setStatusText('Race Complete');
 
@@ -3186,6 +3220,7 @@ function updateCD(el,s) {
 function beginRace() {
   stopWalkUp();
   stopReplay();
+  stopRollCall();   // silence any in-flight pre-race roster call before the off
   clearInterval(countdownInterval);
 
   document.getElementById('prerace-ui').style.display='none';
@@ -3221,7 +3256,9 @@ function beginRace() {
 
   buildGates();
   buildProgressMap();
-  announce(`${RACECOURSE.name.toUpperCase()} — ${RACE_DISTANCE}M ${RACE_TERRAIN} — ${RACE_WEATHER.label.toUpperCase()}`);
+  // (Pre-race setup calls — field size / course / conditions — and the roll call
+  // are voice-only and will be sequenced during walk-up/betting when we wire the
+  // vo-manifest loader. No on-screen text here since the announcer bar was removed.)
 
   horses.forEach(h=>{
     const params = buildRaceParams(h.def, h._luck || 1.0); // _luck is race-day variance
@@ -3287,6 +3324,8 @@ function resetToPrerace() {
   stopReplay();
   stopWalkUp();
   stopWeatherParticles();
+  stopWeatherAudio();
+  stopRollCall();
   clearInterval(countdownInterval);
 
   // Reset state
@@ -3327,6 +3366,8 @@ function init() {
   return loadSheets(raceHorses).then(()=>{
     buildWorld();
     initWeatherParticles();
+    updateWeatherAudio(RACE_WEATHER && RACE_WEATHER.id);   // rain/storm bed to match
+    ensureCrowdBed(); setCrowd('prerace', 3.0);            // gentle presence during walk-up/betting
     stageToPrerace();
     buildHorses(true); // horses start walking up
     buildGates(); // show gates in walk-up cam
@@ -3354,6 +3395,12 @@ function init() {
 
     setStatusText('Accepting Bets');
 
+    // Pre-race announcer sequence (voice-only): the setup calls then the roster
+    // roll-call, gate by gate. Fired on a short delay so it doesn't collide with
+    // the wipe reveal, and guarded so it's skipped if audio isn't ready or the
+    // race has already moved on. The roll call cancels itself if the race jumps.
+    playPreRaceSequence();
+
     if(!multiGame.active){
       // Solo play: no session, no DB. Auto-finalise after the local countdown
       // plus a small random tail, then jump — mirrors the multiplayer feel
@@ -3362,6 +3409,8 @@ function init() {
       setTimeout(()=>{
         if(phase!=='prerace') return;
         setStatusText('Bets Closed');
+        stopRollCall();
+        playVoice('bettingClosed');
         setTimeout(()=>doWipe(beginRace), rand(5, 10) * 1000);
       }, soloCloseMs);
     }
@@ -3526,7 +3575,12 @@ function renderSettingsSummary(){
 
 /* Start session → create the session immediately with the default config and go
    straight to the room screen. Config is edited from there (Edit settings). */
-lq('#lobby-start-session').addEventListener('click', createSessionAndOpenLobby);
+lq('#lobby-start-session').addEventListener('click', ()=>{
+  unlockAudio();
+  // Menu music + a distant continuous crowd murmur for the pre-show.
+  setTimeout(()=>{ startMenuMusic(); ensureCrowdBed(); setCrowd('idle', 2.0); }, 60);
+  createSessionAndOpenLobby();
+});
 
 async function createSessionAndOpenLobby(){
   const btn = lq('#lobby-start-session'); btn.disabled = true;
@@ -3689,6 +3743,10 @@ function escapeHtml(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&
    finished staging (its promise resolves). */
 const FIRST_RACE_HOLD_MS = 10000;   // hold the transition image before race 1
 lq('#lobby-start-game').addEventListener('click', async ()=>{
+  unlockAudio();
+  ensureCrowdBed();
+  stopMenuMusic(1.5);        // pre-show music out; the crowd bed carries through
+  setCrowd('prerace', 2.0);
   const w = document.getElementById('wipe-overlay');
   const p = document.getElementById('wipe-phrase');
   if(p){ const _ph=(PHRASE_DATA&&PHRASE_DATA.wipeTransitions&&PHRASE_DATA.wipeTransitions.length)?PHRASE_DATA.wipeTransitions:['Just a little fun!']; p.textContent=_ph[Math.floor(Math.random()*_ph.length)]; }
@@ -4007,6 +4065,8 @@ async function finaliseBets(){
   multiGame.awaitingSettle = true;
 
   setStatusText('Bets Closed — Race Starting Soon');
+  stopRollCall();                 // roster read is over
+  playVoice('bettingClosed');
 
   // Sweep any unconfirmed bet-slip rows (status='slip') so a slip a player left
   // un-confirmed is discarded and never settled. Best-effort.
@@ -4372,11 +4432,11 @@ async function showFinalLeaderboard(){
     document.getElementById('champ-balance-val').textContent = '$' + fmtMoney(champ.balance);
     const profit = (Number(champ.balance)||0) - startBal;
     const pEl = document.getElementById('champ-profit');
-    if(profit > 0){ pEl.textContent = fillTokens(PHRASE_DATA.champion.profitUp, {amount:fmtMoney(profit)}); pEl.classList.remove('down'); }
-    else if(profit < 0){ pEl.textContent = fillTokens(PHRASE_DATA.champion.profitDown, {amount:fmtMoney(-profit)}); pEl.classList.add('down'); }
-    else { pEl.textContent = PHRASE_DATA.champion.profitFlat; pEl.classList.remove('down'); }
+    if(profit > 0){ pEl.textContent = fillPhrase(PHRASE_DATA.champion.profitUp, {amount:fmtMoney(profit)}); pEl.classList.remove('down'); }
+    else if(profit < 0){ pEl.textContent = fillPhrase(PHRASE_DATA.champion.profitDown, {amount:fmtMoney(-profit)}); pEl.classList.add('down'); }
+    else { pEl.textContent = pickPhrase(PHRASE_DATA.champion.profitFlat); pEl.classList.remove('down'); }
     document.getElementById('champ-sub').textContent =
-      roster.length > 1 ? PHRASE_DATA.champion.subMany : PHRASE_DATA.champion.subSolo;
+      pickPhrase(roster.length > 1 ? PHRASE_DATA.champion.subMany : PHRASE_DATA.champion.subSolo);
   };
   // Hide the champion card contents until the reveal moment.
   const champCard = document.getElementById('champion-card');
@@ -4398,6 +4458,11 @@ async function showFinalLeaderboard(){
     if(champCard) champCard.classList.remove('pending');
     if(marquee) marquee.style.visibility = '';
     launchConfetti();
+    stopLoop('hooves', 0.4); stopWeatherAudio(); stopMenuMusic(0.5);
+    setCrowd('podium', 0.4);                  // champion revealed — the crowd erupts
+    playSound('cheer', { volume:1.0 });
+    playSound('fanfare', { volume:0.9 });
+    playVoice('winner');
     startMarquee();
     signalFinalReveal();   // tell phones to reveal placements now
   });
@@ -4645,6 +4710,443 @@ function startNextRaceCountdown(){
     }
   }, 1000);
 }
+
+/* ══════════════════════════════════════════════════════════
+   AUDIO ENGINE
+   Web Audio mixer: preloaded one-shot SFX + looping ambience
+   beds + a "voice" bus for the ElevenLabs announcer clips.
+   Per-bus gain lets the announcer duck the crowd/hooves.
+   A single unlock (resume) fires on the first user gesture.
+   All files live in  audio/  in the repo (commit them there).
+══════════════════════════════════════════════════════════ */
+const Audio_ = {
+  ctx: null, master: null,
+  buses: {},            // music / crowd / weather / sfx / voice → GainNode
+  buffers: {},          // decoded AudioBuffers by url
+  loops: {},            // active looping sources by name
+  muted: false, ready: false, _ducked: 0,
+  crowdLevel: 0,        // current target crowd loudness (0..1), see CROWD_LEVELS
+};
+
+/* Base level for each bus. The crowd bus is driven dynamically on top of this
+   by setCrowd() (below); the value here is its ceiling at level 1.0. */
+const BUS_BASE = { music:0.6, crowd:1.0, weather:0.7, sfx:0.9, voice:1.0 };
+
+/* Named crowd intensities. The crowd bed runs continuously from the lobby
+   onward; these are the loudness targets we smoothly ramp between:
+     idle    – lobby / between races, a distant murmur
+     prerace – horses walking up, bets open, a touch more presence
+     race    – they're running, the crowd is into it
+     finish  – closing stages, building
+     climax  – a blanket/photo finish: everyone on their feet
+     review  – photo review / stewards: hushed, expectant
+     podium  – placings announced: the biggest roar          */
+const CROWD_LEVELS = {
+  idle:0.28, prerace:0.4, race:0.62, finish:0.8, climax:1.0, review:0.3, podium:1.0,
+};
+
+/* One-shot + looping SOUND files (non-voice). Loops are flagged in LOOP_NAMES.
+   `bus` says which mixer bus each belongs to. */
+const SOUND_MANIFEST = {
+  // ── one-shots ──
+  bell:      { url:'audio/bell.mp3',       bus:'sfx' },   // starting bell as gates fly open
+  gates:     { url:'audio/gates.mp3',      bus:'sfx' },   // gates clang/spring
+  cheer:     { url:'audio/cheer.mp3',      bus:'crowd' }, // roar swell at the line
+  fanfare:   { url:'audio/fanfare.mp3',    bus:'music' }, // win / leaderboard sting
+  stumble:   { url:'audio/stumble.mp3',    bus:'sfx' },   // impact as a runner goes down
+  whinny:    { url:'audio/whinny.mp3',     bus:'sfx' },   // horse cry on a fall
+  thunder:   { url:'audio/thunder.mp3',    bus:'weather' },// thunderclap (storm lightning)
+  // ── loops ──
+  crowd:     { url:'audio/crowd.mp3',      bus:'crowd',   loop:true }, // continuous ambience bed
+  hooves:    { url:'audio/hooves.mp3',     bus:'sfx',     loop:true }, // galloping, only while racing
+  menuMusic: { url:'audio/menu_music.mp3', bus:'music',   loop:true }, // lobby / pre-show music
+  rainLight: { url:'audio/rain_light.mp3', bus:'weather', loop:true }, // light rain bed
+  rainHeavy: { url:'audio/rain_heavy.mp3', bus:'weather', loop:true }, // heavy rain bed
+};
+const LOOP_NAMES = new Set(Object.entries(SOUND_MANIFEST).filter(([,v])=>v.loop).map(([k])=>k));
+
+/* ElevenLabs announcer clips. The real manifest is loaded from
+   audio/vo/vo-manifest.json (see loadVoiceManifest). Until that resolves — or if
+   it fails — these placeholders keep every key defined so nothing is undefined.
+   All three structures below are rebuilt from the JSON with basePath prepended:
+     VOICE_MANIFEST    generic per-event pools            (key -> [urls])
+     VOICE_HORSE_LINES personalised per-horse pools       (key -> horseId -> [urls])
+     VOICE_ROLLCALL    pre-race roster clips              ({position:{gate:[urls]}, horseName:{horseId:[urls]}}) */
+let VOICE_MANIFEST = {
+  preraceIntro:['audio/vo/prerace_intro/1.mp3'], fieldSize:['audio/vo/field_size/1.mp3'],
+  course:['audio/vo/course/1.mp3'], conditions:['audio/vo/conditions/1.mp3'],
+  bettingClosed:['audio/vo/betting_closed/1.mp3'],
+  intro:['audio/vo/intro/1.mp3'], theyreOff:['audio/vo/theyre_off/1.mp3'],
+  quarter:['audio/vo/quarter/1.mp3'], half:['audio/vo/half/1.mp3'],
+  threeQ:['audio/vo/three_quarter/1.mp3'], firstPastPost:['audio/vo/first_past_post/1.mp3'],
+  down:['audio/vo/down/1.mp3'], photoClose:['audio/vo/photo_close/1.mp3'],
+  photoNose:['audio/vo/photo_nose/1.mp3'], finish:['audio/vo/finish/1.mp3'],
+  winner:['audio/vo/winner/1.mp3'],
+};
+let VOICE_HORSE_LINES = {};
+let VOICE_ROLLCALL = { position:{}, horseName:{} };
+let _voiceManifestLoaded = null;   // Promise, so initAudio can await a single load
+
+/* Fetch + parse audio/vo/vo-manifest.json and rebuild the three structures with
+   basePath prepended. Skips _comment / _tokens keys. Idempotent: repeated calls
+   return the same promise. On any failure the placeholders above remain. */
+function loadVoiceManifest(){
+  if(_voiceManifestLoaded) return _voiceManifestLoaded;
+  _voiceManifestLoaded = (async ()=>{
+    try{
+      const res = await fetch('audio/vo/vo-manifest.json');
+      if(!res.ok) throw new Error(res.status);
+      const m = await res.json();
+      const base = m.basePath || 'audio/vo/';
+      const pre = (p)=> base + p;
+      const clean = (obj)=> Object.fromEntries(Object.entries(obj||{}).filter(([k])=>k[0] !== '_'));
+
+      if(m.lines){
+        const out = {};
+        for(const [ev, arr] of Object.entries(clean(m.lines))){
+          if(Array.isArray(arr)) out[ev] = arr.map(pre);
+        }
+        if(Object.keys(out).length) VOICE_MANIFEST = out;
+      }
+      if(m.horseLines){
+        const out = {};
+        for(const [ev, byHorse] of Object.entries(clean(m.horseLines))){
+          out[ev] = {};
+          for(const [hid, arr] of Object.entries(clean(byHorse))){
+            if(Array.isArray(arr)) out[ev][hid] = arr.map(pre);
+          }
+        }
+        VOICE_HORSE_LINES = out;
+      }
+      if(m.rollCall){
+        const rc = { position:{}, horseName:{} };
+        for(const [gate, arr] of Object.entries(clean(m.rollCall.position))){
+          if(Array.isArray(arr)) rc.position[gate] = arr.map(pre);
+        }
+        for(const [hid, arr] of Object.entries(clean(m.rollCall.horseName))){
+          if(Array.isArray(arr)) rc.horseName[hid] = arr.map(pre);
+        }
+        VOICE_ROLLCALL = rc;
+      }
+    }catch(e){ /* keep placeholders; game runs regardless */ }
+  })();
+  return _voiceManifestLoaded;
+}
+
+/* Collect every clip URL across all three structures, for preloading. */
+function _allVoiceUrls(){
+  const urls = new Set();
+  Object.values(VOICE_MANIFEST).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  Object.values(VOICE_HORSE_LINES).forEach(byHorse=>
+    Object.values(byHorse||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u))));
+  Object.values(VOICE_ROLLCALL.position||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  Object.values(VOICE_ROLLCALL.horseName||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  return urls;
+}
+
+async function initAudio(){
+  if(Audio_.ctx) return;
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if(!Ctx) return;                       // very old browser — game still runs silently
+  Audio_.ctx = new Ctx();
+  Audio_.master = Audio_.ctx.createGain();
+  Audio_.master.connect(Audio_.ctx.destination);
+  for(const name of ['music','crowd','weather','sfx','voice']){
+    const g = Audio_.ctx.createGain();
+    g.gain.value = BUS_BASE[name] != null ? BUS_BASE[name] : 1;
+    g.connect(Audio_.master);
+    Audio_.buses[name] = g;
+  }
+  // Crowd starts silent; setCrowd() ramps it from the lobby onward.
+  Audio_.buses.crowd.gain.value = 0;
+
+  // Make sure the voice manifest is in before we build the preload list.
+  await loadVoiceManifest();
+
+  // Preload + decode every file (SFX + voice). Keyed by URL; missing files skip.
+  const urls = new Set();
+  Object.values(SOUND_MANIFEST).forEach(s=>urls.add(s.url));
+  _allVoiceUrls().forEach(u=>urls.add(u));
+  await Promise.all([...urls].map(async url=>{
+    try{
+      const res = await fetch(url);
+      if(!res.ok) throw new Error(res.status);
+      const buf = await res.arrayBuffer();
+      Audio_.buffers[url] = await Audio_.ctx.decodeAudioData(buf);
+    }catch(e){ /* a missing file just stays silent — never blocks the game */ }
+  }));
+  Audio_.ready = true;
+}
+
+/* Unlock on a real user gesture (resume the suspended context). Safe to
+   call repeatedly; lazily inits on the first gesture. */
+function unlockAudio(){
+  if(!Audio_.ctx){ initAudio(); }
+  if(Audio_.ctx && Audio_.ctx.state === 'suspended'){ Audio_.ctx.resume(); }
+}
+
+function _buf(url){ return Audio_.buffers[url] || null; }
+function _spec(name){ return SOUND_MANIFEST[name] || null; }
+
+function playSound(name, { volume=1, rate=1, bus=null } = {}){
+  if(!Audio_.ready || Audio_.muted) return null;
+  const spec = _spec(name); if(!spec) return null;
+  const buffer = _buf(spec.url); if(!buffer) return null;
+  const src = Audio_.ctx.createBufferSource();
+  src.buffer = buffer; src.playbackRate.value = rate;
+  const g = Audio_.ctx.createGain(); g.gain.value = volume;
+  src.connect(g).connect(Audio_.buses[bus || spec.bus] || Audio_.buses.sfx);
+  src.start(0);
+  return src;
+}
+
+function startLoop(name, { volume=1, fade=0.5, rate=1 } = {}){
+  if(!Audio_.ready || Audio_.muted || Audio_.loops[name]) return;
+  const spec = _spec(name); if(!spec) return;
+  const buffer = _buf(spec.url); if(!buffer) return;
+  const src = Audio_.ctx.createBufferSource();
+  src.buffer = buffer; src.loop = true; src.playbackRate.value = rate;
+  const g = Audio_.ctx.createGain(); g.gain.value = 0;
+  src.connect(g).connect(Audio_.buses[spec.bus] || Audio_.buses.crowd);
+  src.start(0);
+  const now = Audio_.ctx.currentTime;
+  g.gain.linearRampToValueAtTime(volume, now + fade);
+  Audio_.loops[name] = { src, gain:g, vol:volume };
+}
+
+function stopLoop(name, fade=0.5){
+  const l = Audio_.loops[name]; if(!l) return;
+  const now = Audio_.ctx.currentTime;
+  try{
+    l.gain.gain.cancelScheduledValues(now);
+    l.gain.gain.setValueAtTime(l.gain.gain.value, now);
+    l.gain.gain.linearRampToValueAtTime(0, now + fade);
+    l.src.stop(now + fade + 0.05);
+  }catch(e){}
+  delete Audio_.loops[name];
+}
+
+function stopAllLoops(fade=0.4){ Object.keys(Audio_.loops).forEach(n=>stopLoop(n,fade)); }
+
+/* ── Dynamic crowd level ──────────────────────────────────
+   Smoothly ramp the crowd BUS between named intensities. The crowd loop keeps
+   playing underneath; this just rides its overall loudness up and down through
+   the race so it swells and hushes with the drama. */
+function setCrowd(level, ramp=1.2){
+  const target = (typeof level === 'number') ? level : (CROWD_LEVELS[level] ?? 0.3);
+  Audio_.crowdLevel = target;
+  if(!Audio_.ctx || !Audio_.buses.crowd) return;
+  if(Audio_._ducked > 0) return;   // while VO is ducking, _duck() owns the crowd gain
+  const g = Audio_.buses.crowd, now = Audio_.ctx.currentTime;
+  g.gain.cancelScheduledValues(now);
+  g.gain.setValueAtTime(g.gain.value, now);
+  g.gain.linearRampToValueAtTime(target * BUS_BASE.crowd, now + ramp);
+}
+
+/* Ensure the continuous crowd bed is running (call once audio is unlocked). */
+function ensureCrowdBed(){
+  if(Audio_.ready && !Audio_.loops.crowd && !Audio_.muted){
+    startLoop('crowd', { volume:1.0, fade:1.5 });
+  }
+}
+
+/* ── Weather beds ─────────────────────────────────────────
+   Start the rain/storm loop that matches RACE_WEATHER.id, and stop any that
+   don't. Thunder one-shots are fired from the lightning scheduler.
+   Weather ids are opaque pks (see weather.json); named here for readability. */
+const WEATHER_ID = { LIGHT_RAIN:'w03', HEAVY_RAIN:'w04', STORM:'w06' };
+function updateWeatherAudio(weatherId){
+  const wants = weatherId === WEATHER_ID.LIGHT_RAIN ? 'rainLight'
+              : (weatherId === WEATHER_ID.HEAVY_RAIN || weatherId === WEATHER_ID.STORM) ? 'rainHeavy'
+              : null;
+  ['rainLight','rainHeavy'].forEach(n=>{ if(n !== wants) stopLoop(n, 0.8); });
+  if(wants){
+    const vol = weatherId === WEATHER_ID.STORM ? 1.0 : (weatherId === WEATHER_ID.HEAVY_RAIN ? 0.9 : 0.55);
+    startLoop(wants, { volume:vol, fade:1.2 });
+  }
+}
+function stopWeatherAudio(){ stopLoop('rainLight',0.8); stopLoop('rainHeavy',0.8); }
+
+/* ── Menu / lobby music ── */
+function startMenuMusic(){ startLoop('menuMusic', { volume:1.0, fade:1.5 }); }
+function stopMenuMusic(fade=1.0){ stopLoop('menuMusic', fade); }
+
+/* Duck the crowd/hooves/weather/music beds while the announcer speaks, then
+   restore. Reference-counted so overlapping VO stays ducked. On release the
+   crowd returns to its current dynamic level rather than a fixed value. */
+function _duck(on){
+  if(!Audio_.ctx) return;
+  const now = Audio_.ctx.currentTime;
+  Audio_._ducked = Math.max(0, Audio_._ducked + (on ? 1 : -1));
+  const ducked = Audio_._ducked > 0;
+  const ramp = (bus, full)=>{
+    const g = Audio_.buses[bus]; if(!g) return;
+    g.gain.cancelScheduledValues(now);
+    g.gain.setValueAtTime(g.gain.value, now);
+    g.gain.linearRampToValueAtTime(ducked ? full*0.35 : full, now + 0.25);
+  };
+  ramp('sfx',     BUS_BASE.sfx);
+  ramp('weather', BUS_BASE.weather);
+  ramp('music',   BUS_BASE.music);
+  // Crowd: duck relative to its live dynamic level, restore to that same level.
+  const gc = Audio_.buses.crowd;
+  if(gc){
+    const lvl = Audio_.crowdLevel * BUS_BASE.crowd;
+    gc.gain.cancelScheduledValues(now);
+    gc.gain.setValueAtTime(gc.gain.value, now);
+    gc.gain.linearRampToValueAtTime(ducked ? lvl*0.4 : lvl, now + 0.25);
+  }
+}
+
+/* Play a pre-generated announcer clip by VOICE_MANIFEST key. Ducks the beds
+   for the clip's duration. Missing clip → silent no-op. */
+/* Resolve the list of candidate clips for an event, preferring a per-horse set
+   when a horse id is supplied and one exists, otherwise the generic set.
+   VOICE_HORSE_LINES is populated by the manifest loader (later); until then this
+   simply returns the generic VOICE_MANIFEST entry. */
+function _voiceCandidates(key, horseId){
+  if(horseId && typeof VOICE_HORSE_LINES !== 'undefined'
+     && VOICE_HORSE_LINES[key] && VOICE_HORSE_LINES[key][horseId]
+     && VOICE_HORSE_LINES[key][horseId].length){
+    return VOICE_HORSE_LINES[key][horseId];
+  }
+  return VOICE_MANIFEST[key] || null;
+}
+
+function playVoice(key, { volume=1, horse=null } = {}){
+  if(!Audio_.ready || Audio_.muted) return null;
+  const entry = _voiceCandidates(key, horse); if(!entry) return null;
+  const url = Array.isArray(entry) ? entry[(Math.random()*entry.length)|0] : entry;
+  const buffer = _buf(url); if(!buffer) return null;
+  const src = Audio_.ctx.createBufferSource();
+  src.buffer = buffer;
+  const g = Audio_.ctx.createGain(); g.gain.value = volume;
+  src.connect(g).connect(Audio_.buses.voice);
+  _duck(true);
+  let released = false;
+  const release = ()=>{ if(!released){ released = true; _duck(false); } };
+  src.onended = release;
+  setTimeout(release, (buffer.duration*1000) + 400);   // safety release
+  src.start(0);
+  return src;
+}
+
+/* Low-level: play a single already-decoded URL on the voice bus and resolve when
+   it finishes (or immediately if not loaded). Used by the roll-call sequencer.
+   Ducking is handled by the caller so a whole sequence ducks once, not per clip. */
+function _playVoiceUrl(url, { volume=1 } = {}){
+  return new Promise(resolve=>{
+    if(!Audio_.ready || Audio_.muted){ resolve(); return; }
+    const buffer = _buf(url); if(!buffer){ resolve(); return; }
+    const src = Audio_.ctx.createBufferSource();
+    src.buffer = buffer;
+    const g = Audio_.ctx.createGain(); g.gain.value = volume;
+    src.connect(g).connect(Audio_.buses.voice);
+    let done=false; const fin=()=>{ if(!done){ done=true; resolve(); } };
+    src.onended = fin;
+    setTimeout(fin, (buffer.duration*1000) + 250);   // safety
+    src.start(0);
+  });
+}
+
+let _rollCallToken = 0;   // bump to cancel an in-flight roll call
+function stopRollCall(){ _rollCallToken++; }
+
+/* Pre-race roster read-out. For each runner in gate order, play the position
+   clip for its gate then the horse-name clip for its id, back to back. `runners`
+   is an array of { gate, horseId } in the order to announce. The crowd holds at
+   a low murmur underneath (caller can set the level; we just duck lightly).
+   Interruptible via stopRollCall() (e.g. if the race jumps early). */
+async function playRollCall(runners, { gapMs=120, betweenMs=260 } = {}){
+  if(!Audio_.ready || Audio_.muted || !runners || !runners.length) return;
+  const token = ++_rollCallToken;
+  _duck(true);
+  try{
+    for(const r of runners){
+      if(token !== _rollCallToken) break;                 // cancelled
+      const posArr = VOICE_ROLLCALL.position[String(r.gate)];
+      if(posArr && posArr.length){
+        await _playVoiceUrl(posArr[(Math.random()*posArr.length)|0]);
+        await _wait(gapMs);
+      }
+      if(token !== _rollCallToken) break;
+      const nameArr = VOICE_ROLLCALL.horseName[r.horseId];
+      if(nameArr && nameArr.length){
+        await _playVoiceUrl(nameArr[(Math.random()*nameArr.length)|0]);
+      }
+      if(token !== _rollCallToken) break;
+      await _wait(betweenMs);
+    }
+  } finally {
+    _duck(false);
+  }
+}
+function _wait(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+/* Orchestrates the full pre-race announcer sequence during betting:
+   preraceIntro → fieldSize → course → conditions → roster roll-call.
+   Voice-only; each step no-ops if its clip is missing. Bails cleanly if audio
+   isn't ready or we're no longer in the prerace phase. Runs off the main flow
+   (not awaited by init) so it never delays staging. */
+async function playPreRaceSequence(){
+  // Give the wipe reveal a beat, and let audio finish initialising.
+  await _wait(900);
+  if(typeof phase !== 'undefined' && phase !== 'prerace') return;
+  try{ await loadVoiceManifest(); }catch(e){}
+  if(!Audio_.ready || Audio_.muted) return;
+  if(typeof phase !== 'undefined' && phase !== 'prerace') return;
+
+  const step = async (key)=>{
+    if(typeof phase !== 'undefined' && phase !== 'prerace') return false;
+    const arr = VOICE_MANIFEST[key];
+    if(arr && arr.length){
+      await new Promise(res=>{
+        const s = playVoice(key);
+        if(!s){ res(); return; }
+        // playVoice manages its own duck; wait roughly its length before the next.
+        const b = _buf(Array.isArray(arr)?arr[0]:arr);
+        setTimeout(res, b ? (b.duration*1000)+200 : 400);
+      });
+      await _wait(150);
+    }
+    return true;
+  };
+
+  if(!(await step('preraceIntro'))) return;
+  if(!(await step('fieldSize')))    return;
+  if(!(await step('course')))       return;
+  if(!(await step('conditions')))   return;
+
+  // Roll call: gate order, position clip then horse-name clip per runner.
+  if(typeof phase !== 'undefined' && phase !== 'prerace') return;
+  if(Array.isArray(horses) && horses.length){
+    const runners = horses
+      .map(h => ({ gate: (h.def && h.def.num) || 0, horseId: h.def && h.def.id }))
+      .filter(r => r.gate && r.horseId)
+      .sort((a,b)=> a.gate - b.gate);
+    await playRollCall(runners);
+  }
+}
+
+function toggleMute(){
+  Audio_.muted = !Audio_.muted;
+  if(Audio_.master) Audio_.master.gain.value = Audio_.muted ? 0 : 1;
+  if(Audio_.muted){
+    stopAllLoops(0.1);
+  } else if(Audio_.crowdLevel > 0){
+    // Coming back from mute mid-session: bring the continuous crowd bed back.
+    ensureCrowdBed();
+    setCrowd(Audio_.crowdLevel, 0.6);
+  }
+  const btn = document.getElementById('mute-btn');
+  if(btn){ btn.textContent = Audio_.muted ? '🔇' : '🔊'; btn.setAttribute('aria-label', Audio_.muted ? 'Unmute' : 'Mute'); }
+  return Audio_.muted;
+}
+
+/* The mute button uses an inline onclick, but this is a module (module scope
+   is not global), so expose the functions it calls onto window. */
+window.unlockAudio = unlockAudio;
+window.toggleMute = toggleMute;
 
 /* ── boot: load game data in the background, keep lobby up ── */
 loadGameData().then(()=>{
