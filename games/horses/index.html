@@ -2901,8 +2901,19 @@ function raceTick(ts) {
   if(leaderProgress>0.25&&lastMilestone<1){lastMilestone=1;playVoice('quarter', { horse: leader.def.id });}
   if(leaderProgress>0.5&&lastMilestone<2){lastMilestone=2;playVoice('half', { horse: leader.def.id });}
   if(leaderProgress>0.75&&lastMilestone<3){lastMilestone=3;setCrowd('finish',2.5);playVoice('threeQ');}
-  // Leader driving for the line — the house comes up now, not after the field trails in.
-  if(leaderProgress>0.90&&lastMilestone<4){lastMilestone=4;playSound('cheer', { volume:1.0 });}
+  // Leader driving for the line. Fire once the leader is inside the finish window
+  // (same 400px band the photo-finish detector uses), so this runs in a frame
+  // where isRecording already reflects whether a podium cluster is brewing —
+  // avoiding a fixed-% gate that could beat the detector on longer tracks.
+  // A live cluster ⇒ photo finish likely ⇒ the house erupts; a clear win gets a
+  // modest cheer, so the tight ones actually stand out.
+  {
+    const leaderToLine = (START_X + RACE_LENGTH) - leader.worldX;   // px remaining
+    if(leaderToLine < CONFIG.recordingWindowPx && lastMilestone<4){
+      lastMilestone=4;
+      playSound('cheer', { volume: isRecording ? 1.0 : 0.45 });
+    }
+  }
 
   updateProgressMap();
   recordReplayFrame();
