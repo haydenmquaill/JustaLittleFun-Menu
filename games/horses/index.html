@@ -1210,6 +1210,23 @@ let RACE_DISTANCE = null;
 let RACE_FIELD_SIZE = 10;
 let RACE_FALL_CHANCE = null;   // per-tick fall chance for the current race (set in setupRace)
 
+/* Condition bands used to pick spoken remarks. Distance -> sprint/mile/staying
+   (cutoffs from the real course distance range 955–3400m); field size ->
+   small/medium/large/full. These keys map to the manifest's conditionLines. */
+function distanceBand(m){
+  const d = m || RACE_DISTANCE || 0;
+  if(d <= 1300) return 'sprint';
+  if(d <= 2000) return 'mile';
+  return 'staying';
+}
+function fieldBand(n){
+  const f = n || RACE_FIELD_SIZE || 0;
+  if(f <= 6)  return 'small';
+  if(f <= 9)  return 'medium';
+  if(f <= 12) return 'large';
+  return 'full';
+}
+
 // ══════════════════════════════
 //  SUPABASE CONFIG
 // ══════════════════════════════
@@ -5122,6 +5139,7 @@ let VOICE_MANIFEST = {
 };
 let VOICE_HORSE_LINES = {};
 let VOICE_COURSE_LINES = {};   // courseId -> [urls]; named per-course "course" clips
+let VOICE_CONDITION_LINES = { weather:{}, distance:{}, field:{} };   // weather by id, distance/field by band
 let VOICE_ROLLCALL = { position:{}, horseName:{} };
 
 /* ── Voice language routing ──────────────────────────────────────────────────
@@ -5181,6 +5199,15 @@ function loadVoiceManifest(lang = DEFAULT_LANG){
           if(Array.isArray(arr)) out[cid] = arr.map(pre);
         }
         VOICE_COURSE_LINES = out;
+      }
+      if(m.conditionLines){
+        const cl = { weather:{}, distance:{}, field:{} };
+        for(const grp of ['weather','distance','field']){
+          for(const [k, arr] of Object.entries(clean(m.conditionLines[grp]||{}))){
+            if(Array.isArray(arr)) cl[grp][k] = arr.map(pre);
+          }
+        }
+        VOICE_CONDITION_LINES = cl;
       }
       if(m.rollCall){
         const rc = { position:{}, horseName:{} };
@@ -5246,6 +5273,8 @@ function _allVoiceUrls(){
   Object.values(VOICE_HORSE_LINES).forEach(byHorse=>
     Object.values(byHorse||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u))));
   Object.values(VOICE_COURSE_LINES).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  ['weather','distance','field'].forEach(grp=>
+    Object.values((VOICE_CONDITION_LINES||{})[grp]||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u))));
   Object.values(VOICE_ROLLCALL.position||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
   Object.values(VOICE_ROLLCALL.horseName||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
   return urls;
@@ -5630,10 +5659,42 @@ async function playPreRaceSequence(){
     return true;
   };
 
+  /* Play one clip from an explicit URL array, same pacing/duck as step().
+     Used by the condition remarks (weather/distance/field). Falls back to the
+     generic `conditions` pool if the specific band/weather has no clips. */
+  const stepUrls = async (arr)=>{
+    if(typeof phase !== 'undefined' && phase !== 'prerace') return false;
+    if(!(arr && arr.length)) arr = VOICE_MANIFEST['conditions'];
+    if(arr && arr.length){
+      await new Promise(res=>{
+        const url = arr[(Math.random()*arr.length)|0];
+        _playVoiceUrl(url);
+        const b = _buf(url);
+        setTimeout(res, b ? (b.duration*1000)+200 : 400);
+      });
+      await _wait(150);
+    }
+    return true;
+  };
+
   if(!(await step('preraceIntro'))) return;
   if(!(await step('fieldSize')))    return;
   if(!(await stepCourse()))         return;
-  if(!(await step('conditions')))   return;
+
+  // Three condition remarks — weather (by weather id), distance band, field band
+  // — played in a random order each race so it never sounds like a fixed script.
+  {
+    const cl = VOICE_CONDITION_LINES || {};
+    const wid = RACE_WEATHER && RACE_WEATHER.id;
+    const remarks = [
+      (cl.weather  || {})[wid],
+      (cl.distance || {})[distanceBand()],
+      (cl.field    || {})[fieldBand()],
+    ];
+    // Fisher–Yates shuffle
+    for(let i=remarks.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [remarks[i],remarks[j]]=[remarks[j],remarks[i]]; }
+    for(const arr of remarks){ if(!(await stepUrls(arr))) return; }
+  }
 
   // Roll call: gate order, position clip then horse-name clip per runner.
   if(typeof phase !== 'undefined' && phase !== 'prerace') return;
