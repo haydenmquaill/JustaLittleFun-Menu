@@ -28,6 +28,8 @@
     "gateRattle": { "url": "gate_rattle.mp3", "bus": "sfx", "loop": true, "_comment": "horses shuffling in the stalls: race-view transition until gates open" },
     "menuMusic":  { "url": "menu_music.mp3", "bus": "music", "loop": true, "_comment": "lobby / pre-show music" },
     "rainLight":  { "url": "rain_light.mp3", "bus": "weather", "loop": true, "_comment": "light rain bed" },
-    "rainHeavy":  { "url": "rain_heavy.mp3", "bus": "weather", "loop": true, "_comment": "heavy rain bed" }
+    "rainHeavy":  { "url": "rain_heavy.mp3", "bus": "weather", "loop": true, "_comment": "heavy rain bed" },
+    "breeze":     { "url": "breeze.mp3", "bus": "weather", "loop": true, "_comment": "soft wind bed for petals / autumn leaves / light snow" },
+    "windHowl":   { "url": "wind_howl.mp3", "bus": "weather", "loop": true, "_comment": "howling wind bed for blizzard" }
   }
 }
