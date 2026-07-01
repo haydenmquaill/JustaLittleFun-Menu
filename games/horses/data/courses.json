@@ -1,8 +1,320 @@
 [
   {
     "id": "c01",
-    "name": "Doomben Downs",
-    "location": "Brisbane",
+    "name": "Flemington",
+    "location": "Melbourne, VIC",
+    "terrains": [
+      "TURF"
+    ],
+    "distances": [
+      1000,
+      1200,
+      1600,
+      2000,
+      2400,
+      3200
+    ],
+    "description": "Home of the Melbourne Cup. A wide, galloping course with a long straight that rewards genuine stayers with a strong finish.",
+    "terrainAffinityBonus": {
+      "dirt": 0.9,
+      "turf": 1.05
+    },
+    "distanceProfile": "MIDDLE_TO_LONG",
+    "country": "AU"
+  },
+  {
+    "id": "c02",
+    "name": "Randwick",
+    "location": "Sydney, NSW",
+    "terrains": [
+      "TURF"
+    ],
+    "distances": [
+      1200,
+      1400,
+      1600,
+      2000,
+      2400
+    ],
+    "description": "Royal Randwick — a spacious, undulating track with a testing uphill run to the line. A true test of class.",
+    "terrainAffinityBonus": {
+      "dirt": 0.92,
+      "turf": 1.04
+    },
+    "distanceProfile": "MIDDLE_TO_LONG",
+    "country": "AU"
+  },
+  {
+    "id": "c03",
+    "name": "Caulfield",
+    "location": "Melbourne, VIC",
+    "terrains": [
+      "TURF"
+    ],
+    "distances": [
+      1000,
+      1200,
+      1400,
+      1600,
+      2400
+    ],
+    "description": "A tight, tricky circuit where the run to the first turn is short. Barrier draw and early speed matter here.",
+    "terrainAffinityBonus": {
+      "dirt": 0.95,
+      "turf": 1.03
+    },
+    "distanceProfile": "SHORT_TO_MIDDLE",
+    "country": "AU"
+  },
+  {
+    "id": "c04",
+    "name": "Rosehill Gardens",
+    "location": "Sydney, NSW",
+    "terrains": [
+      "TURF"
+    ],
+    "distances": [
+      1200,
+      1500,
+      1900,
+      2000,
+      2400
+    ],
+    "description": "A roomy metropolitan track with a long straight. Suits horses that can quicken off a solid tempo.",
+    "terrainAffinityBonus": {
+      "dirt": 0.94,
+      "turf": 1.03
+    },
+    "distanceProfile": "MIDDLE",
+    "country": "AU"
+  },
+  {
+    "id": "c05",
+    "name": "Eagle Farm",
+    "location": "Brisbane, QLD",
+    "terrains": [
+      "TURF"
+    ],
+    "distances": [
+      1000,
+      1200,
+      1400,
+      1600,
+      2200
+    ],
+    "description": "Brisbane's premier turf course — a big, sweeping track with a generous straight for the run home.",
+    "terrainAffinityBonus": {
+      "dirt": 0.93,
+      "turf": 1.04
+    },
+    "distanceProfile": "MIDDLE",
+    "country": "AU"
+  },
+  {
+    "id": "c06",
+    "name": "Morphettville",
+    "location": "Adelaide, SA",
+    "terrains": [
+      "TURF"
+    ],
+    "distances": [
+      1000,
+      1200,
+      1600,
+      2000,
+      2500
+    ],
+    "description": "South Australia's headquarters. A fair, galloping track that gives every runner a chance from the turn.",
+    "terrainAffinityBonus": {
+      "dirt": 0.96,
+      "turf": 1.02
+    },
+    "distanceProfile": "MIDDLE",
+    "country": "AU"
+  },
+  {
+    "id": "c07",
+    "name": "Ascot",
+    "location": "Perth, WA",
+    "terrains": [
+      "TURF"
+    ],
+    "distances": [
+      1000,
+      1200,
+      1400,
+      1800,
+      2200
+    ],
+    "description": "Perth's summer showpiece beside the Swan River. Firm going and a fair straight reward on-pace runners.",
+    "terrainAffinityBonus": {
+      "dirt": 0.95,
+      "turf": 1.03
+    },
+    "distanceProfile": "SHORT_TO_MIDDLE",
+    "country": "AU"
+  },
+  {
+    "id": "c08",
+    "name": "Elwick",
+    "location": "Hobart, TAS",
+    "terrains": [
+      "TURF"
+    ],
+    "distances": [
+      1000,
+      1200,
+      1400,
+      1600,
+      2100
+    ],
+    "description": "Tasmania's main track. A compact, honest circuit where tactical speed and a clean run count.",
+    "terrainAffinityBonus": {
+      "dirt": 0.97,
+      "turf": 1.02
+    },
+    "distanceProfile": "SHORT_TO_MIDDLE",
+    "country": "AU"
+  },
+  {
+    "id": "c09",
+    "name": "Fannie Bay",
+    "location": "Darwin, NT",
+    "terrains": [
+      "TURF",
+      "DIRT"
+    ],
+    "distances": [
+      1000,
+      1200,
+      1400,
+      1600,
+      2000
+    ],
+    "description": "Tropical racing in the Top End. A tight turning track under the Darwin sun that favours brave front-runners.",
+    "terrainAffinityBonus": {
+      "dirt": 1.02,
+      "turf": 1.0
+    },
+    "distanceProfile": "SHORT_TO_MIDDLE",
+    "country": "AU"
+  },
+  {
+    "id": "c10",
+    "name": "Thoroughbred Park",
+    "location": "Canberra, ACT",
+    "terrains": [
+      "TURF"
+    ],
+    "distances": [
+      1000,
+      1200,
+      1400,
+      1600,
+      2000
+    ],
+    "description": "The capital's course. A fair galloping track with a good straight that lets the best horse win.",
+    "terrainAffinityBonus": {
+      "dirt": 0.96,
+      "turf": 1.02
+    },
+    "distanceProfile": "MIDDLE",
+    "country": "AU"
+  },
+  {
+    "id": "c11",
+    "name": "The Valley",
+    "location": "Melbourne, VIC",
+    "terrains": [
+      "TURF"
+    ],
+    "distances": [
+      955,
+      1200,
+      1600,
+      1800,
+      2040
+    ],
+    "description": "Moonee Valley — a tight, thrilling circuit with a famously short home straight. Position is everything.",
+    "terrainAffinityBonus": {
+      "dirt": 0.94,
+      "turf": 1.03
+    },
+    "distanceProfile": "SHORT_TO_MIDDLE",
+    "country": "AU"
+  },
+  {
+    "id": "c12",
+    "name": "Doomben",
+    "location": "Brisbane, QLD",
+    "terrains": [
+      "TURF"
+    ],
+    "distances": [
+      1050,
+      1200,
+      1350,
+      1615,
+      2020
+    ],
+    "description": "Eagle Farm's tight neighbour. A turning track with a short straight that rewards speed and early acceleration.",
+    "terrainAffinityBonus": {
+      "dirt": 0.95,
+      "turf": 1.03
+    },
+    "distanceProfile": "SHORT_TO_MIDDLE",
+    "country": "AU"
+  },
+  {
+    "id": "j01",
+    "name": "Tokyo Racecourse",
+    "location": "Fuchu, Tokyo",
+    "terrains": [
+      "TURF",
+      "DIRT"
+    ],
+    "distances": [
+      1400,
+      1600,
+      2000,
+      2400,
+      3400
+    ],
+    "description": "A grand, sweeping course with a long home straight and a punishing uphill finish. Rewards genuine stayers with a turn of foot.",
+    "terrainAffinityBonus": {
+      "dirt": 0.95,
+      "turf": 1.05
+    },
+    "distanceProfile": "MIDDLE_TO_LONG",
+    "country": "JP"
+  },
+  {
+    "id": "j02",
+    "name": "Nakayama Racecourse",
+    "location": "Funabashi, Chiba",
+    "terrains": [
+      "TURF",
+      "DIRT"
+    ],
+    "distances": [
+      1200,
+      1600,
+      1800,
+      2000,
+      2500
+    ],
+    "description": "A tight, undulating track with a steep climb to the line. Tactical and testing — positioning matters more than raw speed.",
+    "terrainAffinityBonus": {
+      "dirt": 0.96,
+      "turf": 1.04
+    },
+    "distanceProfile": "SHORT_TO_MIDDLE",
+    "country": "JP"
+  },
+  {
+    "id": "j03",
+    "name": "Hanshin Racecourse",
+    "location": "Takarazuka, Hyogo",
     "terrains": [
       "TURF",
       "DIRT"
@@ -14,80 +326,18 @@
       2000,
       2400
     ],
-    "description": "A tight turning track that rewards speed and power. Short straight favours horses that accelerate early.",
+    "description": "A spacious western course with an uphill run home. A fair, class-testing track that suits strong finishers.",
     "terrainAffinityBonus": {
-      "dirt": 1.05,
-      "turf": 1
+      "dirt": 0.95,
+      "turf": 1.04
     },
-    "distanceProfile": "SHORT_TO_MIDDLE"
+    "distanceProfile": "MIDDLE_TO_LONG",
+    "country": "JP"
   },
   {
-    "id": "c02",
-    "name": "Eagle Farm",
-    "location": "Brisbane",
-    "terrains": [
-      "TURF"
-    ],
-    "distances": [
-      1400,
-      1600,
-      2000,
-      2400,
-      3200
-    ],
-    "description": "A long sweeping track with a generous straight. The distance tests stamina and rewards genuine stayers.",
-    "terrainAffinityBonus": {
-      "turf": 1.05,
-      "dirt": 0.95
-    },
-    "distanceProfile": "MIDDLE_TO_LONG"
-  },
-  {
-    "id": "c03",
-    "name": "Sunshine Coast Turf Club",
-    "location": "Sunshine Coast",
-    "terrains": [
-      "TURF"
-    ],
-    "distances": [
-      1000,
-      1200,
-      1400,
-      1600,
-      1800
-    ],
-    "description": "An undulating track with a tricky camber. Balanced horses thrive here, as do those with natural rhythm.",
-    "terrainAffinityBonus": {
-      "turf": 1.03,
-      "dirt": 0.92
-    },
-    "distanceProfile": "SHORT_TO_MIDDLE"
-  },
-  {
-    "id": "c04",
-    "name": "Ipswich Raceway",
-    "location": "Ipswich",
-    "terrains": [
-      "DIRT"
-    ],
-    "distances": [
-      1000,
-      1100,
-      1200,
-      1400,
-      1600
-    ],
-    "description": "A tight dirt circuit beloved by sprinters and power horses. Stamina matters less here — it is over before it starts.",
-    "terrainAffinityBonus": {
-      "dirt": 1.08,
-      "turf": 0.9
-    },
-    "distanceProfile": "SHORT"
-  },
-  {
-    "id": "c05",
-    "name": "Gold Coast Turf Club",
-    "location": "Gold Coast",
+    "id": "j04",
+    "name": "Kyoto Racecourse",
+    "location": "Fushimi, Kyoto",
     "terrains": [
       "TURF",
       "DIRT"
@@ -96,14 +346,197 @@
       1200,
       1400,
       1600,
+      2000,
+      3000
+    ],
+    "description": "Famous for its downhill sweep into the straight. Momentum from the descent sets up a thrilling run to the line.",
+    "terrainAffinityBonus": {
+      "dirt": 0.95,
+      "turf": 1.04
+    },
+    "distanceProfile": "MIDDLE",
+    "country": "JP"
+  },
+  {
+    "id": "j05",
+    "name": "Chukyo Racecourse",
+    "location": "Toyoake, Aichi",
+    "terrains": [
+      "TURF",
+      "DIRT"
+    ],
+    "distances": [
+      1200,
+      1400,
+      1600,
+      2000,
+      2200
+    ],
+    "description": "A modern central-Japan track with a long straight and an uphill finish. Rewards horses that stay on strongly.",
+    "terrainAffinityBonus": {
+      "dirt": 0.96,
+      "turf": 1.03
+    },
+    "distanceProfile": "MIDDLE",
+    "country": "JP"
+  },
+  {
+    "id": "j06",
+    "name": "Sapporo Racecourse",
+    "location": "Sapporo, Hokkaido",
+    "terrains": [
+      "TURF",
+      "DIRT"
+    ],
+    "distances": [
+      1000,
+      1200,
+      1500,
       1800,
       2000
     ],
-    "description": "Wide open bends and a long run home. All-rounders love this track. End closers find plenty of room to weave.",
+    "description": "A flat, circular northern track with gentle turns. Even-paced and fair, favouring smooth-travelling runners.",
     "terrainAffinityBonus": {
-      "turf": 1.02,
-      "dirt": 1.02
+      "dirt": 0.97,
+      "turf": 1.02
     },
-    "distanceProfile": "MIDDLE"
+    "distanceProfile": "SHORT_TO_MIDDLE",
+    "country": "JP"
+  },
+  {
+    "id": "j07",
+    "name": "Hakodate Racecourse",
+    "location": "Hakodate, Hokkaido",
+    "terrains": [
+      "TURF",
+      "DIRT"
+    ],
+    "distances": [
+      1000,
+      1200,
+      1700,
+      1800,
+      2000
+    ],
+    "description": "A seaside Hokkaido course with lush turf. A compact, honest circuit where a good position pays off.",
+    "terrainAffinityBonus": {
+      "dirt": 0.97,
+      "turf": 1.02
+    },
+    "distanceProfile": "SHORT_TO_MIDDLE",
+    "country": "JP"
+  },
+  {
+    "id": "j08",
+    "name": "Niigata Racecourse",
+    "location": "Niigata City, Niigata",
+    "terrains": [
+      "TURF",
+      "DIRT"
+    ],
+    "distances": [
+      1000,
+      1200,
+      1400,
+      1600,
+      2000
+    ],
+    "description": "Home of the longest straight in Japan. A wide, flat track where a devastating late sprint can win from anywhere.",
+    "terrainAffinityBonus": {
+      "dirt": 0.96,
+      "turf": 1.03
+    },
+    "distanceProfile": "MIDDLE",
+    "country": "JP"
+  },
+  {
+    "id": "j09",
+    "name": "Fukushima Racecourse",
+    "location": "Fukushima City, Fukushima",
+    "terrains": [
+      "TURF",
+      "DIRT"
+    ],
+    "distances": [
+      1000,
+      1200,
+      1700,
+      1800,
+      2000
+    ],
+    "description": "A tight north-eastern track with a short straight. Front-runners and nimble types thrive on the turns.",
+    "terrainAffinityBonus": {
+      "dirt": 0.97,
+      "turf": 1.02
+    },
+    "distanceProfile": "SHORT_TO_MIDDLE",
+    "country": "JP"
+  },
+  {
+    "id": "j10",
+    "name": "Kokura Racecourse",
+    "location": "Kitakyushu, Fukuoka",
+    "terrains": [
+      "TURF",
+      "DIRT"
+    ],
+    "distances": [
+      1000,
+      1200,
+      1700,
+      1800,
+      2000
+    ],
+    "description": "Kyushu's premier course. A compact, turning track under southern skies that rewards tactical speed.",
+    "terrainAffinityBonus": {
+      "dirt": 0.97,
+      "turf": 1.02
+    },
+    "distanceProfile": "SHORT_TO_MIDDLE",
+    "country": "JP"
+  },
+  {
+    "id": "j11",
+    "name": "Ohi Racecourse",
+    "location": "Shinagawa, Tokyo",
+    "terrains": [
+      "DIRT"
+    ],
+    "distances": [
+      1200,
+      1400,
+      1600,
+      2000,
+      2400
+    ],
+    "description": "Tokyo's floodlit dirt showpiece — 'Tokyo City Keiba'. Night racing on a fair dirt oval that suits genuine gallopers.",
+    "terrainAffinityBonus": {
+      "dirt": 1.05,
+      "turf": 0.9
+    },
+    "distanceProfile": "MIDDLE",
+    "country": "JP"
+  },
+  {
+    "id": "j12",
+    "name": "Kawasaki Racecourse",
+    "location": "Kawasaki, Kanagawa",
+    "terrains": [
+      "DIRT"
+    ],
+    "distances": [
+      1400,
+      1500,
+      1600,
+      2000,
+      2100
+    ],
+    "description": "A tight local dirt track with a short straight. Early speed and a good gate are prized on the sand.",
+    "terrainAffinityBonus": {
+      "dirt": 1.04,
+      "turf": 0.9
+    },
+    "distanceProfile": "SHORT_TO_MIDDLE",
+    "country": "JP"
   }
 ]
