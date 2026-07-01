@@ -2259,7 +2259,7 @@ let cameraX=0, currentZoom=0.55, targetZoom=0.55;
 let animFrame=null, raceOver=false, finishOrder=[], dnfOrder=[];
 let tick=0, lastMilestone=-1;
 let directorTick=0, directorDuration=300, camShot='PACK';
-let gatePhase=false, gateCountdown=0;
+let gatePhase=false, gateCountdown=0, _introPlayed=false;
 let phase='prerace';
 
 // Slow mo state — one replay slot for the highest priority close finish
@@ -2982,6 +2982,9 @@ function raceTick(ts) {
 
   // Gate hold
   if(gatePhase) {
+    // "At the gate" line — fire once as the hold begins (just after the wipe
+    // reveal), well before the off, so intro and theyreOff never bunch up.
+    if(!_introPlayed){ _introPlayed = true; playVoice('intro'); }
     gateCountdown -= frameDt;
     horses.forEach(h=>{setAnim(h,'idle'); advanceAnim(h,16);});
     // Use same leader-follow camera as race — no snap when gates open
@@ -3199,7 +3202,6 @@ function raceTick(ts) {
 
 
   // Milestones (voice-only now; text captions were removed with the announcer bar)
-  if(tick>=1 && lastMilestone<0){lastMilestone=0;playVoice('intro');}
   if(leaderProgress>0.25&&lastMilestone<1){lastMilestone=1;playVoice('quarter', { horse: leader.def.id });}
   if(leaderProgress>0.5&&lastMilestone<2){lastMilestone=2;playVoice('half', { horse: leader.def.id });}
   if(leaderProgress>0.75&&lastMilestone<3){lastMilestone=3;setCrowd('finish',2.5);playVoice('threeQ');}
@@ -3436,7 +3438,7 @@ function populatePostRace(placingsHidden, photoFinish) {
 let countdownInterval=null;
 
 let _wipeCleanupId = null;
-function doWipe(callback) {
+function doWipe(callback, holdMs=2000) {
   const w = document.getElementById('wipe-overlay');
   const p = document.getElementById('wipe-phrase');
   const phrases = (PHRASE_DATA && PHRASE_DATA.wipeTransitions && PHRASE_DATA.wipeTransitions.length)
@@ -3451,6 +3453,7 @@ function doWipe(callback) {
   void w.offsetWidth;
   w.style.transition = '';
   w.classList.add('in');
+  playSound('uiWhoosh', { volume:0.6 });   // transition whoosh as the cover sweeps in
   setTimeout(() => {
     // Run the scene swap while fully covered. If the callback is async (returns
     // a thenable — e.g. init() waiting on loadSheets()), HOLD the cover until it
@@ -3474,7 +3477,7 @@ function doWipe(callback) {
     } else {
       slideOut();
     }
-  }, 2000);
+  }, holdMs);   // covered duration (default 2000; prerace→race passes 5000 for the handover)
 }
 
 /* Lobby menu wipe: cover (0.4s), run the swap while covered, uncover (0.4s),
@@ -3548,9 +3551,6 @@ function beginRace() {
   stageToRace(true);
   playSound('postTrumpet', { volume:0.9 });   // "Call to the Post" as we enter race view and hold for the off
   startLoop('gateRattle', { volume:0.55, fade:0.6 });   // stalls shuffle under the hold; killed the instant gates open
-  // C1 hands over to the race-caller during the held pre-off window — they talk
-  // over the trumpet/settle beat. Delayed so the bugle rings out first.
-  setTimeout(()=>playVoice('handover'), 1600);
 
   // Set camera to leader-follow position immediately so gate phase uses same camera logic
   const sh = getRaceStageH();
@@ -3570,11 +3570,12 @@ function beginRace() {
   });
 
   phase='racing';
-  raceOver=false; tick=0; finishOrder=[]; dnfOrder=[]; lastMilestone=-1;
+  raceOver=false; tick=0; finishOrder=[]; dnfOrder=[]; lastMilestone=-1; _introPlayed=false;
   directorTick=0; directorDuration=300; camShot='PACK';
   gatePhase=true;
-  // Hold at the gate before they run. Solo keeps the original ~5s feel; a
-  // multiplayer race holds a random 5–15s (≈60 frame-units per second).
+  // Hold at the gate before they run — always AT LEAST 5s so `intro` (fired at
+  // the start of the hold) and `theyreOff` (at the off) never bunch together.
+  // Solo: a clean 5s. Multiplayer: a random 5–15s (≈60 frame-units per second).
   gateCountdown = (typeof multiGame !== 'undefined' && multiGame.active)
     ? Math.round(rand(5, 15) * 60)
     : 300;
@@ -3737,7 +3738,10 @@ function init() {
         setStatusText('Bets Closed');
         stopRollCall();
         playVoice('bettingClosed');
-        setTimeout(()=>doWipe(beginRace), rand(5, 10) * 1000);
+        setTimeout(()=>{
+          playVoice('handover');              // host hands over AS the wipe begins
+          doWipe(beginRace, 5000);            // long cover so the handover clip finishes
+        }, rand(5, 10) * 1000);
       }, soloCloseMs);
     }
     // Multiplayer: startRaceCycle() already scheduled finaliseBets() at the
@@ -3903,8 +3907,12 @@ function renderSettingsSummary(){
    straight to the room screen. Config is edited from there (Edit settings). */
 lq('#lobby-start-session').addEventListener('click', ()=>{
   unlockAudio();
-  // Menu music + a distant continuous crowd murmur for the pre-show.
-  setTimeout(()=>{ startMenuMusic(); ensureCrowdBed(); setCrowd('idle', 2.0); }, 60);
+  // Menu music + a distant continuous crowd murmur for the pre-show. These all
+  // wait internally for audio to finish loading, so they fire correctly even on
+  // the very first (slow) load rather than needing a session re-open.
+  startMenuMusic();
+  ensureCrowdBed();
+  onAudioReady(()=>setCrowd('idle', 2.0));
   createSessionAndOpenLobby();
 });
 
@@ -4408,7 +4416,8 @@ async function finaliseBets(){
   setTimeout(async ()=>{
     const { error: rErr } = await sb.rpc('start_racing', { p_session_id: lobby.session.id });
     if(rErr){ console.error('start_racing failed:', rErr); }
-    doWipe(beginRace);
+    playVoice('handover');              // host hands over AS the wipe begins
+    doWipe(beginRace, 5000);            // long cover so the handover clip finishes
   }, rand(5, 10) * 1000);
 }
 
@@ -5094,6 +5103,7 @@ let SOUND_MANIFEST = {
   stumble:   { url:['audio/stumble1.mp3','audio/stumble2.mp3'], bus:'sfx' }, // impact as a runner goes down (random take)
   whinny:    { url:['audio/whinny1.mp3','audio/whinny2.mp3','audio/whinny3.mp3'],    bus:'sfx' }, // horse cry on a fall (random take)
   thunder:   { url:['audio/thunder1.mp3','audio/thunder2.mp3'], bus:'weather' }, // thunderclap, storm lightning (random take)
+  uiWhoosh:  { url:'audio/ui_whoosh.mp3',  bus:'sfx' },   // screen-wipe transition whoosh
   // ── loops ──
   crowd:     { url:'audio/crowd.mp3',      bus:'crowd',   loop:true }, // continuous ambience bed
   hooves:    { url:'audio/hooves.mp3',     bus:'sfx',     loop:true }, // galloping, only while racing
@@ -5132,7 +5142,7 @@ let VOICE_MANIFEST = {
   threeQ:['audio/vo/en/three_quarter/1.mp3'], lastCorner:['audio/vo/en/last_corner/1.mp3'],
   finalStraight:['audio/vo/en/final_straight/1.mp3'], firstPastPost:['audio/vo/en/first_past_post/1.mp3'],
   down:['audio/vo/en/down/1.mp3'], photoClose:['audio/vo/en/photo_close/1.mp3'],
-  photoNose:['audio/vo/en/photo_nose/1.mp3'], finish:['audio/vo/en/finish/1.mp3'],
+  photoNose:['audio/vo/en/photo_nose/1.mp3'],
   placeSecond:['audio/vo/en/place_second/1.mp3'], placeThird:['audio/vo/en/place_third/1.mp3'],
   bigWin:['audio/vo/en/big_win/1.mp3'], bigLoss:['audio/vo/en/big_loss/1.mp3'],
   winner:['audio/vo/en/winner/1.mp3'], closing:['audio/vo/en/closing/1.mp3'],
@@ -5156,6 +5166,7 @@ function courseLang(){ return langForCountry(RACECOURSE && RACECOURSE.country); 
 
 let _voiceLang = DEFAULT_LANG;                 // language the loaded manifest is for
 const _voiceManifestByLang = {};               // lang -> load promise (one per language)
+const _voiceDataByLang = {};                   // lang -> parsed pack data (for re-apply on switch back)
 
 /* Fetch + parse the voice manifest for a given language and rebuild the three
    voice structures, with the language folder injected into basePath (so
@@ -5165,7 +5176,7 @@ const _voiceManifestByLang = {};               // lang -> load promise (one per 
    very first load). Sets _voiceLang to the language actually applied. */
 function loadVoiceManifest(lang = DEFAULT_LANG){
   if(_voiceManifestByLang[lang]) return _voiceManifestByLang[lang];
-  _voiceManifestByLang[lang] = (async ()=>{
+  const p = (async ()=>{
     const folder = LANG_FOLDER[lang] || LANG_FOLDER[DEFAULT_LANG];
     try{
       const res = await fetch(`audio/vo/${folder}/vo-manifest.json`);
@@ -5176,62 +5187,95 @@ function loadVoiceManifest(lang = DEFAULT_LANG){
       const pre = (p)=> base + p;
       const clean = (obj)=> Object.fromEntries(Object.entries(obj||{}).filter(([k])=>k[0] !== '_'));
 
+      // Parse into a self-contained data object (don't touch globals yet), then
+      // cache it so switching back to this language can re-apply without refetch.
+      const data = { lines:{}, horseLines:{}, courseLines:{}, conditionLines:{weather:{},distance:{},field:{}}, rollCall:{position:{},horseName:{}} };
       if(m.lines){
-        const out = {};
         for(const [ev, arr] of Object.entries(clean(m.lines))){
-          if(Array.isArray(arr)) out[ev] = arr.map(pre);
+          if(Array.isArray(arr)) data.lines[ev] = arr.map(pre);
         }
-        if(Object.keys(out).length) VOICE_MANIFEST = out;
       }
       if(m.horseLines){
-        const out = {};
         for(const [ev, byHorse] of Object.entries(clean(m.horseLines))){
-          out[ev] = {};
+          data.horseLines[ev] = {};
           for(const [hid, arr] of Object.entries(clean(byHorse))){
-            if(Array.isArray(arr)) out[ev][hid] = arr.map(pre);
+            if(Array.isArray(arr)) data.horseLines[ev][hid] = arr.map(pre);
           }
         }
-        VOICE_HORSE_LINES = out;
       }
       if(m.courseLines){
-        const out = {};
         for(const [cid, arr] of Object.entries(clean(m.courseLines))){
-          if(Array.isArray(arr)) out[cid] = arr.map(pre);
+          if(Array.isArray(arr)) data.courseLines[cid] = arr.map(pre);
         }
-        VOICE_COURSE_LINES = out;
       }
       if(m.conditionLines){
-        const cl = { weather:{}, distance:{}, field:{} };
         for(const grp of ['weather','distance','field']){
           for(const [k, arr] of Object.entries(clean(m.conditionLines[grp]||{}))){
-            if(Array.isArray(arr)) cl[grp][k] = arr.map(pre);
+            if(Array.isArray(arr)) data.conditionLines[grp][k] = arr.map(pre);
           }
         }
-        VOICE_CONDITION_LINES = cl;
       }
       if(m.rollCall){
-        const rc = { position:{}, horseName:{} };
         for(const [gate, arr] of Object.entries(clean(m.rollCall.position))){
-          if(Array.isArray(arr)) rc.position[gate] = arr.map(pre);
+          if(Array.isArray(arr)) data.rollCall.position[gate] = arr.map(pre);
         }
         for(const [hid, arr] of Object.entries(clean(m.rollCall.horseName))){
-          if(Array.isArray(arr)) rc.horseName[hid] = arr.map(pre);
+          if(Array.isArray(arr)) data.rollCall.horseName[hid] = arr.map(pre);
         }
-        VOICE_ROLLCALL = rc;
       }
-      _voiceLang = lang;   // this pack is now the active one
-    }catch(e){ /* keep whatever is loaded; game runs regardless */ }
+      _voiceDataByLang[lang] = data;
+      _applyVoiceData(lang);   // make this the active pack
+      return true;
+    }catch(e){
+      // Don't let a single early failure (e.g. folder not ready yet, transient
+      // fetch error) poison this language forever: drop the cached promise so a
+      // later course can retry the load cleanly.
+      delete _voiceManifestByLang[lang];
+      console.warn(`[voice] failed to load '${lang}' pack:`, e && e.message);
+      return false;
+    }
   })();
-  return _voiceManifestByLang[lang];
+  _voiceManifestByLang[lang] = p;
+  return p;
+}
+
+/* Copy a parsed language pack's data into the live VOICE_* globals and mark it
+   active. Called both on first load and when switching back to an already-loaded
+   language (so the globals always match the current course's country). */
+function _applyVoiceData(lang){
+  const d = _voiceDataByLang[lang];
+  if(!d) return false;
+  if(Object.keys(d.lines).length) VOICE_MANIFEST = d.lines;
+  VOICE_HORSE_LINES = d.horseLines;
+  VOICE_COURSE_LINES = d.courseLines;
+  VOICE_CONDITION_LINES = d.conditionLines;
+  VOICE_ROLLCALL = d.rollCall;
+  _voiceLang = lang;
+  return true;
 }
 
 /* Switch the active announcer language to match the given course's country,
    loading that language's pack (and preloading its clips) if not already done.
    Safe to call every race; a no-op when the language is already active. */
 async function setVoiceLanguage(lang){
-  if(lang === _voiceLang && _voiceManifestByLang[lang]) return;
+  if(lang === _voiceLang && _voiceDataByLang[lang]) return;   // already active
+  // If this language was already parsed once, just re-apply its data to the
+  // globals (fast path — handles switching AU→JP→AU without refetching, and
+  // fixes the case where switching back left the other language's clips active).
+  if(_voiceDataByLang[lang]){
+    _applyVoiceData(lang);
+    await preloadVoiceClips();
+    return;
+  }
   await loadVoiceManifest(lang);
-  await preloadVoiceClips();   // decode this language's files (missing ones skip)
+  // If the pack didn't actually apply (e.g. its vo-manifest.json is missing while
+  // still being built), _voiceLang won't have flipped — the previous language's
+  // clips stay active. Surface that so it's obvious why, say, English plays on a
+  // Japanese course, rather than failing silently.
+  if(_voiceLang !== lang){
+    console.warn(`[voice] '${lang}' pack not active (audio/vo/${LANG_FOLDER[lang]||lang}/vo-manifest.json missing, empty, or failed) — still using '${_voiceLang}'.`);
+  }
+  await preloadVoiceClips();   // decode whatever pack is now active (missing ones skip)
 }
 
 /* Fetch + parse audio/sfx-manifest.json and overlay it onto SOUND_MANIFEST with
@@ -5326,6 +5370,20 @@ async function initAudio(){
   _allVoiceUrls().forEach(u=>urls.add(u));
   await _decodeUrls(urls);
   Audio_.ready = true;
+  // Run anything that was waiting on audio (menu music, crowd bed) now that the
+  // (possibly slow) first load is genuinely done — no matter how long it took.
+  const cbs = Audio_._readyCbs || [];
+  Audio_._readyCbs = [];
+  cbs.forEach(fn=>{ try{ fn(); }catch(e){} });
+}
+
+/* Run `fn` as soon as audio is fully loaded. If it's already ready, run now;
+   otherwise queue it to fire when initAudio finishes — this survives an
+   arbitrarily slow first load (many files, 404s, slow host) instead of racing a
+   fixed timeout. */
+function onAudioReady(fn){
+  if(Audio_.ready){ try{ fn(); }catch(e){} return; }
+  (Audio_._readyCbs = Audio_._readyCbs || []).push(fn);
 }
 
 /* Unlock on a real user gesture (resume the suspended context). Safe to
@@ -5427,11 +5485,14 @@ function setCrowd(level, ramp=1.2){
   g.gain.linearRampToValueAtTime(target * BUS_BASE.crowd, now + ramp);
 }
 
-/* Ensure the continuous crowd bed is running (call once audio is unlocked). */
+/* Ensure the continuous crowd bed is running. Waits for audio to be genuinely
+   ready (survives a slow first load) rather than no-oping if it isn't yet. */
 function ensureCrowdBed(){
-  if(Audio_.ready && !Audio_.loops.crowd && !Audio_.muted){
-    startLoop('crowd', { volume:1.0, fade:1.5 });
-  }
+  onAudioReady(()=>{
+    if(!Audio_.loops.crowd && !Audio_.muted){
+      startLoop('crowd', { volume:1.0, fade:1.5 });
+    }
+  });
 }
 
 /* ── Weather beds ─────────────────────────────────────────
@@ -5465,7 +5526,15 @@ function updateWeatherAudio(weatherId){
 function stopWeatherAudio(){ WEATHER_BEDS.forEach(n=>stopLoop(n, 0.8)); }
 
 /* ── Menu / lobby music ── */
-function startMenuMusic(){ startLoop('menuMusic', { volume:1.0, fade:1.5 }); }
+function startMenuMusic(){
+  // Wait for audio to be genuinely ready (survives a slow first load), then start
+  // — unless the player muted or it's already playing in the meantime.
+  onAudioReady(()=>{
+    if(!Audio_.muted && !Audio_.loops.menuMusic){
+      startLoop('menuMusic', { volume:1.0, fade:1.5 });
+    }
+  });
+}
 function stopMenuMusic(fade=1.0){ stopLoop('menuMusic', fade); }
 
 /* Duck the crowd/hooves/weather/music beds while the announcer speaks, then
