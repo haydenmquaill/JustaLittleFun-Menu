@@ -2689,7 +2689,7 @@ function raceTick(ts) {
     updateProgressMap();
     if(gateCountdown<=0){
       gatePhase=false; openGates();
-      playSound('bell', { volume:0.9 });
+      stopLoop('gateRattle', 0.05);   // stalls go quiet the moment the gates fly open
       playSound('gates', { volume:0.7 });
       startLoop('hooves', { volume:0.7 });
       setCrowd('race', 1.5);              // crowd bed swells as they jump
@@ -3225,6 +3225,8 @@ function beginRace() {
 
   document.getElementById('prerace-ui').style.display='none';
   stageToRace(true);
+  playSound('postTrumpet', { volume:0.9 });   // "Call to the Post" as we enter race view and hold for the off
+  startLoop('gateRattle', { volume:0.55, fade:0.6 });   // stalls shuffle under the hold; killed the instant gates open
 
   // Set camera to leader-follow position immediately so gate phase uses same camera logic
   const sh = getRaceStageH();
@@ -4745,25 +4747,42 @@ const CROWD_LEVELS = {
   idle:0.28, prerace:0.4, race:0.62, finish:0.8, climax:1.0, review:0.3, podium:1.0,
 };
 
-/* One-shot + looping SOUND files (non-voice). Loops are flagged in LOOP_NAMES.
-   `bus` says which mixer bus each belongs to. */
-const SOUND_MANIFEST = {
+/* One-shot + looping SOUND files (non-voice). Loops are flagged with loop:true.
+   `bus` says which mixer bus each belongs to. `url` is a single file or an array
+   of interchangeable takes (picked at random per play; loops pick once at start).
+
+   Like the voice lines, the real manifest is loaded at runtime from
+   audio/sfx-manifest.json (see loadSoundManifest) so clips can be added or the
+   files renamed without touching this file. The table below is the fallback: it
+   keeps every key defined until the JSON resolves, and stays in effect if the
+   fetch fails. External entries are overlaid on top of these by key. */
+let SOUND_MANIFEST = {
   // ── one-shots ──
-  bell:      { url:'audio/bell.mp3',       bus:'sfx' },   // starting bell as gates fly open
+  postTrumpet:{ url:'audio/post_trumpet.mp3', bus:'music' }, // "Call to the Post" bugle at race-view transition
   gates:     { url:'audio/gates.mp3',      bus:'sfx' },   // gates clang/spring
   cheer:     { url:'audio/cheer.mp3',      bus:'crowd' }, // roar swell at the line
   fanfare:   { url:'audio/fanfare.mp3',    bus:'music' }, // win / leaderboard sting
-  stumble:   { url:'audio/stumble.mp3',    bus:'sfx' },   // impact as a runner goes down
-  whinny:    { url:'audio/whinny.mp3',     bus:'sfx' },   // horse cry on a fall
-  thunder:   { url:'audio/thunder.mp3',    bus:'weather' },// thunderclap (storm lightning)
+  stumble:   { url:['audio/stumble1.mp3','audio/stumble2.mp3'], bus:'sfx' }, // impact as a runner goes down (random take)
+  whinny:    { url:['audio/whinny1.mp3','audio/whinny2.mp3','audio/whinny3.mp3'],    bus:'sfx' }, // horse cry on a fall (random take)
+  thunder:   { url:['audio/thunder1.mp3','audio/thunder2.mp3'], bus:'weather' }, // thunderclap, storm lightning (random take)
   // ── loops ──
   crowd:     { url:'audio/crowd.mp3',      bus:'crowd',   loop:true }, // continuous ambience bed
   hooves:    { url:'audio/hooves.mp3',     bus:'sfx',     loop:true }, // galloping, only while racing
+  gateRattle:{ url:'audio/gate_rattle.mp3',bus:'sfx',     loop:true }, // horses shuffling in the stalls, race-view transition → gate open
   menuMusic: { url:'audio/menu_music.mp3', bus:'music',   loop:true }, // lobby / pre-show music
   rainLight: { url:'audio/rain_light.mp3', bus:'weather', loop:true }, // light rain bed
   rainHeavy: { url:'audio/rain_heavy.mp3', bus:'weather', loop:true }, // heavy rain bed
 };
-const LOOP_NAMES = new Set(Object.entries(SOUND_MANIFEST).filter(([,v])=>v.loop).map(([k])=>k));
+/* Set of loop names, rebuilt whenever SOUND_MANIFEST changes (initial parse +
+   after the external manifest overlays). Not currently read by the engine —
+   loops are driven by explicit startLoop/stopLoop calls — but kept accurate and
+   exposed as a mutable set in case anything wants to query it later. */
+let LOOP_NAMES = new Set();
+function _rebuildLoopNames(){
+  LOOP_NAMES = new Set(Object.entries(SOUND_MANIFEST).filter(([,v])=>v && v.loop).map(([k])=>k));
+}
+_rebuildLoopNames();
+let _soundManifestLoaded = null;   // Promise, so initAudio can await a single load
 
 /* ElevenLabs announcer clips. The real manifest is loaded from
    audio/vo/vo-manifest.json (see loadVoiceManifest). Until that resolves — or if
@@ -4833,6 +4852,38 @@ function loadVoiceManifest(){
   return _voiceManifestLoaded;
 }
 
+/* Fetch + parse audio/sfx-manifest.json and overlay it onto SOUND_MANIFEST with
+   basePath prepended to every url. Mirrors loadVoiceManifest: skips _comment
+   keys, idempotent (returns the same promise), and on any failure the inline
+   fallback table above stays in effect. Entries are merged by key, so the JSON
+   can override existing sounds or add brand-new ones; anything it omits keeps
+   its fallback definition. Rebuilds LOOP_NAMES afterwards so loops added or
+   changed via the JSON are recognised. */
+function loadSoundManifest(){
+  if(_soundManifestLoaded) return _soundManifestLoaded;
+  _soundManifestLoaded = (async ()=>{
+    try{
+      const res = await fetch('audio/sfx-manifest.json');
+      if(!res.ok) throw new Error(res.status);
+      const m = await res.json();
+      const base = m.basePath || '';
+      const pre = (p)=> base + p;
+      const preUrl = (u)=> Array.isArray(u) ? u.map(pre) : pre(u);
+      const sounds = m.sounds || {};
+      for(const [name, spec] of Object.entries(sounds)){
+        if(name[0] === '_' || !spec || !spec.url) continue;   // skip _comment / malformed
+        SOUND_MANIFEST[name] = {
+          url: preUrl(spec.url),
+          bus: spec.bus || 'sfx',
+          ...(spec.loop ? { loop:true } : {}),
+        };
+      }
+      _rebuildLoopNames();
+    }catch(e){ /* keep the inline fallback; game runs regardless */ }
+  })();
+  return _soundManifestLoaded;
+}
+
 /* Collect every clip URL across all three structures, for preloading. */
 function _allVoiceUrls(){
   const urls = new Set();
@@ -4860,12 +4911,13 @@ async function initAudio(){
   // Crowd starts silent; setCrowd() ramps it from the lobby onward.
   Audio_.buses.crowd.gain.value = 0;
 
-  // Make sure the voice manifest is in before we build the preload list.
-  await loadVoiceManifest();
+  // Make sure both manifests are in before we build the preload list, so any
+  // externally-defined clips (voice + sfx) are decoded up front.
+  await Promise.all([loadVoiceManifest(), loadSoundManifest()]);
 
   // Preload + decode every file (SFX + voice). Keyed by URL; missing files skip.
   const urls = new Set();
-  Object.values(SOUND_MANIFEST).forEach(s=>urls.add(s.url));
+  Object.values(SOUND_MANIFEST).forEach(s=>_specUrls(s).forEach(u=>urls.add(u)));
   _allVoiceUrls().forEach(u=>urls.add(u));
   await Promise.all([...urls].map(async url=>{
     try{
@@ -4888,10 +4940,24 @@ function unlockAudio(){
 function _buf(url){ return Audio_.buffers[url] || null; }
 function _spec(name){ return SOUND_MANIFEST[name] || null; }
 
+/* A sound's `url` may be a single string or an array of interchangeable takes
+   (e.g. several stumbles / whinnies / thunderclaps). These two helpers are the
+   only places that need to know which: _specUrls returns every file to preload,
+   _pickUrl chooses one take to play. A missing/empty entry yields nothing. */
+function _specUrls(spec){
+  if(!spec || !spec.url) return [];
+  return Array.isArray(spec.url) ? spec.url : [spec.url];
+}
+function _pickUrl(spec){
+  const list = _specUrls(spec);
+  if(!list.length) return null;
+  return list[(Math.random()*list.length)|0];
+}
+
 function playSound(name, { volume=1, rate=1, bus=null } = {}){
   if(!Audio_.ready || Audio_.muted) return null;
   const spec = _spec(name); if(!spec) return null;
-  const buffer = _buf(spec.url); if(!buffer) return null;
+  const buffer = _buf(_pickUrl(spec)); if(!buffer) return null;
   const src = Audio_.ctx.createBufferSource();
   src.buffer = buffer; src.playbackRate.value = rate;
   const g = Audio_.ctx.createGain(); g.gain.value = volume;
@@ -4903,7 +4969,7 @@ function playSound(name, { volume=1, rate=1, bus=null } = {}){
 function startLoop(name, { volume=1, fade=0.5, rate=1 } = {}){
   if(!Audio_.ready || Audio_.muted || Audio_.loops[name]) return;
   const spec = _spec(name); if(!spec) return;
-  const buffer = _buf(spec.url); if(!buffer) return;
+  const buffer = _buf(_pickUrl(spec)); if(!buffer) return;
   const src = Audio_.ctx.createBufferSource();
   src.buffer = buffer; src.loop = true; src.playbackRate.value = rate;
   const g = Audio_.ctx.createGain(); g.gain.value = 0;
