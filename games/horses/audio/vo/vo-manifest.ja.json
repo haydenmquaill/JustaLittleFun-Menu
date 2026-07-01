@@ -1,0 +1,1212 @@
+{
+  "_comment": "Japanese announcer pack. Per-horse events have the horse's NAME BAKED IN (one folder per horse id). courseLines has the announcer NAMING each course (one folder per course id, e.g. course/c01/1.mp3) — the game plays the current course's clip and falls back to the generic 'course' pool if a course has none. Change any take count by editing array length. Only JP horses & courses appear here. basePath relative to this folder.",
+  "basePath": "",
+  "lines": {
+    "preraceIntro": [
+      "prerace_intro/1.mp3",
+      "prerace_intro/2.mp3",
+      "prerace_intro/3.mp3",
+      "prerace_intro/4.mp3",
+      "prerace_intro/5.mp3"
+    ],
+    "fieldSize": [
+      "field_size/1.mp3",
+      "field_size/2.mp3",
+      "field_size/3.mp3",
+      "field_size/4.mp3",
+      "field_size/5.mp3"
+    ],
+    "course": [
+      "course/1.mp3",
+      "course/2.mp3",
+      "course/3.mp3",
+      "course/4.mp3",
+      "course/5.mp3"
+    ],
+    "conditions": [
+      "conditions/1.mp3",
+      "conditions/2.mp3",
+      "conditions/3.mp3",
+      "conditions/4.mp3",
+      "conditions/5.mp3"
+    ],
+    "bettingClosed": [
+      "betting_closed/1.mp3",
+      "betting_closed/2.mp3",
+      "betting_closed/3.mp3",
+      "betting_closed/4.mp3",
+      "betting_closed/5.mp3"
+    ],
+    "handover": [
+      "handover/1.mp3",
+      "handover/2.mp3",
+      "handover/3.mp3",
+      "handover/4.mp3",
+      "handover/5.mp3"
+    ],
+    "intro": [
+      "intro/1.mp3",
+      "intro/2.mp3",
+      "intro/3.mp3",
+      "intro/4.mp3",
+      "intro/5.mp3"
+    ],
+    "theyreOff": [
+      "theyre_off/1.mp3",
+      "theyre_off/2.mp3",
+      "theyre_off/3.mp3",
+      "theyre_off/4.mp3",
+      "theyre_off/5.mp3"
+    ],
+    "threeQ": [
+      "three_quarter/1.mp3",
+      "three_quarter/2.mp3",
+      "three_quarter/3.mp3",
+      "three_quarter/4.mp3",
+      "three_quarter/5.mp3"
+    ],
+    "lastCorner": [
+      "last_corner/1.mp3",
+      "last_corner/2.mp3",
+      "last_corner/3.mp3",
+      "last_corner/4.mp3",
+      "last_corner/5.mp3"
+    ],
+    "photoClose": [
+      "photo_close/1.mp3",
+      "photo_close/2.mp3",
+      "photo_close/3.mp3",
+      "photo_close/4.mp3",
+      "photo_close/5.mp3"
+    ],
+    "photoNose": [
+      "photo_nose/1.mp3",
+      "photo_nose/2.mp3",
+      "photo_nose/3.mp3",
+      "photo_nose/4.mp3",
+      "photo_nose/5.mp3"
+    ],
+    "bigWin": [
+      "big_win/1.mp3",
+      "big_win/2.mp3",
+      "big_win/3.mp3",
+      "big_win/4.mp3",
+      "big_win/5.mp3"
+    ],
+    "bigLoss": [
+      "big_loss/1.mp3",
+      "big_loss/2.mp3",
+      "big_loss/3.mp3",
+      "big_loss/4.mp3",
+      "big_loss/5.mp3"
+    ],
+    "winner": [
+      "winner/1.mp3",
+      "winner/2.mp3",
+      "winner/3.mp3",
+      "winner/4.mp3",
+      "winner/5.mp3"
+    ],
+    "closing": [
+      "closing/1.mp3",
+      "closing/2.mp3",
+      "closing/3.mp3",
+      "closing/4.mp3",
+      "closing/5.mp3"
+    ]
+  },
+  "horseLines": {
+    "quarter": {
+      "j01": [
+        "quarter/j01/1.mp3",
+        "quarter/j01/2.mp3"
+      ],
+      "j02": [
+        "quarter/j02/1.mp3",
+        "quarter/j02/2.mp3"
+      ],
+      "j03": [
+        "quarter/j03/1.mp3",
+        "quarter/j03/2.mp3"
+      ],
+      "j04": [
+        "quarter/j04/1.mp3",
+        "quarter/j04/2.mp3"
+      ],
+      "j05": [
+        "quarter/j05/1.mp3",
+        "quarter/j05/2.mp3"
+      ],
+      "j06": [
+        "quarter/j06/1.mp3",
+        "quarter/j06/2.mp3"
+      ],
+      "j07": [
+        "quarter/j07/1.mp3",
+        "quarter/j07/2.mp3"
+      ],
+      "j08": [
+        "quarter/j08/1.mp3",
+        "quarter/j08/2.mp3"
+      ],
+      "j09": [
+        "quarter/j09/1.mp3",
+        "quarter/j09/2.mp3"
+      ],
+      "j10": [
+        "quarter/j10/1.mp3",
+        "quarter/j10/2.mp3"
+      ],
+      "j11": [
+        "quarter/j11/1.mp3",
+        "quarter/j11/2.mp3"
+      ],
+      "j12": [
+        "quarter/j12/1.mp3",
+        "quarter/j12/2.mp3"
+      ],
+      "j13": [
+        "quarter/j13/1.mp3",
+        "quarter/j13/2.mp3"
+      ],
+      "j14": [
+        "quarter/j14/1.mp3",
+        "quarter/j14/2.mp3"
+      ],
+      "j15": [
+        "quarter/j15/1.mp3",
+        "quarter/j15/2.mp3"
+      ],
+      "j16": [
+        "quarter/j16/1.mp3",
+        "quarter/j16/2.mp3"
+      ],
+      "j17": [
+        "quarter/j17/1.mp3",
+        "quarter/j17/2.mp3"
+      ],
+      "j18": [
+        "quarter/j18/1.mp3",
+        "quarter/j18/2.mp3"
+      ],
+      "j19": [
+        "quarter/j19/1.mp3",
+        "quarter/j19/2.mp3"
+      ],
+      "j20": [
+        "quarter/j20/1.mp3",
+        "quarter/j20/2.mp3"
+      ],
+      "j21": [
+        "quarter/j21/1.mp3",
+        "quarter/j21/2.mp3"
+      ],
+      "j22": [
+        "quarter/j22/1.mp3",
+        "quarter/j22/2.mp3"
+      ],
+      "j23": [
+        "quarter/j23/1.mp3",
+        "quarter/j23/2.mp3"
+      ],
+      "j24": [
+        "quarter/j24/1.mp3",
+        "quarter/j24/2.mp3"
+      ],
+      "j25": [
+        "quarter/j25/1.mp3",
+        "quarter/j25/2.mp3"
+      ],
+      "j26": [
+        "quarter/j26/1.mp3",
+        "quarter/j26/2.mp3"
+      ],
+      "j27": [
+        "quarter/j27/1.mp3",
+        "quarter/j27/2.mp3"
+      ],
+      "j28": [
+        "quarter/j28/1.mp3",
+        "quarter/j28/2.mp3"
+      ],
+      "j29": [
+        "quarter/j29/1.mp3",
+        "quarter/j29/2.mp3"
+      ],
+      "j30": [
+        "quarter/j30/1.mp3",
+        "quarter/j30/2.mp3"
+      ]
+    },
+    "half": {
+      "j01": [
+        "half/j01/1.mp3",
+        "half/j01/2.mp3"
+      ],
+      "j02": [
+        "half/j02/1.mp3",
+        "half/j02/2.mp3"
+      ],
+      "j03": [
+        "half/j03/1.mp3",
+        "half/j03/2.mp3"
+      ],
+      "j04": [
+        "half/j04/1.mp3",
+        "half/j04/2.mp3"
+      ],
+      "j05": [
+        "half/j05/1.mp3",
+        "half/j05/2.mp3"
+      ],
+      "j06": [
+        "half/j06/1.mp3",
+        "half/j06/2.mp3"
+      ],
+      "j07": [
+        "half/j07/1.mp3",
+        "half/j07/2.mp3"
+      ],
+      "j08": [
+        "half/j08/1.mp3",
+        "half/j08/2.mp3"
+      ],
+      "j09": [
+        "half/j09/1.mp3",
+        "half/j09/2.mp3"
+      ],
+      "j10": [
+        "half/j10/1.mp3",
+        "half/j10/2.mp3"
+      ],
+      "j11": [
+        "half/j11/1.mp3",
+        "half/j11/2.mp3"
+      ],
+      "j12": [
+        "half/j12/1.mp3",
+        "half/j12/2.mp3"
+      ],
+      "j13": [
+        "half/j13/1.mp3",
+        "half/j13/2.mp3"
+      ],
+      "j14": [
+        "half/j14/1.mp3",
+        "half/j14/2.mp3"
+      ],
+      "j15": [
+        "half/j15/1.mp3",
+        "half/j15/2.mp3"
+      ],
+      "j16": [
+        "half/j16/1.mp3",
+        "half/j16/2.mp3"
+      ],
+      "j17": [
+        "half/j17/1.mp3",
+        "half/j17/2.mp3"
+      ],
+      "j18": [
+        "half/j18/1.mp3",
+        "half/j18/2.mp3"
+      ],
+      "j19": [
+        "half/j19/1.mp3",
+        "half/j19/2.mp3"
+      ],
+      "j20": [
+        "half/j20/1.mp3",
+        "half/j20/2.mp3"
+      ],
+      "j21": [
+        "half/j21/1.mp3",
+        "half/j21/2.mp3"
+      ],
+      "j22": [
+        "half/j22/1.mp3",
+        "half/j22/2.mp3"
+      ],
+      "j23": [
+        "half/j23/1.mp3",
+        "half/j23/2.mp3"
+      ],
+      "j24": [
+        "half/j24/1.mp3",
+        "half/j24/2.mp3"
+      ],
+      "j25": [
+        "half/j25/1.mp3",
+        "half/j25/2.mp3"
+      ],
+      "j26": [
+        "half/j26/1.mp3",
+        "half/j26/2.mp3"
+      ],
+      "j27": [
+        "half/j27/1.mp3",
+        "half/j27/2.mp3"
+      ],
+      "j28": [
+        "half/j28/1.mp3",
+        "half/j28/2.mp3"
+      ],
+      "j29": [
+        "half/j29/1.mp3",
+        "half/j29/2.mp3"
+      ],
+      "j30": [
+        "half/j30/1.mp3",
+        "half/j30/2.mp3"
+      ]
+    },
+    "finalStraight": {
+      "j01": [
+        "final_straight/j01/1.mp3",
+        "final_straight/j01/2.mp3"
+      ],
+      "j02": [
+        "final_straight/j02/1.mp3",
+        "final_straight/j02/2.mp3"
+      ],
+      "j03": [
+        "final_straight/j03/1.mp3",
+        "final_straight/j03/2.mp3"
+      ],
+      "j04": [
+        "final_straight/j04/1.mp3",
+        "final_straight/j04/2.mp3"
+      ],
+      "j05": [
+        "final_straight/j05/1.mp3",
+        "final_straight/j05/2.mp3"
+      ],
+      "j06": [
+        "final_straight/j06/1.mp3",
+        "final_straight/j06/2.mp3"
+      ],
+      "j07": [
+        "final_straight/j07/1.mp3",
+        "final_straight/j07/2.mp3"
+      ],
+      "j08": [
+        "final_straight/j08/1.mp3",
+        "final_straight/j08/2.mp3"
+      ],
+      "j09": [
+        "final_straight/j09/1.mp3",
+        "final_straight/j09/2.mp3"
+      ],
+      "j10": [
+        "final_straight/j10/1.mp3",
+        "final_straight/j10/2.mp3"
+      ],
+      "j11": [
+        "final_straight/j11/1.mp3",
+        "final_straight/j11/2.mp3"
+      ],
+      "j12": [
+        "final_straight/j12/1.mp3",
+        "final_straight/j12/2.mp3"
+      ],
+      "j13": [
+        "final_straight/j13/1.mp3",
+        "final_straight/j13/2.mp3"
+      ],
+      "j14": [
+        "final_straight/j14/1.mp3",
+        "final_straight/j14/2.mp3"
+      ],
+      "j15": [
+        "final_straight/j15/1.mp3",
+        "final_straight/j15/2.mp3"
+      ],
+      "j16": [
+        "final_straight/j16/1.mp3",
+        "final_straight/j16/2.mp3"
+      ],
+      "j17": [
+        "final_straight/j17/1.mp3",
+        "final_straight/j17/2.mp3"
+      ],
+      "j18": [
+        "final_straight/j18/1.mp3",
+        "final_straight/j18/2.mp3"
+      ],
+      "j19": [
+        "final_straight/j19/1.mp3",
+        "final_straight/j19/2.mp3"
+      ],
+      "j20": [
+        "final_straight/j20/1.mp3",
+        "final_straight/j20/2.mp3"
+      ],
+      "j21": [
+        "final_straight/j21/1.mp3",
+        "final_straight/j21/2.mp3"
+      ],
+      "j22": [
+        "final_straight/j22/1.mp3",
+        "final_straight/j22/2.mp3"
+      ],
+      "j23": [
+        "final_straight/j23/1.mp3",
+        "final_straight/j23/2.mp3"
+      ],
+      "j24": [
+        "final_straight/j24/1.mp3",
+        "final_straight/j24/2.mp3"
+      ],
+      "j25": [
+        "final_straight/j25/1.mp3",
+        "final_straight/j25/2.mp3"
+      ],
+      "j26": [
+        "final_straight/j26/1.mp3",
+        "final_straight/j26/2.mp3"
+      ],
+      "j27": [
+        "final_straight/j27/1.mp3",
+        "final_straight/j27/2.mp3"
+      ],
+      "j28": [
+        "final_straight/j28/1.mp3",
+        "final_straight/j28/2.mp3"
+      ],
+      "j29": [
+        "final_straight/j29/1.mp3",
+        "final_straight/j29/2.mp3"
+      ],
+      "j30": [
+        "final_straight/j30/1.mp3",
+        "final_straight/j30/2.mp3"
+      ]
+    },
+    "firstPastPost": {
+      "j01": [
+        "first_past_post/j01/1.mp3",
+        "first_past_post/j01/2.mp3"
+      ],
+      "j02": [
+        "first_past_post/j02/1.mp3",
+        "first_past_post/j02/2.mp3"
+      ],
+      "j03": [
+        "first_past_post/j03/1.mp3",
+        "first_past_post/j03/2.mp3"
+      ],
+      "j04": [
+        "first_past_post/j04/1.mp3",
+        "first_past_post/j04/2.mp3"
+      ],
+      "j05": [
+        "first_past_post/j05/1.mp3",
+        "first_past_post/j05/2.mp3"
+      ],
+      "j06": [
+        "first_past_post/j06/1.mp3",
+        "first_past_post/j06/2.mp3"
+      ],
+      "j07": [
+        "first_past_post/j07/1.mp3",
+        "first_past_post/j07/2.mp3"
+      ],
+      "j08": [
+        "first_past_post/j08/1.mp3",
+        "first_past_post/j08/2.mp3"
+      ],
+      "j09": [
+        "first_past_post/j09/1.mp3",
+        "first_past_post/j09/2.mp3"
+      ],
+      "j10": [
+        "first_past_post/j10/1.mp3",
+        "first_past_post/j10/2.mp3"
+      ],
+      "j11": [
+        "first_past_post/j11/1.mp3",
+        "first_past_post/j11/2.mp3"
+      ],
+      "j12": [
+        "first_past_post/j12/1.mp3",
+        "first_past_post/j12/2.mp3"
+      ],
+      "j13": [
+        "first_past_post/j13/1.mp3",
+        "first_past_post/j13/2.mp3"
+      ],
+      "j14": [
+        "first_past_post/j14/1.mp3",
+        "first_past_post/j14/2.mp3"
+      ],
+      "j15": [
+        "first_past_post/j15/1.mp3",
+        "first_past_post/j15/2.mp3"
+      ],
+      "j16": [
+        "first_past_post/j16/1.mp3",
+        "first_past_post/j16/2.mp3"
+      ],
+      "j17": [
+        "first_past_post/j17/1.mp3",
+        "first_past_post/j17/2.mp3"
+      ],
+      "j18": [
+        "first_past_post/j18/1.mp3",
+        "first_past_post/j18/2.mp3"
+      ],
+      "j19": [
+        "first_past_post/j19/1.mp3",
+        "first_past_post/j19/2.mp3"
+      ],
+      "j20": [
+        "first_past_post/j20/1.mp3",
+        "first_past_post/j20/2.mp3"
+      ],
+      "j21": [
+        "first_past_post/j21/1.mp3",
+        "first_past_post/j21/2.mp3"
+      ],
+      "j22": [
+        "first_past_post/j22/1.mp3",
+        "first_past_post/j22/2.mp3"
+      ],
+      "j23": [
+        "first_past_post/j23/1.mp3",
+        "first_past_post/j23/2.mp3"
+      ],
+      "j24": [
+        "first_past_post/j24/1.mp3",
+        "first_past_post/j24/2.mp3"
+      ],
+      "j25": [
+        "first_past_post/j25/1.mp3",
+        "first_past_post/j25/2.mp3"
+      ],
+      "j26": [
+        "first_past_post/j26/1.mp3",
+        "first_past_post/j26/2.mp3"
+      ],
+      "j27": [
+        "first_past_post/j27/1.mp3",
+        "first_past_post/j27/2.mp3"
+      ],
+      "j28": [
+        "first_past_post/j28/1.mp3",
+        "first_past_post/j28/2.mp3"
+      ],
+      "j29": [
+        "first_past_post/j29/1.mp3",
+        "first_past_post/j29/2.mp3"
+      ],
+      "j30": [
+        "first_past_post/j30/1.mp3",
+        "first_past_post/j30/2.mp3"
+      ]
+    },
+    "down": {
+      "j01": [
+        "down/j01/1.mp3",
+        "down/j01/2.mp3"
+      ],
+      "j02": [
+        "down/j02/1.mp3",
+        "down/j02/2.mp3"
+      ],
+      "j03": [
+        "down/j03/1.mp3",
+        "down/j03/2.mp3"
+      ],
+      "j04": [
+        "down/j04/1.mp3",
+        "down/j04/2.mp3"
+      ],
+      "j05": [
+        "down/j05/1.mp3",
+        "down/j05/2.mp3"
+      ],
+      "j06": [
+        "down/j06/1.mp3",
+        "down/j06/2.mp3"
+      ],
+      "j07": [
+        "down/j07/1.mp3",
+        "down/j07/2.mp3"
+      ],
+      "j08": [
+        "down/j08/1.mp3",
+        "down/j08/2.mp3"
+      ],
+      "j09": [
+        "down/j09/1.mp3",
+        "down/j09/2.mp3"
+      ],
+      "j10": [
+        "down/j10/1.mp3",
+        "down/j10/2.mp3"
+      ],
+      "j11": [
+        "down/j11/1.mp3",
+        "down/j11/2.mp3"
+      ],
+      "j12": [
+        "down/j12/1.mp3",
+        "down/j12/2.mp3"
+      ],
+      "j13": [
+        "down/j13/1.mp3",
+        "down/j13/2.mp3"
+      ],
+      "j14": [
+        "down/j14/1.mp3",
+        "down/j14/2.mp3"
+      ],
+      "j15": [
+        "down/j15/1.mp3",
+        "down/j15/2.mp3"
+      ],
+      "j16": [
+        "down/j16/1.mp3",
+        "down/j16/2.mp3"
+      ],
+      "j17": [
+        "down/j17/1.mp3",
+        "down/j17/2.mp3"
+      ],
+      "j18": [
+        "down/j18/1.mp3",
+        "down/j18/2.mp3"
+      ],
+      "j19": [
+        "down/j19/1.mp3",
+        "down/j19/2.mp3"
+      ],
+      "j20": [
+        "down/j20/1.mp3",
+        "down/j20/2.mp3"
+      ],
+      "j21": [
+        "down/j21/1.mp3",
+        "down/j21/2.mp3"
+      ],
+      "j22": [
+        "down/j22/1.mp3",
+        "down/j22/2.mp3"
+      ],
+      "j23": [
+        "down/j23/1.mp3",
+        "down/j23/2.mp3"
+      ],
+      "j24": [
+        "down/j24/1.mp3",
+        "down/j24/2.mp3"
+      ],
+      "j25": [
+        "down/j25/1.mp3",
+        "down/j25/2.mp3"
+      ],
+      "j26": [
+        "down/j26/1.mp3",
+        "down/j26/2.mp3"
+      ],
+      "j27": [
+        "down/j27/1.mp3",
+        "down/j27/2.mp3"
+      ],
+      "j28": [
+        "down/j28/1.mp3",
+        "down/j28/2.mp3"
+      ],
+      "j29": [
+        "down/j29/1.mp3",
+        "down/j29/2.mp3"
+      ],
+      "j30": [
+        "down/j30/1.mp3",
+        "down/j30/2.mp3"
+      ]
+    },
+    "placeSecond": {
+      "j01": [
+        "place_second/j01/1.mp3",
+        "place_second/j01/2.mp3"
+      ],
+      "j02": [
+        "place_second/j02/1.mp3",
+        "place_second/j02/2.mp3"
+      ],
+      "j03": [
+        "place_second/j03/1.mp3",
+        "place_second/j03/2.mp3"
+      ],
+      "j04": [
+        "place_second/j04/1.mp3",
+        "place_second/j04/2.mp3"
+      ],
+      "j05": [
+        "place_second/j05/1.mp3",
+        "place_second/j05/2.mp3"
+      ],
+      "j06": [
+        "place_second/j06/1.mp3",
+        "place_second/j06/2.mp3"
+      ],
+      "j07": [
+        "place_second/j07/1.mp3",
+        "place_second/j07/2.mp3"
+      ],
+      "j08": [
+        "place_second/j08/1.mp3",
+        "place_second/j08/2.mp3"
+      ],
+      "j09": [
+        "place_second/j09/1.mp3",
+        "place_second/j09/2.mp3"
+      ],
+      "j10": [
+        "place_second/j10/1.mp3",
+        "place_second/j10/2.mp3"
+      ],
+      "j11": [
+        "place_second/j11/1.mp3",
+        "place_second/j11/2.mp3"
+      ],
+      "j12": [
+        "place_second/j12/1.mp3",
+        "place_second/j12/2.mp3"
+      ],
+      "j13": [
+        "place_second/j13/1.mp3",
+        "place_second/j13/2.mp3"
+      ],
+      "j14": [
+        "place_second/j14/1.mp3",
+        "place_second/j14/2.mp3"
+      ],
+      "j15": [
+        "place_second/j15/1.mp3",
+        "place_second/j15/2.mp3"
+      ],
+      "j16": [
+        "place_second/j16/1.mp3",
+        "place_second/j16/2.mp3"
+      ],
+      "j17": [
+        "place_second/j17/1.mp3",
+        "place_second/j17/2.mp3"
+      ],
+      "j18": [
+        "place_second/j18/1.mp3",
+        "place_second/j18/2.mp3"
+      ],
+      "j19": [
+        "place_second/j19/1.mp3",
+        "place_second/j19/2.mp3"
+      ],
+      "j20": [
+        "place_second/j20/1.mp3",
+        "place_second/j20/2.mp3"
+      ],
+      "j21": [
+        "place_second/j21/1.mp3",
+        "place_second/j21/2.mp3"
+      ],
+      "j22": [
+        "place_second/j22/1.mp3",
+        "place_second/j22/2.mp3"
+      ],
+      "j23": [
+        "place_second/j23/1.mp3",
+        "place_second/j23/2.mp3"
+      ],
+      "j24": [
+        "place_second/j24/1.mp3",
+        "place_second/j24/2.mp3"
+      ],
+      "j25": [
+        "place_second/j25/1.mp3",
+        "place_second/j25/2.mp3"
+      ],
+      "j26": [
+        "place_second/j26/1.mp3",
+        "place_second/j26/2.mp3"
+      ],
+      "j27": [
+        "place_second/j27/1.mp3",
+        "place_second/j27/2.mp3"
+      ],
+      "j28": [
+        "place_second/j28/1.mp3",
+        "place_second/j28/2.mp3"
+      ],
+      "j29": [
+        "place_second/j29/1.mp3",
+        "place_second/j29/2.mp3"
+      ],
+      "j30": [
+        "place_second/j30/1.mp3",
+        "place_second/j30/2.mp3"
+      ]
+    },
+    "placeThird": {
+      "j01": [
+        "place_third/j01/1.mp3",
+        "place_third/j01/2.mp3"
+      ],
+      "j02": [
+        "place_third/j02/1.mp3",
+        "place_third/j02/2.mp3"
+      ],
+      "j03": [
+        "place_third/j03/1.mp3",
+        "place_third/j03/2.mp3"
+      ],
+      "j04": [
+        "place_third/j04/1.mp3",
+        "place_third/j04/2.mp3"
+      ],
+      "j05": [
+        "place_third/j05/1.mp3",
+        "place_third/j05/2.mp3"
+      ],
+      "j06": [
+        "place_third/j06/1.mp3",
+        "place_third/j06/2.mp3"
+      ],
+      "j07": [
+        "place_third/j07/1.mp3",
+        "place_third/j07/2.mp3"
+      ],
+      "j08": [
+        "place_third/j08/1.mp3",
+        "place_third/j08/2.mp3"
+      ],
+      "j09": [
+        "place_third/j09/1.mp3",
+        "place_third/j09/2.mp3"
+      ],
+      "j10": [
+        "place_third/j10/1.mp3",
+        "place_third/j10/2.mp3"
+      ],
+      "j11": [
+        "place_third/j11/1.mp3",
+        "place_third/j11/2.mp3"
+      ],
+      "j12": [
+        "place_third/j12/1.mp3",
+        "place_third/j12/2.mp3"
+      ],
+      "j13": [
+        "place_third/j13/1.mp3",
+        "place_third/j13/2.mp3"
+      ],
+      "j14": [
+        "place_third/j14/1.mp3",
+        "place_third/j14/2.mp3"
+      ],
+      "j15": [
+        "place_third/j15/1.mp3",
+        "place_third/j15/2.mp3"
+      ],
+      "j16": [
+        "place_third/j16/1.mp3",
+        "place_third/j16/2.mp3"
+      ],
+      "j17": [
+        "place_third/j17/1.mp3",
+        "place_third/j17/2.mp3"
+      ],
+      "j18": [
+        "place_third/j18/1.mp3",
+        "place_third/j18/2.mp3"
+      ],
+      "j19": [
+        "place_third/j19/1.mp3",
+        "place_third/j19/2.mp3"
+      ],
+      "j20": [
+        "place_third/j20/1.mp3",
+        "place_third/j20/2.mp3"
+      ],
+      "j21": [
+        "place_third/j21/1.mp3",
+        "place_third/j21/2.mp3"
+      ],
+      "j22": [
+        "place_third/j22/1.mp3",
+        "place_third/j22/2.mp3"
+      ],
+      "j23": [
+        "place_third/j23/1.mp3",
+        "place_third/j23/2.mp3"
+      ],
+      "j24": [
+        "place_third/j24/1.mp3",
+        "place_third/j24/2.mp3"
+      ],
+      "j25": [
+        "place_third/j25/1.mp3",
+        "place_third/j25/2.mp3"
+      ],
+      "j26": [
+        "place_third/j26/1.mp3",
+        "place_third/j26/2.mp3"
+      ],
+      "j27": [
+        "place_third/j27/1.mp3",
+        "place_third/j27/2.mp3"
+      ],
+      "j28": [
+        "place_third/j28/1.mp3",
+        "place_third/j28/2.mp3"
+      ],
+      "j29": [
+        "place_third/j29/1.mp3",
+        "place_third/j29/2.mp3"
+      ],
+      "j30": [
+        "place_third/j30/1.mp3",
+        "place_third/j30/2.mp3"
+      ]
+    }
+  },
+  "courseLines": {
+    "j01": [
+      "course/j01/1.mp3",
+      "course/j01/2.mp3",
+      "course/j01/3.mp3"
+    ],
+    "j02": [
+      "course/j02/1.mp3",
+      "course/j02/2.mp3",
+      "course/j02/3.mp3"
+    ],
+    "j03": [
+      "course/j03/1.mp3",
+      "course/j03/2.mp3",
+      "course/j03/3.mp3"
+    ],
+    "j04": [
+      "course/j04/1.mp3",
+      "course/j04/2.mp3",
+      "course/j04/3.mp3"
+    ],
+    "j05": [
+      "course/j05/1.mp3",
+      "course/j05/2.mp3",
+      "course/j05/3.mp3"
+    ],
+    "j06": [
+      "course/j06/1.mp3",
+      "course/j06/2.mp3",
+      "course/j06/3.mp3"
+    ],
+    "j07": [
+      "course/j07/1.mp3",
+      "course/j07/2.mp3",
+      "course/j07/3.mp3"
+    ],
+    "j08": [
+      "course/j08/1.mp3",
+      "course/j08/2.mp3",
+      "course/j08/3.mp3"
+    ],
+    "j09": [
+      "course/j09/1.mp3",
+      "course/j09/2.mp3",
+      "course/j09/3.mp3"
+    ],
+    "j10": [
+      "course/j10/1.mp3",
+      "course/j10/2.mp3",
+      "course/j10/3.mp3"
+    ],
+    "j11": [
+      "course/j11/1.mp3",
+      "course/j11/2.mp3",
+      "course/j11/3.mp3"
+    ],
+    "j12": [
+      "course/j12/1.mp3",
+      "course/j12/2.mp3",
+      "course/j12/3.mp3"
+    ]
+  },
+  "rollCall": {
+    "position": {
+      "1": [
+        "roll_call/position/1/1.mp3",
+        "roll_call/position/1/2.mp3",
+        "roll_call/position/1/3.mp3"
+      ],
+      "2": [
+        "roll_call/position/2/1.mp3",
+        "roll_call/position/2/2.mp3",
+        "roll_call/position/2/3.mp3"
+      ],
+      "3": [
+        "roll_call/position/3/1.mp3",
+        "roll_call/position/3/2.mp3",
+        "roll_call/position/3/3.mp3"
+      ],
+      "4": [
+        "roll_call/position/4/1.mp3",
+        "roll_call/position/4/2.mp3",
+        "roll_call/position/4/3.mp3"
+      ],
+      "5": [
+        "roll_call/position/5/1.mp3",
+        "roll_call/position/5/2.mp3",
+        "roll_call/position/5/3.mp3"
+      ],
+      "6": [
+        "roll_call/position/6/1.mp3",
+        "roll_call/position/6/2.mp3",
+        "roll_call/position/6/3.mp3"
+      ],
+      "7": [
+        "roll_call/position/7/1.mp3",
+        "roll_call/position/7/2.mp3",
+        "roll_call/position/7/3.mp3"
+      ],
+      "8": [
+        "roll_call/position/8/1.mp3",
+        "roll_call/position/8/2.mp3",
+        "roll_call/position/8/3.mp3"
+      ],
+      "9": [
+        "roll_call/position/9/1.mp3",
+        "roll_call/position/9/2.mp3",
+        "roll_call/position/9/3.mp3"
+      ],
+      "10": [
+        "roll_call/position/10/1.mp3",
+        "roll_call/position/10/2.mp3",
+        "roll_call/position/10/3.mp3"
+      ]
+    },
+    "horseName": {
+      "j01": [
+        "roll_call/name/j01/1.mp3",
+        "roll_call/name/j01/2.mp3"
+      ],
+      "j02": [
+        "roll_call/name/j02/1.mp3",
+        "roll_call/name/j02/2.mp3"
+      ],
+      "j03": [
+        "roll_call/name/j03/1.mp3",
+        "roll_call/name/j03/2.mp3"
+      ],
+      "j04": [
+        "roll_call/name/j04/1.mp3",
+        "roll_call/name/j04/2.mp3"
+      ],
+      "j05": [
+        "roll_call/name/j05/1.mp3",
+        "roll_call/name/j05/2.mp3"
+      ],
+      "j06": [
+        "roll_call/name/j06/1.mp3",
+        "roll_call/name/j06/2.mp3"
+      ],
+      "j07": [
+        "roll_call/name/j07/1.mp3",
+        "roll_call/name/j07/2.mp3"
+      ],
+      "j08": [
+        "roll_call/name/j08/1.mp3",
+        "roll_call/name/j08/2.mp3"
+      ],
+      "j09": [
+        "roll_call/name/j09/1.mp3",
+        "roll_call/name/j09/2.mp3"
+      ],
+      "j10": [
+        "roll_call/name/j10/1.mp3",
+        "roll_call/name/j10/2.mp3"
+      ],
+      "j11": [
+        "roll_call/name/j11/1.mp3",
+        "roll_call/name/j11/2.mp3"
+      ],
+      "j12": [
+        "roll_call/name/j12/1.mp3",
+        "roll_call/name/j12/2.mp3"
+      ],
+      "j13": [
+        "roll_call/name/j13/1.mp3",
+        "roll_call/name/j13/2.mp3"
+      ],
+      "j14": [
+        "roll_call/name/j14/1.mp3",
+        "roll_call/name/j14/2.mp3"
+      ],
+      "j15": [
+        "roll_call/name/j15/1.mp3",
+        "roll_call/name/j15/2.mp3"
+      ],
+      "j16": [
+        "roll_call/name/j16/1.mp3",
+        "roll_call/name/j16/2.mp3"
+      ],
+      "j17": [
+        "roll_call/name/j17/1.mp3",
+        "roll_call/name/j17/2.mp3"
+      ],
+      "j18": [
+        "roll_call/name/j18/1.mp3",
+        "roll_call/name/j18/2.mp3"
+      ],
+      "j19": [
+        "roll_call/name/j19/1.mp3",
+        "roll_call/name/j19/2.mp3"
+      ],
+      "j20": [
+        "roll_call/name/j20/1.mp3",
+        "roll_call/name/j20/2.mp3"
+      ],
+      "j21": [
+        "roll_call/name/j21/1.mp3",
+        "roll_call/name/j21/2.mp3"
+      ],
+      "j22": [
+        "roll_call/name/j22/1.mp3",
+        "roll_call/name/j22/2.mp3"
+      ],
+      "j23": [
+        "roll_call/name/j23/1.mp3",
+        "roll_call/name/j23/2.mp3"
+      ],
+      "j24": [
+        "roll_call/name/j24/1.mp3",
+        "roll_call/name/j24/2.mp3"
+      ],
+      "j25": [
+        "roll_call/name/j25/1.mp3",
+        "roll_call/name/j25/2.mp3"
+      ],
+      "j26": [
+        "roll_call/name/j26/1.mp3",
+        "roll_call/name/j26/2.mp3"
+      ],
+      "j27": [
+        "roll_call/name/j27/1.mp3",
+        "roll_call/name/j27/2.mp3"
+      ],
+      "j28": [
+        "roll_call/name/j28/1.mp3",
+        "roll_call/name/j28/2.mp3"
+      ],
+      "j29": [
+        "roll_call/name/j29/1.mp3",
+        "roll_call/name/j29/2.mp3"
+      ],
+      "j30": [
+        "roll_call/name/j30/1.mp3",
+        "roll_call/name/j30/2.mp3"
+      ]
+    }
+  }
+}
