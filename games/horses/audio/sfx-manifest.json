@@ -1,0 +1,33 @@
+{
+  "_comment": "Sound-effect manifest for JustaLittleFun Racing (non-voice). Mirrors vo-manifest.json. Each entry under 'sounds' is keyed by the name the game calls it by (e.g. playSound('gates')). 'url' is either a single file or an array of interchangeable takes: one-shots pick a random take per play; loops pick one take when they start. 'bus' routes it through the mixer (music / crowd / weather / sfx / voice); defaults to 'sfx' if omitted. 'loop': true marks a continuous bed (crowd, rain, hooves, gate rattle, menu music). All paths are relative to basePath. This file is overlaid on the inline fallback table in the page by key: entries here override or add to it, anything omitted keeps its built-in definition. Missing files stay silent and never block the game. _comment keys are ignored by the loader.",
+  "basePath": "audio/",
+  "sounds": {
+    "postTrumpet": { "url": "post_trumpet.mp3", "bus": "music", "_comment": "'Call to the Post' bugle at the race-view transition" },
+    "gates":       { "url": "gates.mp3", "bus": "sfx", "_comment": "gates clang/spring as they fly open" },
+    "cheer":       { "url": "cheer.mp3", "bus": "crowd", "_comment": "roar swell at the line" },
+    "fanfare":     { "url": "fanfare.mp3", "bus": "music", "_comment": "win / leaderboard sting" },
+
+    "stumble": {
+      "url": ["stumble1.mp3", "stumble2.mp3"],
+      "bus": "sfx",
+      "_comment": "impact as a runner goes down; random take per fall"
+    },
+    "whinny": {
+      "url": ["whinny1.mp3", "whinny2.mp3", "whinny3.mp3"],
+      "bus": "sfx",
+      "_comment": "horse cry on a fall; random take"
+    },
+    "thunder": {
+      "url": ["thunder1.mp3", "thunder2.mp3"],
+      "bus": "weather",
+      "_comment": "thunderclap on storm lightning; random take"
+    },
+
+    "crowd":      { "url": "crowd.mp3", "bus": "crowd", "loop": true, "_comment": "continuous ambience bed" },
+    "hooves":     { "url": "hooves.mp3", "bus": "sfx", "loop": true, "_comment": "galloping, only while racing" },
+    "gateRattle": { "url": "gate_rattle.mp3", "bus": "sfx", "loop": true, "_comment": "horses shuffling in the stalls: race-view transition until gates open" },
+    "menuMusic":  { "url": "menu_music.mp3", "bus": "music", "loop": true, "_comment": "lobby / pre-show music" },
+    "rainLight":  { "url": "rain_light.mp3", "bus": "weather", "loop": true, "_comment": "light rain bed" },
+    "rainHeavy":  { "url": "rain_heavy.mp3", "bus": "weather", "loop": true, "_comment": "heavy rain bed" }
+  }
+}
