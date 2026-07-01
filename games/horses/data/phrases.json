@@ -1,5 +1,5 @@
 {
-  "_comment": "Configurable display copy for Just a Little Fun. Edit freely. Tokens in {curly braces} are filled in at runtime. Available tokens are noted per section. Host reads this from ./data/phrases.json; the player page reads the same file.",
+  "_comment": "Configurable display copy for Just a Little Fun. Edit freely. Tokens in {curly braces} are filled in at runtime. Available tokens are noted per section. Host reads this from ./data/phrases.json; the player page reads the same file. NOTE: the announcer 'milestones' and 'raceCalls' sections were removed — those calls are now voice-only and their variety lives in the announcer voice-line manifest (vo-manifest.json), not here. Any field whose value is an ARRAY is a pool of interchangeable variants: the code picks one at random each time, so repeated events feel fresh. Single-string fields are used verbatim.",
 
   "wipeTransitions": [
     "Just a little fun!",
@@ -14,40 +14,122 @@
     "It's a great day for racing!"
   ],
 
-  "milestones": {
-    "_tokens": "{field} = number of runners, {distance} = metres, {terrain} = surface, {weather} = conditions label, {leader} = current leader name (UPPER CASE applied automatically)",
-    "start": "FIELD OF {field} — {distance}M {terrain} — {weather}",
-    "quarter": "{leader} SHOWING EARLY",
-    "half": "HALFWAY — {leader} TO THE FORE",
-    "threeQuarter": "THREE QUARTERS — WATCH THE BACKMARKERS"
-  },
-
-  "raceCalls": {
-    "_tokens": "{horse} = horse name (UPPER CASE applied automatically)",
-    "racing": "AND THEY ARE RACING",
-    "firstPastPost": "{horse} — FIRST PAST THE POST",
-    "down": "{horse} IS DOWN — RACE OVER FOR THEM",
-    "photoNose": "PHOTO FINISH — STEWARDS WILL DETERMINE THE RESULT",
-    "photoClose": "VERY CLOSE FINISH — REPLAY"
-  },
-
   "champion": {
-    "_tokens": "{n} = number of punters",
-    "subMany": "Top of the tote",
-    "subSolo": "Last one standing",
-    "profitUp": "\u25b2 Up ${amount} on the night",
-    "profitDown": "\u25bc Down ${amount} \u2014 but still top",
-    "profitFlat": "Finished right where they started"
+    "_tokens": "{n} = number of punters, {amount} = dollar figure (no sign). Each field is an array of variants chosen at random.",
+    "subMany": [
+      "Top of the tote",
+      "Best in the room",
+      "King of the punters",
+      "Nobody read it better",
+      "The sharpest eye on the card"
+    ],
+    "subSolo": [
+      "Last one standing",
+      "The lone survivor",
+      "Outlasted the lot",
+      "Alone at the top",
+      "Sole survivor of the card"
+    ],
+    "profitUp": [
+      "\u25b2 Up ${amount} on the night",
+      "\u25b2 ${amount} to the good",
+      "\u25b2 Pocketed ${amount} tonight",
+      "\u25b2 Walked away ${amount} up",
+      "\u25b2 ${amount} in front when it mattered"
+    ],
+    "profitDown": [
+      "\u25bc Down ${amount} \u2014 but still top",
+      "\u25bc Lost ${amount} and still won the room",
+      "\u25bc ${amount} lighter, but first is first",
+      "\u25bc Bruised by ${amount}, crowned anyway",
+      "\u25bc Down ${amount} \u2014 champion regardless"
+    ],
+    "profitFlat": [
+      "Finished right where they started",
+      "Square on the night \u2014 and still on top",
+      "Broke even and took the crown",
+      "Not a dollar moved \u2014 still the best",
+      "Level pegging, top of the pile"
+    ]
   },
 
   "placement": {
-    "_comment": "Player-side end-of-game placement copy. rank 1/2/3 and last are special; middle-of-field scales by band (top/mid/back).",
-    "first":  { "medal": "\ud83c\udfc6", "headline": "Champion punter!", "subMany": "You topped the tote and took the whole room. Drinks are on you.", "subSolo": "Last one standing \u2014 the title is yours." },
-    "second": { "medal": "\ud83e\udd48", "headline": "So, so close", "sub": "Pipped right at the post. A whisker off the top spot \u2014 unlucky." },
-    "third":  { "medal": "\ud83e\udd49", "headline": "On the podium", "sub": "A spot on the dais and bragging rights to match. Solid card." },
-    "last":   { "medal": "\ud83e\udd44", "headline": "Wooden spoon", "sub": "Someone had to prop up the field \u2014 might as well wear it with pride. There's always next card." },
-    "midTop": { "medal": "\ud83d\udc4f", "headline": "Top of the chasers", "sub": "Just missed the medals but well clear of the pack. Nicely played." },
-    "midMid": { "medal": "\ud83d\ude42", "headline": "Mid-field finish", "sub": "Right in the thick of it \u2014 a few bets away from the top end. Respectable night." },
-    "midBack":{ "medal": "\ud83d\ude05", "headline": "Down the field", "sub": "Hung in there near the back, but you dodged the wooden spoon. We'll call that a win." }
+    "_comment": "Player-side end-of-game placement copy. rank 1/2/3 and last are special; middle-of-field scales by band (top/mid/back). 'medal' is a single emoji; 'headline' and the 'sub' fields are arrays of variants chosen at random.",
+    "first": {
+      "medal": "\ud83c\udfc6",
+      "headline": ["Champion punter!", "You took the room!", "Top of the tote!", "Winner, winner!"],
+      "subMany": [
+        "You topped the tote and took the whole room. Drinks are on you.",
+        "Nobody backed them better. The room is yours.",
+        "Sharpest eyes on the night \u2014 you cleaned up.",
+        "First across the line where it counts. Take a bow."
+      ],
+      "subSolo": [
+        "Last one standing \u2014 the title is yours.",
+        "You outlasted every other punter. Champion by attrition.",
+        "The lone survivor takes the crown.",
+        "Everyone else folded. You didn't."
+      ]
+    },
+    "second": {
+      "medal": "\ud83e\udd48",
+      "headline": ["So, so close", "Pipped at the post", "A whisker short", "Second by a nose"],
+      "sub": [
+        "Pipped right at the post. A whisker off the top spot \u2014 unlucky.",
+        "A hair away from the crown. Cruel margins.",
+        "So near the top you could taste it. Next card's yours.",
+        "Beaten by a whisker \u2014 hold your head high."
+      ]
+    },
+    "third": {
+      "medal": "\ud83e\udd49",
+      "headline": ["On the podium", "Bronze and proud", "A place on the dais", "Third and thereabouts"],
+      "sub": [
+        "A spot on the dais and bragging rights to match. Solid card.",
+        "You made the podium \u2014 no small feat in this room.",
+        "Third place and plenty to be pleased about.",
+        "On the board and in the money. Nicely done."
+      ]
+    },
+    "last": {
+      "medal": "\ud83e\udd44",
+      "headline": ["Wooden spoon", "Someone had to", "The cellar's yours", "Down the very back"],
+      "sub": [
+        "Someone had to prop up the field \u2014 might as well wear it with pride. There's always next card.",
+        "Rock bottom, but you were in it till the end. Chin up.",
+        "The wooden spoon is a badge of sorts. Wear it well.",
+        "Last of the pack \u2014 nowhere to go but up next time."
+      ]
+    },
+    "midTop": {
+      "medal": "\ud83d\udc4f",
+      "headline": ["Top of the chasers", "Just off the medals", "Best of the rest", "Knocking on the podium"],
+      "sub": [
+        "Just missed the medals but well clear of the pack. Nicely played.",
+        "A place or two off the dais \u2014 a strong card all the same.",
+        "Best of the rest tonight. The podium was in sight.",
+        "So close to a medal. Well clear of the muddle."
+      ]
+    },
+    "midMid": {
+      "medal": "\ud83d\ude42",
+      "headline": ["Mid-field finish", "Right in the mix", "Smack in the middle", "Held your own"],
+      "sub": [
+        "Right in the thick of it \u2014 a few bets away from the top end. Respectable night.",
+        "Squarely mid-field. A tidy result with room to climb.",
+        "In the thick of the pack all night. Solid enough.",
+        "Middle of the road \u2014 a few good calls from the sharp end."
+      ]
+    },
+    "midBack": {
+      "medal": "\ud83d\ude05",
+      "headline": ["Down the field", "Near the back", "Dodged the spoon", "A tough card"],
+      "sub": [
+        "Hung in there near the back, but you dodged the wooden spoon. We'll call that a win.",
+        "Back of the pack, but not the very bottom. Small mercies.",
+        "A rough night at the windows \u2014 but you avoided the spoon.",
+        "Near the rear, still swinging. Next card's a fresh start."
+      ]
+    }
   }
 }
