@@ -19,7 +19,8 @@
       "places": 13
     },
     "country": "AU",
-    "_designNote": "Green with gold horseshoe | Make this one like a coin flip (think 50/50 chance of winning)"
+    "_designNote": "Green with gold horseshoe | Make this one like a coin flip (think 50/50 chance of winning)",
+    "about": "A true coin-flip of a horse — some days brilliant, some days baffling. Phil swears it's all part of the plan."
   },
   {
     "id": "a02",
@@ -41,7 +42,8 @@
       "places": 11
     },
     "country": "AU",
-    "_designNote": "White with Diagonal Three Black Dots (3-Sided Die) | Make this one more of a favourite"
+    "_designNote": "White with Diagonal Three Black Dots (3-Sided Die) | Make this one more of a favourite",
+    "about": "Backed on the famous 1-and-3 system: a certain someone always picks 1 when 3 wins, and 3 when 1 wins. Never fails to fail."
   },
   {
     "id": "a03",
@@ -63,7 +65,8 @@
       "places": 8
     },
     "country": "AU",
-    "_designNote": "Black with two white eye shapes | Make this one win 60% of the time, all the time (or as close to for the Anchorman reference)"
+    "_designNote": "Black with two white eye shapes | Make this one win 60% of the time, all the time (or as close to for the Anchorman reference)",
+    "about": "60% of the time, wins every time. The maths is questionable; the swagger is not."
   },
   {
     "id": "a04",
@@ -85,7 +88,8 @@
       "places": 5
     },
     "country": "AU",
-    "_designNote": "White with light blue splatter? | Make this one more of a dud horse"
+    "_designNote": "White with light blue splatter? | Make this one more of a dud horse",
+    "about": "Long on attitude, short on results. Gobs at the barrier, fades in the straight, apologises to nobody."
   },
   {
     "id": "a05",
@@ -107,7 +111,8 @@
       "places": 12
     },
     "country": "AU",
-    "_designNote": "Navy with upward white arrow"
+    "_designNote": "Navy with upward white arrow",
+    "about": "Perpetually looks like he's floating somewhere above the turf. Someone really ought to get him down."
   },
   {
     "id": "a06",
@@ -129,7 +134,8 @@
       "places": 5
     },
     "country": "AU",
-    "_designNote": "Deep purple with thin gold vertical centered column (think stripper pole)"
+    "_designNote": "Deep purple with thin gold vertical centered column (think stripper pole)",
+    "about": "Struts to the gate utterly convinced he's the real deal, and dares you to prove otherwise."
   },
   {
     "id": "a07",
@@ -151,7 +157,8 @@
       "places": 13
     },
     "country": "AU",
-    "_designNote": "Pattern and colours must evoke Boeing logo feel"
+    "_designNote": "Pattern and colours must evoke Boeing logo feel",
+    "about": "A discreet operator with a past he'd rather not discuss. Says little, does his talking on the track."
   },
   {
     "id": "a08",
@@ -173,7 +180,8 @@
       "places": 8
     },
     "country": "AU",
-    "_designNote": "Bright Orange with black repeat arrow icon"
+    "_designNote": "Bright Orange with black repeat arrow icon",
+    "about": "Has exactly one move. It's a good move. Everyone knows it's coming and still can't stop it."
   },
   {
     "id": "a09",
@@ -195,7 +203,8 @@
       "places": 8
     },
     "country": "AU",
-    "_designNote": "Sand beige and a faded orange circle in the centre"
+    "_designNote": "Sand beige and a faded orange circle in the centre",
+    "about": "Wandered in off the desert, entered a race, stayed. Nobody's quite worked out his story."
   },
   {
     "id": "a10",
@@ -217,7 +226,8 @@
       "places": 7
     },
     "country": "AU",
-    "_designNote": "Cream with burnt sienna right triangle wedge (hypotenuse left, point touching right edge)"
+    "_designNote": "Cream with burnt sienna right triangle wedge (hypotenuse left, point touching right edge)",
+    "about": "Contrary to the last. Point him one way and he'll consider the other purely on principle."
   },
   {
     "id": "a11",
@@ -239,7 +249,8 @@
       "places": 9
     },
     "country": "AU",
-    "_designNote": "Yellow with black polka dots"
+    "_designNote": "Yellow with black polka dots",
+    "about": "The people's champion, democratically named and fiercely beloved. Runs on pure public goodwill."
   },
   {
     "id": "a12",
@@ -261,7 +272,8 @@
       "places": 11
     },
     "country": "AU",
-    "_designNote": "Brown square with dark brown star"
+    "_designNote": "Brown square with dark brown star",
+    "about": "A snack, and he knows it. All preening confidence — best appreciated before he goes off the boil."
   },
   {
     "id": "a13",
@@ -283,7 +295,8 @@
       "places": 11
     },
     "country": "AU",
-    "_designNote": "Maroon with vertical strip (offset right of centre)"
+    "_designNote": "Maroon with vertical strip (offset right of centre)",
+    "about": "Started as a birthday-wish and stuck around. Wants the spotlight and won't be talked out of it."
   },
   {
     "id": "a14",
@@ -320,7 +333,8 @@
       "places": 8
     },
     "country": "AU",
-    "_designNote": "Three horizontal bands - pale green 1 part, slightly off white 3 parts, brown 2 parts"
+    "_designNote": "Three horizontal bands - pale green 1 part, slightly off white 3 parts, brown 2 parts",
+    "about": "Insists he belongs in the field, talks the whole way round, and somehow keeps pace anyway."
   },
   {
     "id": "a15",
@@ -342,7 +356,8 @@
       "places": 13
     },
     "country": "AU",
-    "_designNote": "crimson red with black point top hexagon"
+    "_designNote": "crimson red with black point top hexagon",
+    "about": "Has a scheme within every scheme and an identity crisis to match. Nobody's quite sure which one turns up."
   },
   {
     "id": "a16",
@@ -364,7 +379,8 @@
       "places": 8
     },
     "country": "AU",
-    "_designNote": "Red square with white diagonal line | Make this one more of a dud horse"
+    "_designNote": "Red square with white diagonal line | Make this one more of a dud horse",
+    "about": "Once you back him, that's it — no take-backs. Lives up to the name with brutal consistency."
   },
   {
     "id": "a17",
@@ -386,7 +402,8 @@
       "places": 9
     },
     "country": "AU",
-    "_designNote": "beige with dark brown centred semi circle arching upward"
+    "_designNote": "beige with dark brown centred semi circle arching upward",
+    "about": "Meant to be a racehorse. Six subcommittees later, this is what came out. Runs anyway."
   },
   {
     "id": "a18",
@@ -408,7 +425,8 @@
       "places": 9
     },
     "country": "AU",
-    "_designNote": "Dealers Choice"
+    "_designNote": "Dealers Choice",
+    "about": "Yee, and if circumstances permit, haw. A rootin' tootin' outsider with a big heart."
   },
   {
     "id": "a19",
@@ -430,7 +448,8 @@
       "places": 8
     },
     "country": "AU",
-    "_designNote": "Navy blue with two neon yellow horizontal stripes"
+    "_designNote": "Navy blue with two neon yellow horizontal stripes",
+    "about": "The sequel nobody asked for and everybody secretly enjoys. More neon, more nonsense."
   },
   {
     "id": "a20",
@@ -452,7 +471,8 @@
       "places": 11
     },
     "country": "AU",
-    "_designNote": "Bright orange with white partial top band (quarter of total square) + connected white centered vertical column (think T shape) | Make this one more of a dud horse"
+    "_designNote": "Bright orange with white partial top band (quarter of total square) + connected white centered vertical column (think T shape) | Make this one more of a dud horse",
+    "about": "Looked great in the listing. Arrived slightly smaller than expected. Ships fast, though."
   },
   {
     "id": "a21",
@@ -474,7 +494,8 @@
       "places": 8
     },
     "country": "AU",
-    "_designNote": "Red square with white centered heart"
+    "_designNote": "Red square with white centered heart",
+    "about": "All hindquarters and confidence. Powers home on pure posterior when the mood strikes."
   },
   {
     "id": "a22",
@@ -496,7 +517,8 @@
       "places": 8
     },
     "country": "AU",
-    "_designNote": "White Square, yellow lightning bolt"
+    "_designNote": "White Square, yellow lightning bolt",
+    "about": "The horse who lived. A lightning-quick turn of foot and a scar-shaped blaze he won't discuss."
   },
   {
     "id": "a23",
@@ -518,7 +540,8 @@
       "places": 9
     },
     "country": "AU",
-    "_designNote": "Forest Green with centered Gold thin ring"
+    "_designNote": "Forest Green with centered Gold thin ring",
+    "about": "One horse to rule the field. Carries a certain ring of authority to the line."
   },
   {
     "id": "a24",
@@ -542,7 +565,8 @@
       "places": 14
     },
     "country": "AU",
-    "_designNote": "Top third grey, bottom two thirds is to be split into three columns of red, brown, red"
+    "_designNote": "Top third grey, bottom two thirds is to be split into three columns of red, brown, red",
+    "about": "Half horse, half thunder god, fully committed to the bit. Swings a mean gallop."
   },
   {
     "id": "a25",
@@ -564,7 +588,8 @@
       "places": 10
     },
     "country": "AU",
-    "_designNote": "Dark blue square, white star"
+    "_designNote": "Dark blue square, white star",
+    "about": "Wholesome to a fault and tireless with it — he could canter all day, and he'll tell you so."
   },
   {
     "id": "a26",
@@ -586,7 +611,8 @@
       "places": 8
     },
     "country": "AU",
-    "_designNote": "Purple Square white central horizontal band"
+    "_designNote": "Purple Square white central horizontal band",
+    "about": "A ragtag misfit who has no business being this good, running to his own private soundtrack."
   },
   {
     "id": "a27",
@@ -608,7 +634,8 @@
       "places": 8
     },
     "country": "AU",
-    "_designNote": "Yellow with thin brown diagonal crosshatch | Make this one more of a dud horse"
+    "_designNote": "Yellow with thin brown diagonal crosshatch | Make this one more of a dud horse",
+    "about": "Cheerfully aware that every run might be his last audition. Gives it everything, just in case."
   },
   {
     "id": "a28",
@@ -630,7 +657,8 @@
       "places": 9
     },
     "country": "AU",
-    "_designNote": "Solid Brown (similar colour to horse if possible)"
+    "_designNote": "Solid Brown (similar colour to horse if possible)",
+    "about": "Just Juan. The one and only, no theme, no gimmick — deceptively hard to beat."
   },
   {
     "id": "a29",
@@ -652,7 +680,8 @@
       "places": 5
     },
     "country": "AU",
-    "_designNote": "Brown base with a centred off white rectangle equal to 3/4 of square width and 1/4 of square height | Make this one more of a dud horse"
+    "_designNote": "Brown base with a centred off white rectangle equal to 3/4 of square width and 1/4 of square height | Make this one more of a dud horse",
+    "about": "Five thousand candles in the wind. A miniature legend beloved far beyond his size."
   },
   {
     "id": "a30",
@@ -674,7 +703,8 @@
       "places": 11
     },
     "country": "AU",
-    "_designNote": "Light Blue with White Centered Down Arrow | Make this a favourite"
+    "_designNote": "Light Blue with White Centered Down Arrow | Make this a favourite",
+    "about": "The chosen one of the four stables — master of every gait, when he remembers he's the hero."
   },
   {
     "id": "j01",
@@ -695,7 +725,8 @@
       "wins": 15,
       "places": 20
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "A high-flying ace with a need for speed and a heart full of ambition. Salutes at the line."
   },
   {
     "id": "j02",
@@ -716,7 +747,8 @@
       "wins": 16,
       "places": 22
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "A temperamental genius who might win by ten or forget to try — nobody, including him, knows which."
   },
   {
     "id": "j03",
@@ -737,7 +769,8 @@
       "wins": 1,
       "places": 7
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "Loved no matter how many times she loses. The never-say-die darling everyone's rooting for."
   },
   {
     "id": "j04",
@@ -758,7 +791,8 @@
       "wins": 12,
       "places": 15
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "The quiet record-breaker. Gentle off the track, a spoiler's steel the moment the gates open."
   },
   {
     "id": "j05",
@@ -779,7 +813,8 @@
       "wins": 8,
       "places": 11
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "A big-hearted country girl chasing the title of Japan's best — and never turning down a meal."
   },
   {
     "id": "j06",
@@ -800,7 +835,8 @@
       "wins": 8,
       "places": 14
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "Soars where others gallop. A fearless internationalist with the wings of a condor."
   },
   {
     "id": "j07",
@@ -821,7 +857,8 @@
       "wins": 8,
       "places": 13
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "The emperor of miracles. Falls, breaks, comes back, and wins anyway. Refuses to stay down."
   },
   {
     "id": "j08",
@@ -842,7 +879,8 @@
       "wins": 16,
       "places": 22
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "Regal to the bone. Noble bearing, impeccable manners, and a stayer's iron stamina."
   },
   {
     "id": "j09",
@@ -863,7 +901,8 @@
       "wins": 10,
       "places": 16
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "The sound-speed front-runner. Takes the lead and simply floats away, aloof and untouchable."
   },
   {
     "id": "j10",
@@ -884,7 +923,8 @@
       "wins": 7,
       "places": 10
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "Tougher than the boys and twice as stubborn. No frills — just head down and power through."
   },
   {
     "id": "j11",
@@ -905,7 +945,8 @@
       "wins": 11,
       "places": 16
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "Graceful and gentle, with a devastating finishing kick hidden behind the soft smile."
   },
   {
     "id": "j12",
@@ -926,7 +967,8 @@
       "wins": 9,
       "places": 12
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "Blue-blooded and a touch dramatic. Wears his royal pedigree like a crown, halo optional."
   },
   {
     "id": "j13",
@@ -947,7 +989,8 @@
       "wins": 11,
       "places": 15
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "Pure sprinting joy. One speed — flat out — and endlessly, cheerfully certain it'll work."
   },
   {
     "id": "j14",
@@ -968,7 +1011,8 @@
       "wins": 12,
       "places": 14
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "A whimsical genius who'd rather be in the lab than on the track. Brilliant, eccentric, allergic to training."
   },
   {
     "id": "j15",
@@ -989,7 +1033,8 @@
       "wins": 15,
       "places": 20
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "The empress. Grace, pride, and a flat refusal to lose to anyone. Bow first, ask questions later."
   },
   {
     "id": "j16",
@@ -1010,7 +1055,8 @@
       "wins": 9,
       "places": 13
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "The grey monster from the provinces with a legendary appetite. Ate his way to the top and kept going."
   },
   {
     "id": "j17",
@@ -1031,7 +1077,8 @@
       "wins": 7,
       "places": 9
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "Fastest thing in a tiny frame, and knowingly, weaponising-ly adorable. Underestimate her once."
   },
   {
     "id": "j18",
@@ -1052,7 +1099,8 @@
       "wins": 6,
       "places": 8
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "Cool, dependable, and quietly excellent. Lets the running do all the talking."
   },
   {
     "id": "j19",
@@ -1073,7 +1121,8 @@
       "wins": 9,
       "places": 13
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "A gentleman with a flashing turn of foot. Reserved off the track, electric on it."
   },
   {
     "id": "j20",
@@ -1094,7 +1143,8 @@
       "wins": 10,
       "places": 12
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "White lightning from humble roots — all grit and grind, a late-blooming powerhouse."
   },
   {
     "id": "j21",
@@ -1115,7 +1165,8 @@
       "wins": 4,
       "places": 6
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "Elegant and blossom-bright. Runs with a graceful poise that belies real competitive fire."
   },
   {
     "id": "j22",
@@ -1136,7 +1187,8 @@
       "wins": 16,
       "places": 23
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "The people's superstar in black and gold, who runs like a champion and sings like nobody's watching."
   },
   {
     "id": "j23",
@@ -1157,7 +1209,8 @@
       "wins": 8,
       "places": 14
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "Earnest and hard-working, forever carrying the pride of the Mejiro name a stride at a time."
   },
   {
     "id": "j24",
@@ -1178,7 +1231,8 @@
       "wins": 6,
       "places": 10
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "Bright as a spring bloom and twice as cheerful. A floral sprinter who lights up the paddock."
   },
   {
     "id": "j25",
@@ -1199,7 +1253,8 @@
       "wins": 5,
       "places": 9
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "A bold, boundless front-runner powered entirely by enthusiasm and zero chill."
   },
   {
     "id": "j26",
@@ -1220,7 +1275,8 @@
       "wins": 7,
       "places": 9
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "A wistful night-owl poet who drifts through the shadows and closes with dark, quiet magic."
   },
   {
     "id": "j27",
@@ -1241,7 +1297,8 @@
       "wins": 6,
       "places": 8
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "A princess through and through — tiara, poise, and a surprisingly steely will to win."
   },
   {
     "id": "j28",
@@ -1262,7 +1319,8 @@
       "wins": 4,
       "places": 9
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "The digital all-rounder. Handles any surface, any distance, cool as a running program."
   },
   {
     "id": "j29",
@@ -1283,7 +1341,8 @@
       "wins": 11,
       "places": 14
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "The legendary supercar. So quick the field barely sees which way he went."
   },
   {
     "id": "j30",
@@ -1304,6 +1363,7 @@
       "wins": 13,
       "places": 20
     },
-    "country": "JP"
+    "country": "JP",
+    "about": "Everyone's mother figure — calm, warm, and quietly unstoppable when she flows past them late."
   }
 ]
