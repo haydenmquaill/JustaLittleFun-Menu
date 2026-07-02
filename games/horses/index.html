@@ -2805,7 +2805,7 @@ function tryDeath(horse, prog) {
     flashScreen('rgba(200,16,46,0.35)'); shakeViewport();
     playSound('stumble', { volume:0.85 });
     playSound('whinny', { volume:0.8, rate:0.96 + Math.random()*0.08 });
-    playVoice('down', { horse: horse.def.id });
+    playRaceCall('down', horse.def.id);
     dnfOrder.push(horse);
     updateDNFBoard();
     camShot='TAIL'; directorTick=0; directorDuration=220;
@@ -3384,13 +3384,13 @@ function raceTick(ts) {
   // race (~65s) leaves the tightest pair — threeQ (0.75) → lastCorner (0.82) —
   // ~4.5s apart, with every longer distance more generous still. So the calls
   // (including the per-horse quarter/half lines) no longer trip over each other.
-  if(leaderProgress>0.25&&lastMilestone<1){lastMilestone=1;playVoice('quarter', { horse: leader.def.id });}
-  if(leaderProgress>0.5&&lastMilestone<2){lastMilestone=2;playVoice('half', { horse: leader.def.id });}
+  if(leaderProgress>0.25&&lastMilestone<1){lastMilestone=1;playRaceCall('quarter', leader.def.id);}
+  if(leaderProgress>0.5&&lastMilestone<2){lastMilestone=2;playRaceCall('half', leader.def.id);}
   if(leaderProgress>0.75&&lastMilestone<3){lastMilestone=3;setCrowd('finish',2.5);playVoice('threeQ');}
   // Into the final bend, then into the home straight — two extra beats of drive
   // before the line. finalStraight names the leader; lastCorner is generic.
   if(leaderProgress>0.82&&lastMilestone<4){lastMilestone=4;playVoice('lastCorner');}
-  if(leaderProgress>0.90&&lastMilestone<5){lastMilestone=5;playVoice('finalStraight', { horse: leader.def.id });}
+  if(leaderProgress>0.90&&lastMilestone<5){lastMilestone=5;playRaceCall('finalStraight', leader.def.id);}
   // Leader driving for the line. Fire once the leader is inside the finish window
   // (same 400px band the photo-finish detector uses), so this runs in a frame
   // where isRecording already reflects whether a podium cluster is brewing —
@@ -3493,7 +3493,7 @@ function startPostRaceTransition(hadSlowmo) {
     // is held and named later, when the review settles (see playPodiumPlacers).
     const firstIsPhoto = isPhotoFinishPosition(0);
     if(!firstIsPhoto && finishOrder[0]){
-      playVoice('firstPastPost', { horse: finishOrder[0].def.id });
+      playRaceCall('firstPastPost', finishOrder[0].def.id);
     }
 
     // Stop raceTick so it doesn't fight replay over camera/positions
@@ -3541,7 +3541,7 @@ function startPostRaceTransition(hadSlowmo) {
     if(typeof multiGame !== 'undefined' && multiGame.active){ onRaceFinished(); }
     // No photo anywhere, so 1st is a clear winner: announce the winner now, at the
     // board reveal, then name 2nd and 3rd shortly after.
-    if(finishOrder[0]) playVoice('firstPastPost', { horse: finishOrder[0].def.id });
+    if(finishOrder[0]) playRaceCall('firstPastPost', finishOrder[0].def.id);
     setTimeout(()=>playPodiumPlacers(finishOrder), 1200);
     startWinnerTrotCam();
   }
@@ -5551,9 +5551,7 @@ let VOICE_MANIFEST = {
   preraceIntro:['audio/vo/en/prerace_intro/1.mp3'],
   bettingClosed:['audio/vo/en/betting_closed/1.mp3'], handover:['audio/vo/en/handover/1.mp3'],
   intro:['audio/vo/en/intro/1.mp3'], theyreOff:['audio/vo/en/theyre_off/1.mp3'],
-  quarter:['audio/vo/en/quarter/1.mp3'], half:['audio/vo/en/half/1.mp3'],
   threeQ:['audio/vo/en/three_quarter/1.mp3'], lastCorner:['audio/vo/en/last_corner/1.mp3'],
-  finalStraight:['audio/vo/en/final_straight/1.mp3'], firstPastPost:['audio/vo/en/first_past_post/1.mp3'],
   down:['audio/vo/en/down/1.mp3'], photoClose:['audio/vo/en/photo_close/1.mp3'],
   photoNose:['audio/vo/en/photo_nose/1.mp3'],
   placeFirst:['audio/vo/en/place_first/1.mp3'], placeFirstPhoto:['audio/vo/en/place_first_photo/1.mp3'],
@@ -5566,6 +5564,12 @@ let VOICE_HORSE_LINES = {};
 let VOICE_COURSE_LINES = {};   // courseId -> [urls]; named per-course "course" clips
 let VOICE_CONDITION_LINES = { weather:{}, distance:{}, field:{} };   // weather by id, distance/field by band
 let VOICE_ROLLCALL = { position:{}, favourite:[], horseName:{} };
+// Stitched race-call library: generic frames per event + clean per-horse names in
+// two tones (neutral for quarter/half, emphatic for final straight / first past
+// post). The caller stays neutral/functional; per-horse character lives in the
+// pre/post commentator instead. down + place* remain baked per-horse.
+let VOICE_RACE_FRAMES = {};   // event -> [frame urls]
+let VOICE_RACE_NAME   = {};   // horseId -> { neutral, emphatic }
 
 /* ── Voice language routing ──────────────────────────────────────────────────
    Each racecourse carries a `country` (see courses.json). That maps to a voice
@@ -5666,6 +5670,8 @@ function _applyVoiceData(lang){
   VOICE_COURSE_LINES = d.courseLines;
   VOICE_CONDITION_LINES = d.conditionLines;
   VOICE_ROLLCALL = d.rollCall;
+  VOICE_RACE_FRAMES = d.raceFrames || {};
+  VOICE_RACE_NAME   = d.raceName   || {};
   _voiceLang = lang;
   return true;
 }
@@ -5732,6 +5738,8 @@ function _allVoiceUrls(){
   Object.values(VOICE_MANIFEST).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
   Object.values(VOICE_HORSE_LINES).forEach(byHorse=>
     Object.values(byHorse||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u))));
+  Object.values(VOICE_RACE_FRAMES||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  Object.values(VOICE_RACE_NAME||{}).forEach(n=>{ if(n){ if(n.neutral)urls.add(n.neutral); if(n.emphatic)urls.add(n.emphatic); } });
   Object.values(VOICE_COURSE_LINES).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
   ['weather','distance','field'].forEach(grp=>
     Object.values((VOICE_CONDITION_LINES||{})[grp]||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u))));
@@ -5778,19 +5786,22 @@ function _priorityVoiceUrls(){
   // same ~90s race, so include them here rather than in the fire-and-forget pass.
   [
     'preraceIntro','bettingClosed','handover','intro','theyreOff',
-    'quarter','half','threeQ','lastCorner','finalStraight','firstPastPost',
+    'threeQ','lastCorner',
     'down','photoClose','photoNose',
     'placeFirst','placeSecond','placeThird',
     'placeFirstPhoto','placeSecondPhoto','placeThirdPhoto',
     'bigWin','bigLoss','winner','closing',
   ].forEach(k=> (VOICE_MANIFEST[k]||[]).forEach(u=>urls.add(u)));
-  // Per-horse finish lines (down / firstPastPost / place*) live under
-  // VOICE_HORSE_LINES; decode those too so named finish calls aren't cold.
-  ['down','firstPastPost','placeFirst','placeSecond','placeThird',
+  // Per-horse finish lines (place*) live under VOICE_HORSE_LINES; decode those too
+  // so named finish calls aren't cold. (firstPastPost + down are now stitched.)
+  ['placeFirst','placeSecond','placeThird',
    'placeFirstPhoto','placeSecondPhoto','placeThirdPhoto'].forEach(k=>{
     const byHorse = (typeof VOICE_HORSE_LINES !== 'undefined' && VOICE_HORSE_LINES[k]) || {};
     Object.values(byHorse).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
   });
+  // Stitched race-call library: generic frames + clean per-horse name takes.
+  Object.values(VOICE_RACE_FRAMES||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  Object.values(VOICE_RACE_NAME||{}).forEach(n=>{ if(n){ if(n.neutral)urls.add(n.neutral); if(n.emphatic)urls.add(n.emphatic); } });
   Object.values(VOICE_COURSE_LINES).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
   ['weather','distance','field'].forEach(grp=>
     Object.values((VOICE_CONDITION_LINES||{})[grp]||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u))));
@@ -6068,6 +6079,32 @@ function _voiceCandidates(key, horseId){
     return VOICE_HORSE_LINES[key][horseId];
   }
   return VOICE_MANIFEST[key] || null;
+}
+
+/* Stitched in-race call: play a generic frame for the event, then the horse's
+   clean name clip, back to back as one call. Tone picks the name take — quarter
+   and half use 'neutral', final straight and first-past-post use 'emphatic'. The
+   frame has a fixed name-slot (name always trails the frame), so concatenation
+   reads naturally. Decodes on demand if a clip isn't buffered yet, and falls back
+   silently if the library is missing. One duck spans the whole pair. */
+const RACECALL_TONE = { quarter:'neutral', half:'neutral', finalStraight:'emphatic', firstPastPost:'emphatic', down:'emphatic' };
+async function playRaceCall(event, horseId){
+  if(!Audio_.ready || Audio_.muted) return;
+  const frames = VOICE_RACE_FRAMES[event];
+  const nameSet = horseId && VOICE_RACE_NAME[horseId];
+  if(!frames || !frames.length || !nameSet) return;
+  const tone = RACECALL_TONE[event] || 'neutral';
+  const frameUrl = frames[(Math.random()*frames.length)|0];
+  const nameUrl  = nameSet[tone] || nameSet.neutral || nameSet.emphatic;
+  if(!frameUrl || !nameUrl) return;
+  // Ensure both are decoded (on-demand safety — they're in the priority preload,
+  // but a cold clip should still play rather than silently drop the call).
+  try{ await _decodeUrls(new Set([frameUrl, nameUrl])); }catch(e){}
+  _duck(true);
+  try{
+    await _playVoiceUrl(frameUrl);
+    await _playVoiceUrl(nameUrl);
+  } finally { _duck(false); }
 }
 
 function playVoice(key, { volume=1, horse=null } = {}){
