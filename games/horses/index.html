@@ -319,7 +319,7 @@ body {
 }
 .board-pos { color:#f0c040; width:18px; flex-shrink:0; font-size:0.75rem; text-align:right; }
 .board-num { width:24px; height:20px; display:flex; align-items:center; justify-content:center; font-size:0.75rem; border-radius:2px; flex-shrink:0; font-weight:800; background:#222; }
-.board-name { flex:1; font-size:0.8rem; white-space:nowrap; overflow:hidden; color:#ccc; }
+.board-name { flex:1; min-width:0; font-size:0.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#ccc; }
 .board-time { color:#8ef; font-size:0.7rem; white-space:nowrap; flex-shrink:0; width:50px; text-align:right; }
 .board-margin { color:#888; font-size:0.7rem; white-space:nowrap; flex-shrink:0; width:40px; text-align:right; }
 
@@ -925,9 +925,9 @@ body {
           </div>
           <div class="lobby-row">
             <span class="lab">Betting window<small>Seconds players get to place bets each race</small></span>
-            <div class="stepper" data-cfg="bettingSeconds" data-min="15" data-max="180" data-step="15">
+            <div class="stepper" data-cfg="bettingSeconds" data-min="90" data-max="180" data-step="15">
               <button data-dir="-1">–</button>
-              <span class="val"><span class="num">60</span><span class="unit">sec</span></span>
+              <span class="val"><span class="num">90</span><span class="unit">sec</span></span>
               <button data-dir="1">+</button>
             </div>
           </div>
@@ -1977,16 +1977,28 @@ function buildWorld() {
   // Build fixed scoreboard — two columns, positioned in grass above track left of arch
   const archW = 300;
   const archH = 280;
-  const boardW = 560; // wide enough for two columns
+  const boardW = 640; // wide enough for two columns incl. longer horse names
   const boardH = 200;
   const trackTop = getTrackTop(getStageH());
 
   const arch = document.getElementById('finish-arch');
-  // Arch visual centre is at SVG x=150 (midpoint of 20..280), rendered at 150*(300/400)=112.5px from div left
-  const archVisualCentreOffset = 150 * (archW / 400);
+  // The arch SVG has viewBox 0 0 400 280 but renders in a 300x280 box. With the
+  // default preserveAspectRatio (uniform 'meet' scaling) it scales by
+  // min(300/400, 280/280) = 0.75, so the artwork renders 400*0.75=300 wide and
+  // 280*0.75=210 tall, then is centred vertically — leaving a letterbox gap of
+  // (280 - 210) / 2 = 35px of empty space below the arch legs. Without allowing
+  // for that gap the visible arch bottom sits ~35px above the track. Compute it
+  // from the actual dimensions so it stays correct if they change.
+  const VBW = 400, VBH = 280;                 // arch SVG viewBox
+  const renderScale = Math.min(archW / VBW, archH / VBH);
+  const artBottomGap = (archH - VBH * renderScale) / 2;   // empty px below the legs
+  // Arch visual centre is at SVG x=150 (midpoint of 20..280), rendered at
+  // 150*renderScale from the div's left edge.
+  const archVisualCentreOffset = 150 * renderScale;
   arch.style.left = (fpX - archVisualCentreOffset) + 'px';
-  // track-layer has a 4px border-top, so the visible dirt edge is 4px above trackTop
-  arch.style.top = (trackTop - archH - 4) + 'px';
+  // Drop the div so the artwork's bottom (not the div's) lands on the track. The
+  // track-layer has a 4px border-top, so the visible dirt edge is 4px above trackTop.
+  arch.style.top = (trackTop - archH + artBottomGap - 4) + 'px';
 
   const board = document.getElementById('finish-board');
   board.style.left = (fpX - archW / 2 - boardW - 40) + 'px';
@@ -3895,7 +3907,7 @@ const PLAYER_JOIN_URL = 'https://haydenmquaill.github.io/JustaLittleFun';
 const sb = _createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const lobby = {
-  cfg: { numRaces:6, bettingSeconds:60, startingBalance:200, payoutCeiling:5000 },
+  cfg: { numRaces:6, bettingSeconds:90, startingBalance:200, payoutCeiling:5000 },
   session: null,
   channel: null,
   players: [],
@@ -4401,6 +4413,10 @@ async function startRaceCycle(){
   multiGame.awaitingSettle = false;
   multiGame.settledRace = -1;   // allow this race to settle once at its reveal
   // The visible countdown must start from the session's betting seconds.
+  // Hard floor of 90s so there's always time for the runner positions to be
+  // listed on the phones, whatever the config source (default, edit, or DB).
+  const MIN_BETTING_SECONDS = 90;
+  if(!(lobby.cfg.bettingSeconds >= MIN_BETTING_SECONDS)) lobby.cfg.bettingSeconds = MIN_BETTING_SECONDS;
   CONFIG.countdownSeconds = lobby.cfg.bettingSeconds;
 
   // init() runs setupRace() synchronously (so raceHorses + odds exist now),
@@ -5302,7 +5318,7 @@ async function setVoiceLanguage(lang){
   // fixes the case where switching back left the other language's clips active).
   if(_voiceDataByLang[lang]){
     _applyVoiceData(lang);
-    await preloadVoiceClips();
+    await preloadVoiceClipsPrioritised();
     return;
   }
   await loadVoiceManifest(lang);
@@ -5313,7 +5329,7 @@ async function setVoiceLanguage(lang){
   if(_voiceLang !== lang){
     console.warn(`[voice] '${lang}' pack not active (audio/vo/${LANG_FOLDER[lang]||lang}/vo-manifest.json missing, empty, or failed) — still using '${_voiceLang}'.`);
   }
-  await preloadVoiceClips();   // decode whatever pack is now active (missing ones skip)
+  await preloadVoiceClipsPrioritised();   // urgent clips now; rest in background
 }
 
 /* Fetch + parse audio/sfx-manifest.json and overlay it onto SOUND_MANIFEST with
@@ -5383,6 +5399,36 @@ async function _decodeUrls(urls){
    initial load and again whenever the language switches to a new course. */
 async function preloadVoiceClips(){ await _decodeUrls(_allVoiceUrls()); }
 
+/* Clips needed at/near race start: the pre-race announcer sequence
+   (preraceIntro → course → condition remarks → roll call) plus the "intro" and
+   "they're off" stings. Milestone/finish/big-moment clips are NOT here — they're
+   not needed for ~30s+, so they decode in the background. Awaiting only this set
+   lets a race (in any language) begin talking far sooner, which matters most for
+   a cold pack like Japanese on a first race. */
+function _priorityVoiceUrls(){
+  const urls = new Set();
+  ['preraceIntro','intro','theyreOff'].forEach(k=>
+    (VOICE_MANIFEST[k]||[]).forEach(u=>urls.add(u)));
+  Object.values(VOICE_COURSE_LINES).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  ['weather','distance','field'].forEach(grp=>
+    Object.values((VOICE_CONDITION_LINES||{})[grp]||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u))));
+  Object.values(VOICE_ROLLCALL.position||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  (VOICE_ROLLCALL.favourite||[]).forEach(u=>urls.add(u));
+  Object.values(VOICE_ROLLCALL.horseName||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  return urls;
+}
+
+/* Two-phase preload: await the priority clips (so the caller can start the race
+   as soon as the opening lines are ready), then decode everything else in the
+   background without blocking. Returns once the priority set is decoded. */
+async function preloadVoiceClipsPrioritised(){
+  await _decodeUrls(_priorityVoiceUrls());
+  // Background: decode the remaining (milestones/finish/big-moment) clips. Not
+  // awaited — they'll be ready well before they're needed mid-race.
+  const rest = _allVoiceUrls();
+  _decodeUrls(rest);   // fire-and-forget; _decodeUrls skips already-decoded
+}
+
 async function initAudio(){
   if(Audio_.ctx) return;
   const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -5403,10 +5449,11 @@ async function initAudio(){
   // (falls back to the default language before any course is chosen).
   await Promise.all([loadVoiceManifest(courseLang()), loadSoundManifest()]);
 
-  // Preload + decode SFX + the active voice pack. Keyed by URL; missing skip.
+  // Decode SFX + the PRIORITY voice clips before flipping ready — enough to open
+  // a race. The rest of the active pack decodes in the background right after.
   const urls = new Set();
   Object.values(SOUND_MANIFEST).forEach(s=>_specUrls(s).forEach(u=>urls.add(u)));
-  _allVoiceUrls().forEach(u=>urls.add(u));
+  _priorityVoiceUrls().forEach(u=>urls.add(u));
   await _decodeUrls(urls);
   Audio_.ready = true;
   // Run anything that was waiting on audio (menu music, crowd bed) now that the
@@ -5414,6 +5461,29 @@ async function initAudio(){
   const cbs = Audio_._readyCbs || [];
   Audio_._readyCbs = [];
   cbs.forEach(fn=>{ try{ fn(); }catch(e){} });
+
+  // Background, non-blocking: finish decoding the active pack, then warm EVERY
+  // other supported language's pack (manifest + priority clips). This is why a
+  // Japanese first race no longer pays a cold-fetch penalty — by the time the
+  // host starts the session, the JP opening clips are typically already decoded.
+  (async ()=>{
+    try{ _decodeUrls(_allVoiceUrls()); }catch(e){}
+    const others = [...new Set(Object.values(COUNTRY_LANG))]
+      .filter(l => l && l !== _voiceLang);
+    for(const l of others){
+      try{
+        await loadVoiceManifest(l);          // caches the pack (no-op if present)
+        if(_voiceDataByLang[l]){
+          // decode that pack's clips without making it the active language
+          const save = _voiceLang;
+          _applyVoiceData(l);
+          const warm = _priorityVoiceUrls();
+          _applyVoiceData(save);             // restore active pack immediately
+          await _decodeUrls(warm);           // decode JP openers in the background
+        }
+      }catch(e){ /* warming is best-effort */ }
+    }
+  })();
 }
 
 /* Run `fn` as soon as audio is fully loaded. If it's already ready, run now;
