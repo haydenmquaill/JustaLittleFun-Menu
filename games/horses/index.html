@@ -585,10 +585,17 @@ body {
 .ad-slot { position:absolute; inset:0; overflow:hidden; background:var(--white); }
 .ad-slot .ad-media {
   position:absolute; inset:0; width:100%; height:100%;
+  display:block;                     /* kill the inline-baseline gap under <video> */
   object-fit:contain; padding:24px; box-sizing:border-box;
   opacity:0; transition:opacity 0.6s ease; pointer-events:none;
 }
-.ad-slot .ad-media.cover { object-fit:cover; padding:0; }
+/* Cover fills the tile. A tiny overscan (inset:-1px, size calc +2px) guarantees no
+   subpixel seam of the white tile shows at an edge when the video's intrinsic
+   aspect ratio doesn't divide evenly into the slot. */
+.ad-slot .ad-media.cover {
+  object-fit:cover; padding:0;
+  inset:-1px; width:calc(100% + 2px); height:calc(100% + 2px);
+}
 .ad-slot .ad-media.show { opacity:1; }
 #postrace-cam             { background:#1a2a1a; position:relative; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.4); }
 /* Big-moments marquee — scrolls the race's standout bets along the bottom of
@@ -1250,9 +1257,11 @@ const CONFIG = {
   photoFinishMaxLengths: 0.25,
   photoFinishMaxPlaces: 4, // only the top N board rows can be flagged PHOTO FINISH
   recordingWindowPx: 400,
-  // Global race-pace multiplier. <1 slows every horse; >1 speeds them up. 1.0 =
-  // normal tuning. Applies uniformly so relative finishes are unchanged. Kept at
-  // 1.0 — if longer races are wanted, lengthen the track rather than slow horses.
+  // Global race-pace multiplier — scales every horse's top speed uniformly, so it
+  // changes absolute finish times WITHOUT altering relative order or the field's
+  // spread. Target pace ≈ 60s per 1000m. Left at 1.0 as the clean baseline after
+  // the stamina-fade fix; measure a real race, then nudge this to hit the target
+  // (raise if pace reads long, lower if short).
   racePaceScale: 1.0,
   finishHoldMs: 2500,
   slowmoSpeed: 0.25,
@@ -2619,11 +2628,11 @@ function buildRaceParams(horseDef, raceLuck) {
                           horseDef.style === 'LATE_SURGER' ? 2.5 : 1.0;
   const accel = (0.010 + accelRoll * 0.032) * styleAccelBoost;
 
-  // Stamina — scaled to race length so depletion rate is the same proportion of the race
-  // regardless of distance. Without this, FR horses over-fade in long races and
-  // end-closers/late-surgers get a free pass because they hold back during the extra distance.
-  const distanceScale = RACE_LENGTH / (1000 * PX_PER_M); // 1000m baseline
-  const staminaPool = ((400 + staminaRoll * 2100) / RACE_WEATHER.staminaDrainModifier) * distanceScale;
+  // Stamina pool. NOTE: fade is kept length-independent by normalising the DRAIN
+  // rate in tickHorseSpeed (drain ÷ distanceScale), which also fixes the slow-horse
+  // over-drain feedback loop. So the pool itself is NOT distance-scaled here — doing
+  // both would double-correct and leave long races under-fatigued. One correction only.
+  const staminaPool = (400 + staminaRoll * 2100) / RACE_WEATHER.staminaDrainModifier;
 
   // Style pace variance — triangular rolls centred at midpoint
   const tri = () => (Math.random() + Math.random()) / 2;
@@ -2710,9 +2719,16 @@ function tickHorseSpeed(horse, prog) {
 
   const p = horse._raceParams;
 
-  // Stamina drain — 1 unit per 120fps-frame at full speed, proportional to runFraction²
+  // Stamina drain — proportional to runFraction². Drain is normalised by the race's
+  // distanceScale so that TOTAL fade over a race is the same proportion of the pool
+  // regardless of track length. Without this, a longer race takes more frames, and
+  // since drain accrues per-frame, horses over-drained on long tracks — and slower
+  // horses (more frames to cover the distance) over-drained worst, compounding into
+  // a badly stretched tail and an overall-slow pace. Dividing per-frame drain by
+  // distanceScale makes drain-per-unit-distance constant, decoupling fade from length.
   const runFraction = horse._currentSpeed / p.topSpeed;
-  const drain = (runFraction * runFraction) * RACE_WEATHER.staminaDrainModifier * frameDt;
+  const _distScale = (RACE_LENGTH / (1000 * PX_PER_M)) || 1;
+  const drain = (runFraction * runFraction) * RACE_WEATHER.staminaDrainModifier * frameDt / _distScale;
   horse._stamina = Math.max(-99999, horse._stamina - drain);
   const staminaUsed = 1.0 - (horse._stamina / p.staminaPool);
 
@@ -5175,16 +5191,29 @@ async function showFinalLeaderboard(){
       const b = arr && arr.length ? _buf(Array.isArray(arr)?arr[0]:arr) : null;
       return b ? b.duration*1000 : 1400;
     };
+    // Play a generic (name-free) voice line, decoding it on demand first if its
+    // buffer isn't ready. The finale fires seconds after a language switch, and
+    // if the winner/closing clips hadn't finished decoding (or the language
+    // early-returned without a fresh preload) playVoice() would silently no-op —
+    // which is exactly the "fanfare plays but no voices" bug. Decoding here first
+    // guarantees they sound as long as the files exist.
+    const playFinaleVoice = async (key)=>{
+      const arr = VOICE_MANIFEST[key];
+      if(!arr || !arr.length) return;
+      try{ await _decodeUrls(new Set(arr)); }catch(e){}
+      playVoice(key);
+    };
+
     const fanfareSpec = SOUND_MANIFEST.fanfare;
     const fanfareUrl  = fanfareSpec && (Array.isArray(fanfareSpec.url)?fanfareSpec.url[0]:fanfareSpec.url);
     const fanfareBuf  = fanfareUrl ? _buf(fanfareUrl) : null;
     // Wait out most of the sting (cap so a long fanfare doesn't stall the finale).
     const afterFanfare = Math.min(fanfareBuf ? fanfareBuf.duration*1000*0.85 : 1800, 2600);
 
-    setTimeout(()=>{
-      playVoice('winner');
+    setTimeout(async ()=>{
+      await playFinaleVoice('winner');
       // closing follows once winner has finished (+ a short beat).
-      setTimeout(()=>playVoice('closing'), clipMs('winner') + 450);
+      setTimeout(()=>playFinaleVoice('closing'), clipMs('winner') + 450);
     }, afterFanfare);
 
     // Let the roar + fanfare land, then settle the house to a low murmur so the
@@ -6532,9 +6561,15 @@ function createAdCycler(slotEl, playlist){
     const item = items[idx];
     const el = build(item);
 
-    const onFail = ()=>{ el.remove(); advance(tries + 1); };
+    let advanced = false;                 // guard: this item may only advance once
+    const nextOnce = ()=>{ if(advanced) return; advanced = true; clearTimer(); advance(); };
+    let revealed = false;                 // guard: reveal must run once (canplay can re-fire)
+
+    const onFail = ()=>{ el.remove(); if(!advanced){ advanced = true; advance(tries + 1); } };
 
     const reveal = ()=>{
+      if(revealed) return;                // canplay/loadeddata can fire repeatedly
+      revealed = true;
       if(stopped){ el.remove(); return; }
       slotEl.appendChild(el);
       // Force layout then fade in; fade out + remove the previous layer.
@@ -6546,14 +6581,16 @@ function createAdCycler(slotEl, playlist){
       // Schedule the next advance.
       if(item.type === 'video'){
         // Video governs its own duration: advance when it ends. A safety timer
-        // covers a clip that never fires 'ended' (e.g. stalled).
-        el.onended = ()=>{ clearTimer(); advance(); };
-        const safety = ()=>{ timer = setTimeout(()=>advance(), (el.duration ? el.duration*1000 : 15000) + 1000); };
+        // covers a clip that never fires 'ended' (e.g. stalled). Both route through
+        // nextOnce() so a late 'ended' and the safety timer can't double-advance,
+        // and a canplay re-fire can't stack extra timers/plays.
+        el.onended = nextOnce;
+        const safety = ()=>{ clearTimer(); timer = setTimeout(nextOnce, (el.duration ? el.duration*1000 : 15000) + 1200); };
         if(el.readyState >= 1 && el.duration) safety(); else el.onloadedmetadata = safety;
         const p = el.play(); if(p && p.catch) p.catch(()=>{ /* if it won't play, safety timer still advances */ });
       } else {
         clearTimer();
-        timer = setTimeout(()=>advance(), item.ms);
+        timer = setTimeout(nextOnce, item.ms);
       }
     };
 
