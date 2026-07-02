@@ -152,6 +152,30 @@ body {
 }
 .stepper .val .unit { font-size:1.1rem; color:var(--mid); margin-left:4px; }
 
+/* Course picker — grouped chips inside a lobby-card, toggled on/off by the host */
+.course-picker { padding:6px 4px 2px; }
+.course-picker .cp-group { margin-bottom:12px; }
+.course-picker .cp-group:last-child { margin-bottom:2px; }
+.course-picker .cp-head {
+  display:flex; align-items:center; justify-content:space-between;
+  font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:1.3rem;
+  letter-spacing:1px; text-transform:uppercase; color:var(--mid); margin-bottom:6px;
+}
+.course-picker .cp-head .cp-all {
+  font-family:'Oswald',sans-serif; font-size:1rem; letter-spacing:.5px;
+  color:var(--blue); cursor:pointer; background:none; border:none; text-transform:uppercase;
+}
+.course-picker .cp-chips { display:flex; flex-wrap:wrap; gap:7px; }
+.course-picker .cp-chip {
+  font-family:'Oswald',sans-serif; font-weight:600; font-size:1.25rem;
+  padding:6px 12px; border-radius:6px; cursor:pointer; user-select:none;
+  border:2px solid #c3ccdd; background:#eef1f7; color:var(--mid);
+  transition:background .12s, border-color .12s, color .12s;
+}
+.course-picker .cp-chip.on { background:var(--blue); border-color:var(--blue); color:#fff; }
+.course-picker .cp-empty { color:var(--mid); font-size:1.2rem; padding:6px 2px; }
+.settings-summary .ss-item .ss-val.wrap { white-space:normal; }
+
 /* Room code — navy board, not the black one, so it reads as part of the frame */
 .code-board {
   background:var(--blue); border:4px solid #33508a;
@@ -941,6 +965,12 @@ body {
           </div>
         </div>
       </div>
+      <div class="lobby-card">
+        <div class="lobby-card-head">Courses in play<small>Which tracks can come up this session. At least one required.</small></div>
+        <div class="course-picker" id="course-picker">
+          <div class="cp-empty">Loading courses…</div>
+        </div>
+      </div>
       <div class="lobby-actions">
         <button class="lobby-btn ghost" id="lobby-config-back">Cancel</button>
         <button class="lobby-btn gold" id="lobby-create" style="margin-top:0;">Confirm</button>
@@ -977,6 +1007,7 @@ body {
         <div class="ss-item"><span class="ss-lab">Races</span><span class="ss-val" id="ss-races">6</span></div>
         <div class="ss-item"><span class="ss-lab">Betting</span><span class="ss-val" id="ss-betting">60s</span></div>
         <div class="ss-item"><span class="ss-lab">Balance</span><span class="ss-val" id="ss-balance">$200</span></div>
+        <div class="ss-item"><span class="ss-lab">Courses</span><span class="ss-val wrap" id="ss-courses">All</span></div>
       </div>
 
       <div class="lobby-actions">
@@ -1168,10 +1199,10 @@ const CONFIG = {
   photoFinishMaxLengths: 0.25,
   photoFinishMaxPlaces: 4, // only the top N board rows can be flagged PHOTO FINISH
   recordingWindowPx: 400,
-  // Global race-pace multiplier. <1 slows every horse (longer races, more room
-  // between the milestone/condition voice calls); >1 speeds them up. 1.0 = the
-  // original tuning. Applies uniformly so relative finishes are unchanged.
-  racePaceScale: 0.8,
+  // Global race-pace multiplier. <1 slows every horse; >1 speeds them up. 1.0 =
+  // normal tuning. Applies uniformly so relative finishes are unchanged. Kept at
+  // 1.0 — if longer races are wanted, lengthen the track rather than slow horses.
+  racePaceScale: 1.0,
   finishHoldMs: 2500,
   slowmoSpeed: 0.25,
   forceSlowmo: false,
@@ -1439,8 +1470,16 @@ function rollWeather() {
 }
 
 function setupRace() {
-  // Pick random course
-  RACECOURSE = COURSES_DATA[Math.floor(Math.random()*COURSES_DATA.length)];
+  // Pick a random course from the session's included set (falls back to all if the
+  // config is missing/empty, so a race is never left without a course).
+  const inc = (lobby && lobby.cfg && lobby.cfg.includedCourses) || null;
+  let pool = COURSES_DATA;
+  if(inc && inc.length){
+    const set = new Set(inc);
+    const filtered = COURSES_DATA.filter(c=>set.has(c.id));
+    if(filtered.length) pool = filtered;
+  }
+  RACECOURSE = pool[Math.floor(Math.random()*pool.length)];
   // Pick terrain and distance
   RACE_TERRAIN = RACECOURSE.terrains[Math.floor(Math.random()*RACECOURSE.terrains.length)];
   RACE_DISTANCE = RACECOURSE.distances[Math.floor(Math.random()*RACECOURSE.distances.length)];
@@ -3907,7 +3946,7 @@ const PLAYER_JOIN_URL = 'https://haydenmquaill.github.io/JustaLittleFun';
 const sb = _createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const lobby = {
-  cfg: { numRaces:6, bettingSeconds:90, startingBalance:200, payoutCeiling:5000 },
+  cfg: { numRaces:6, bettingSeconds:90, startingBalance:200, payoutCeiling:5000, includedCourses:null, includedCountries:null },
   session: null,
   channel: null,
   players: [],
@@ -3920,6 +3959,8 @@ const lq = sel => document.querySelector(sel);
 function showStack(id){
   document.querySelectorAll('.lobby-stack').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  if(id==='lobby-config') renderCoursePicker();
+  if(id==='lobby-room')   renderSettingsSummary();
 }
 
 /* steppers — update the in-memory cfg + the on-screen number. Nothing is sent
@@ -3951,6 +3992,105 @@ function renderSettingsSummary(){
   if(r)   r.textContent   = lobby.cfg.numRaces;
   if(b)   b.textContent   = lobby.cfg.bettingSeconds + 's';
   if(bal) bal.textContent = '$' + lobby.cfg.startingBalance;
+  const c=lq('#ss-courses');
+  if(c){
+    const total = (COURSES_DATA||[]).length;
+    const inc = lobby.cfg.includedCourses;
+    c.textContent = (!inc || inc.length===0 || inc.length===total)
+      ? `All ${total||''}`.trim()
+      : `${inc.length} of ${total}`;
+  }
+}
+
+/* Normalise includedCourses to a concrete array of ids. null/empty means "all",
+   materialised against the loaded course list. */
+function effectiveIncludedCourses(){
+  const all = (COURSES_DATA||[]).map(c=>c.id);
+  const inc = lobby.cfg.includedCourses;
+  if(!inc || !inc.length) return all;
+  const set = new Set(all);
+  const filtered = inc.filter(id=>set.has(id));
+  return filtered.length ? filtered : all;   // never empty
+}
+
+/* Derive the set of countries covered by the included courses and store it on
+   the config as `includedCountries`. This is what the PLAYER reads to scope its
+   horse viewer — the player never needs courses.json because the host resolves
+   ids → countries here and writes the answer into the synced config. */
+function syncIncludedCountries(){
+  const ids = new Set(effectiveIncludedCourses());
+  const seen = [];
+  for(const c of (COURSES_DATA||[])){
+    if(ids.has(c.id)){ const k=c.country||'AU'; if(!seen.includes(k)) seen.push(k); }
+  }
+  lobby.cfg.includedCountries = seen.length ? seen : null;
+}
+
+/* Render the course picker in the config card, grouped by country. Ensures the
+   game data (course list) is loaded first, since it's fetched async. */
+async function renderCoursePicker(){
+  const host = lq('#course-picker'); if(!host) return;
+  try { await loadGameData(); } catch(e){ /* fall through to empty state */ }
+  const courses = COURSES_DATA || [];
+  if(!courses.length){ host.innerHTML = '<div class="cp-empty">Couldn’t load courses.</div>'; return; }
+
+  if(lobby.cfg.includedCourses == null){
+    lobby.cfg.includedCourses = courses.map(c=>c.id);
+  }
+  syncIncludedCountries();
+  const sel = new Set(lobby.cfg.includedCourses);
+
+  const LABEL = { AU:'Australian', JP:'Japanese' };
+  const groups = [];
+  const byCountry = {};
+  for(const c of courses){
+    const k = c.country || 'AU';
+    if(!byCountry[k]){ byCountry[k] = []; groups.push(k); }
+    byCountry[k].push(c);
+  }
+  host.innerHTML = groups.map(k=>{
+    const chips = byCountry[k].map(c=>
+      `<span class="cp-chip ${sel.has(c.id)?'on':''}" data-cid="${c.id}">${escapeHtml(c.name)}</span>`
+    ).join('');
+    return `<div class="cp-group">
+      <div class="cp-head"><span>${LABEL[k]||k}</span>
+        <button class="cp-all" data-country="${k}">Toggle all</button></div>
+      <div class="cp-chips">${chips}</div>
+    </div>`;
+  }).join('');
+
+  host.querySelectorAll('.cp-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const id = chip.dataset.cid;
+      const s = new Set(lobby.cfg.includedCourses);
+      if(s.has(id)) s.delete(id); else s.add(id);
+      lobby.cfg.includedCourses = [...s];
+      chip.classList.toggle('on', s.has(id));
+      syncIncludedCountries();
+      updateCoursePickerMsg();
+    });
+  });
+  host.querySelectorAll('.cp-all').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const k = btn.dataset.country;
+      const ids = byCountry[k].map(c=>c.id);
+      const s = new Set(lobby.cfg.includedCourses);
+      const allOn = ids.every(id=>s.has(id));
+      ids.forEach(id=> allOn ? s.delete(id) : s.add(id));
+      lobby.cfg.includedCourses = [...s];
+      renderCoursePicker();
+    });
+  });
+  updateCoursePickerMsg();
+}
+
+/* Warn (and block Confirm) if the host has deselected every course. */
+function updateCoursePickerMsg(){
+  const msg = lq('#lobby-config-msg'), btn = lq('#lobby-create');
+  const none = !lobby.cfg.includedCourses || lobby.cfg.includedCourses.length===0;
+  if(msg && none){ msg.textContent = 'Pick at least one course to run.'; }
+  else if(msg && msg.textContent==='Pick at least one course to run.'){ msg.textContent=''; }
+  if(btn) btn.disabled = none;
 }
 
 /* Start session → create the session immediately with the default config and go
@@ -4020,6 +4160,10 @@ lq('#lobby-create').addEventListener('click', confirmConfig);
 
 async function confirmConfig(){
   if(!lobby.session){ showStack('lobby-room'); return; }
+  if(lobby.cfg.includedCourses && lobby.cfg.includedCourses.length===0){
+    lq('#lobby-config-msg').textContent = 'Pick at least one course to run.';
+    return;
+  }
   const btn = lq('#lobby-create'); btn.disabled = true;
   const oldLabel = btn.textContent; btn.textContent = 'Saving…';
   const { error } = await sb.rpc('apply_config', {
