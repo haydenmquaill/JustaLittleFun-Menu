@@ -53,6 +53,9 @@ body {
    matching the density of the race engine. */
 .lobby-stack { display:none; width:100%; max-width:1280px; padding:36px; }
 .lobby-stack.active { display:flex; flex-direction:column; align-items:stretch; gap:0; }
+/* Bound the config screen to the frame height so its (taller) body scrolls
+   internally instead of overflowing and clipping the Confirm/Cancel buttons. */
+#lobby-config.lobby-stack.active { max-height:100vh; box-sizing:border-box; }
 
 /* Top banner — navy, skewed, like the engine's controls bar */
 .lobby-banner {
@@ -78,6 +81,13 @@ body {
   margin-top:20px; padding:48px 56px;
   display:flex; flex-direction:column; align-items:center;
   flex:1; min-height:560px; justify-content:center;
+}
+/* The config screen carries two cards + actions; centring overflowed the fixed
+   viewport and clipped the buttons. Top-pack it with tighter spacing and let it
+   scroll internally as a last resort rather than pushing content off-screen. */
+#lobby-config .lobby-body {
+  justify-content:flex-start; padding:28px 56px; gap:16px;
+  min-height:0; overflow-y:auto;
 }
 
 .lobby-eyebrow {
@@ -127,6 +137,10 @@ body {
   font-family:'Oswald',sans-serif; font-weight:700; font-size:1.8rem;
   letter-spacing:4px; text-transform:uppercase; padding:14px 28px;
 }
+.lobby-card-head small {
+  display:block; margin-top:4px; font-size:1rem; letter-spacing:2px;
+  font-weight:400; color:rgba(255,255,255,0.6); text-transform:uppercase;
+}
 .lobby-rows { padding:14px 28px 26px; }
 .lobby-row {
   display:flex; align-items:center; justify-content:space-between;
@@ -152,28 +166,30 @@ body {
 }
 .stepper .val .unit { font-size:1.1rem; color:var(--mid); margin-left:4px; }
 
-/* Course picker — grouped chips inside a lobby-card, toggled on/off by the host */
-.course-picker { padding:6px 4px 2px; }
-.course-picker .cp-group { margin-bottom:12px; }
-.course-picker .cp-group:last-child { margin-bottom:2px; }
+/* Course picker — grouped chips inside a lobby-card, toggled on/off by the host.
+   Kept compact and two-up (AU | JP side by side) so the config fits the fixed
+   TV viewport without overflowing the Confirm/Cancel buttons. */
+.course-picker { padding:12px 20px 14px; display:flex; gap:24px; }
+.course-picker .cp-group { flex:1; min-width:0; }
 .course-picker .cp-head {
-  display:flex; align-items:center; justify-content:space-between;
-  font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:1.3rem;
-  letter-spacing:1px; text-transform:uppercase; color:var(--mid); margin-bottom:6px;
+  display:flex; align-items:baseline; justify-content:space-between;
+  font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:1.15rem;
+  letter-spacing:1px; text-transform:uppercase; color:var(--mid);
+  margin-bottom:7px; border-bottom:1px solid #e2e2e2; padding-bottom:4px;
 }
 .course-picker .cp-head .cp-all {
-  font-family:'Oswald',sans-serif; font-size:1rem; letter-spacing:.5px;
+  font-family:'Oswald',sans-serif; font-size:0.85rem; letter-spacing:.5px;
   color:var(--blue); cursor:pointer; background:none; border:none; text-transform:uppercase;
 }
-.course-picker .cp-chips { display:flex; flex-wrap:wrap; gap:7px; }
+.course-picker .cp-chips { display:flex; flex-wrap:wrap; gap:5px; }
 .course-picker .cp-chip {
-  font-family:'Oswald',sans-serif; font-weight:600; font-size:1.25rem;
-  padding:6px 12px; border-radius:6px; cursor:pointer; user-select:none;
-  border:2px solid #c3ccdd; background:#eef1f7; color:var(--mid);
+  font-family:'Oswald',sans-serif; font-weight:600; font-size:0.95rem;
+  padding:4px 9px; border-radius:5px; cursor:pointer; user-select:none;
+  border:1.5px solid #c3ccdd; background:#eef1f7; color:var(--mid);
   transition:background .12s, border-color .12s, color .12s;
 }
 .course-picker .cp-chip.on { background:var(--blue); border-color:var(--blue); color:#fff; }
-.course-picker .cp-empty { color:var(--mid); font-size:1.2rem; padding:6px 2px; }
+.course-picker .cp-empty { color:var(--mid); font-size:1rem; padding:6px 2px; }
 .settings-summary .ss-item .ss-val.wrap { white-space:normal; }
 
 /* Room code — navy board, not the black one, so it reads as part of the frame */
@@ -433,7 +449,7 @@ body {
 #prerace-ui { display:flex; flex-direction:column; gap:0; width:100%; flex:1; min-height:0; }
 #prerace-top { display:flex; gap:36px; height:477px; flex-shrink:0; align-items:stretch; }
 #logo-panel {
-  flex:1; background:var(--white); 
+  flex:1; background:var(--white); position:relative; overflow:hidden;
   display:flex; align-items:center; justify-content:center;
   padding:24px; box-shadow:0 2px 12px rgba(0,0,0,0.4);
 }
@@ -543,6 +559,19 @@ body {
 #postrace-ui.visible      { opacity:1; }
 #postrace-grid            { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:minmax(0,477px) auto; gap:36px; flex:1; min-height:0; }
 #postrace-logo            { background:var(--white); position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:24px; box-shadow:0 2px 12px rgba(0,0,0,0.4); }
+/* ── Cycling ad / media slot ─────────────────────────────────────────────
+   Drops into the pre-race #logo-panel and post-race #postrace-logo tiles.
+   Holds stacked <img>/<video> layers that cross-fade between playlist items.
+   The slot fills its tile; each media item is object-fit:contain by default so
+   logos/ads aren't cropped (set data-fit="cover" per item to fill instead). */
+.ad-slot { position:absolute; inset:0; overflow:hidden; background:var(--white); }
+.ad-slot .ad-media {
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:contain; padding:24px; box-sizing:border-box;
+  opacity:0; transition:opacity 0.6s ease; pointer-events:none;
+}
+.ad-slot .ad-media.cover { object-fit:cover; padding:0; }
+.ad-slot .ad-media.show { opacity:1; }
 #postrace-cam             { background:#1a2a1a; position:relative; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.4); }
 /* Big-moments marquee — scrolls the race's standout bets along the bottom of
    the post-race screen, mirroring the final-leaderboard marquee. */
@@ -1027,7 +1056,7 @@ body {
   <div id="prerace-ui">
     <div id="prerace-top">
       <div id="logo-panel">
-        <img src="assets/jalf_logo.png" alt="JustaLittleFun Racing" style="max-width:90%;max-height:90%;object-fit:contain;">
+        <div class="ad-slot" id="ad-slot-prerace"></div>
       </div>
       <div id="cam-panel-placeholder"></div>
     </div>
@@ -1061,7 +1090,7 @@ body {
   <div id="postrace-ui">
     <div id="postrace-grid">
       <div id="postrace-logo">
-        <img src="assets/jalf_logo.png" alt="JustaLittleFun Racing" style="max-width:90%;max-height:90%;object-fit:contain;">
+        <div class="ad-slot" id="ad-slot-postrace"></div>
       </div>
       <div id="postrace-cam">
         <div id="postrace-replay-badge" style="display:none;">SLOW MO REPLAY</div>
@@ -1224,13 +1253,18 @@ const CONFIG = {
   // listed here just use deathChance. Tune these freely — they're the real knobs.
   // Keys are weather ids (see weather.json): w03=Light Rain, w04=Heavy Rain, w06=Thunderstorm.
   // Snow tiers mirror the rain tiers exactly (w09/w10/w11 ≈ w03/w04/w06).
+  // These are P(at least one horse falls) per race for each wet/heavy weather.
+  // Dialled DOWN from the old 0.20 / 0.60 / 0.90 — falls were happening too
+  // often in bad weather — but storm/blizzard kept at 0.60 (not 0.50) so the
+  // worst conditions still carry a real, race-shaping fall risk. The tiers keep
+  // their relative ordering (worse weather falls more). Tune freely.
   weatherFallTarget: {
-    "w03": 0.20,   // Light Rain
-    "w04": 0.60,   // Heavy Rain
-    "w06": 0.90,   // Thunderstorm
-    "w09": 0.20,   // Light Snow   (≈ Light Rain)
-    "w10": 0.60,   // Heavy Snow   (≈ Heavy Rain)
-    "w11": 0.90,   // Blizzard     (≈ Thunderstorm)
+    "w03": 0.10,   // Light Rain
+    "w04": 0.30,   // Heavy Rain
+    "w06": 0.60,   // Thunderstorm
+    "w09": 0.10,   // Light Snow   (≈ Light Rain)
+    "w10": 0.30,   // Heavy Snow   (≈ Heavy Rain)
+    "w11": 0.60,   // Blizzard     (≈ Thunderstorm)
   },
   weatherFallEligibleTicks: 1800, // ~death-eligible ticks per race (prog 0.08–0.90 window);
                                   // used only to convert a target into a per-tick chance.
@@ -1487,7 +1521,8 @@ function setupRace() {
   RACE_WEATHER = rollWeather();
   // Set race length from distance. This is the VISUAL track length in world px only —
   // the displayed distance (RACE_DISTANCE) and all odds/label logic are unaffected.
-  // Scale: PX_PER_M px per metre — 25% longer track than the old 5 px/m.
+  // Strictly proportional to distance (PX_PER_M px/metre) so race length and
+  // duration scale with the real distance and the announcer calls stay spaced.
   RACE_LENGTH = RACE_DISTANCE * PX_PER_M;
   // Roll field size
   RACE_FIELD_SIZE = rollFieldSize();
@@ -1739,7 +1774,16 @@ const SCALE=1.5;
 const DRAW_W=Math.round(FRAME_W*SCALE), DRAW_H=Math.round(FRAME_H*SCALE);
 
 let RACE_LENGTH = 10000; // updated by setupRace based on distance
-const PX_PER_M  = 6.25;  // world px per race metre (visual track scale)
+/* World px per race metre (visual track scale). Raised from the old 6.25 so the
+   fixed-PROGRESS announcer calls are far enough apart in TIME not to overlap.
+   The calls fire at quarter 0.25, half 0.50, threeQ 0.75, lastCorner 0.82,
+   finalStraight 0.90 — the tightest pair (threeQ→lastCorner) is 0.07 of the
+   track apart. At a leader cruise of ~516 px/s this scale makes an average
+   1000m race ~65s and that tightest gap ~4.5s, with every longer distance
+   scaling up proportionally (a 3200m race is ~3.2× the 1000m length/time). No
+   minimum/floor: length stays strictly proportional to distance so a 1000m and
+   a 2400m race are never the same duration. */
+const PX_PER_M  = 33;
 const WALK_UP_START = -1800;  // horses start far left for a long cinematic walk-up
 const START_X       = 800;    // gate well to the right so camera has room to pan
 const VIEWPORT_W    = 1848;
@@ -1791,8 +1835,20 @@ let WORLD_W = RACE_LENGTH + VIEWPORT_W*3 + Math.abs(WALK_UP_START); // recompute
 function applyTrackTheme() {
   const track = document.getElementById('track-layer');
   const grass = document.getElementById('grass-layer');
+  const stage = document.getElementById('track-stage');
   const vis   = RACE_WEATHER && RACE_WEATHER.visual;
   const snowy = vis && vis.particleType === 'snow';
+
+  // #track-stage carries a static green base that shows through in the
+  // foreground apron below the bottom rail (the "bottom grass"). It must follow
+  // the ground theme too, or it stays green while everything else turns white in
+  // snow. Cool blue-grey white to match the snow ground (kept distinct from the
+  // brighter falling flakes); reset to green on any non-snow theme.
+  if(stage){
+    stage.style.background = snowy
+      ? ((vis.particleIntensity || 0) >= 0.7 ? '#e2ebf2' : '#d5e0ea')
+      : '#4a8a3a';
+  }
 
   if(snowy){
     // Snow-covered ground. Deliberately a cooler, faintly blue-grey white
@@ -3189,22 +3245,40 @@ function raceTick(ts) {
     const nextPlaceIsPodium = finishOrder.length < eligiblePlaces;
     // Start: eligible spot open, 2+ horses approaching, no replay saved yet
     const shouldStart = podiumOpen && nextPlaceIsPodium && approaching.length >= 2 && !replaySlot;
-    // Stop when EITHER the podium is full (4 crossed — nothing below 4th can be a
-    // photo finish, so never record past that) OR every current member has
-    // crossed. The podium-full check is what prevents the cluster ballooning to
-    // the back of the field.
-    const podiumFull = finishOrder.length >= eligiblePlaces;
-    const shouldStop = isRecording && activeSlot &&
-      (podiumFull || [...activeSlot.members].every(h => h.finished || h.dead));
+
+    // Photo-tight distance in world px: how close a runner must be to the current
+    // cluster to count as part of the SAME blanket. One body length = DRAW_W px;
+    // the podium-margin threshold is photoFinishMaxLengths lengths. We allow a
+    // little headroom (×1.5) so a genuine 3-4-way blanket is still captured, but
+    // a clear length-back straggler is not. This is what stops a 2nd/3rd photo's
+    // recording from ballooning to include the (length-back) 4th horse.
+    const PHOTO_TIGHT_PX = DRAW_W * CONFIG.photoFinishMaxLengths * 1.5;
 
     if(shouldStart && !isRecording) {
       startClusterRecording(new Set(approaching));
-    } else if(isRecording && activeSlot && approaching.length > 0 && !podiumFull) {
-      // Absorb a horse joining the window mid-approach ONLY while a podium spot is
-      // still open — a runner that can at best finish 5th can't be in a photo
-      // finish, so it must never be recorded into the cluster.
-      approaching.forEach(h => activeSlot.members.add(h));
+    } else if(isRecording && activeSlot && approaching.length > 0) {
+      // Absorb a newcomer ONLY if it's photo-tight against the current rearmost
+      // (smallest worldX) member — i.e. a real continuation of the same blanket —
+      // AND a podium spot is still open. Merely being inside the recording window
+      // is NOT enough: a runner a full length back can't be in this photo and must
+      // never join the cluster (that was the bug that ran recording to 4th place).
+      if(podiumOpen){
+        let rearX = Infinity;
+        activeSlot.members.forEach(h => { if(h.worldX < rearX) rearX = h.worldX; });
+        approaching.forEach(h => {
+          if(Math.abs(h.worldX - rearX) <= PHOTO_TIGHT_PX) activeSlot.members.add(h);
+        });
+      }
     }
+
+    // Stop as soon as every current member has crossed (or died) — the tight pair
+    // is fully recorded at that point. We NO LONGER wait for the podium to fill:
+    // on a 2nd/3rd photo the cluster is just those two, so recording ends when 3rd
+    // crosses, not when an unrelated 4th finally arrives. The podium-full guard
+    // stays purely as a hard backstop against ever recording past 4th.
+    const podiumFull = finishOrder.length >= eligiblePlaces;
+    const allMembersDone = [...activeSlot?.members || []].every(h => h.finished || h.dead);
+    const shouldStop = isRecording && activeSlot && (allMembersDone || podiumFull);
 
     if(shouldStop) {
       // Use the two most recent finishers — they are the pair we just recorded
@@ -3267,7 +3341,11 @@ function raceTick(ts) {
   applyCamera();
 
 
-  // Milestones (voice-only now; text captions were removed with the announcer bar)
+  // Milestone gates stay at their natural progress points; the spacing between
+  // calls is carried by the track scale (PX_PER_M), sized so an average 1000m
+  // race (~65s) leaves the tightest pair — threeQ (0.75) → lastCorner (0.82) —
+  // ~4.5s apart, with every longer distance more generous still. So the calls
+  // (including the per-horse quarter/half lines) no longer trip over each other.
   if(leaderProgress>0.25&&lastMilestone<1){lastMilestone=1;playVoice('quarter', { horse: leader.def.id });}
   if(leaderProgress>0.5&&lastMilestone<2){lastMilestone=2;playVoice('half', { horse: leader.def.id });}
   if(leaderProgress>0.75&&lastMilestone<3){lastMilestone=3;setCrowd('finish',2.5);playVoice('threeQ');}
@@ -4532,6 +4610,7 @@ function buildOddsTable(){
   // (and so each bet can carry its course at placement, for big moments etc).
   table.course = {
     name:       RACECOURSE ? RACECOURSE.name : '',
+    country:    RACECOURSE ? (RACECOURSE.country || 'AU') : '',
     distance:   RACE_DISTANCE || null,
     terrain:    RACE_TERRAIN || '',
     conditions: RACE_WEATHER ? `${RACE_WEATHER.label} (${RACE_WEATHER.railCondition})` : '',
@@ -4846,9 +4925,11 @@ async function showRaceBigMoments(roundNumber){
   const moments = computeBigMoments(bets, { names, getRoundMeta, startBank });
   if(!moments.length){ marquee.style.display='none'; return; }
 
-  // Voice the standout moment — a win gets a congratulation, a loss a consoling
-  // "get 'em next time". Delayed so it follows the podium placers, not over them.
-  setTimeout(()=>playBigMomentVoice(moments), 3200);
+  // Voice the standout moment(s) — a win gets a congratulation, a loss a
+  // consoling "get 'em next time". This now internally waits for the podium
+  // read-out to finish before speaking (see playBigMomentVoice), so it follows
+  // the place_ calls rather than playing over them; no fixed delay needed.
+  playBigMomentVoice(moments);
 
   // Repeat the set until it spans the marquee, THEN duplicate for the loop, so
   // a sparse race's few moments don't pop in on the left mid-scroll.
@@ -4948,6 +5029,28 @@ async function showFinalLeaderboard(){
     metaByRace[r.round_number] = { names: ot.names||{}, silks: ot.silks||{}, course: ot.course||{} };
   });
 
+  // ── Finale sign-off language ────────────────────────────────────────────
+  // The winner/closing lines are a GAME-WIDE sign-off, not tied to any one race,
+  // so we choose their language deliberately rather than inheriting whatever the
+  // last race happened to leave active (which was arbitrary — a JP final race
+  // meant a Japanese sign-off even on an otherwise all-Australian card). Rule:
+  // go with the language of the MAJORITY of races on the card (ties fall to the
+  // default). Each round now stamps course.country (see buildOddsTable).
+  let _finaleLang = DEFAULT_LANG;
+  {
+    const tally = {};
+    (rounds || []).forEach(r => {
+      const c = r.odds_table && r.odds_table.course && r.odds_table.course.country;
+      const l = langForCountry(c);
+      tally[l] = (tally[l] || 0) + 1;
+    });
+    let best = -1;
+    for(const [l, n] of Object.entries(tally)){
+      // Strict '>' keeps DEFAULT_LANG (seeded implicitly) winning ties.
+      if(n > best){ best = n; _finaleLang = l; }
+    }
+  }
+
   const highlights = computeBigMoments(allBets || [], {
     names: nameById,
     getRoundMeta: rn => metaByRace[rn] || {},
@@ -4985,7 +5088,7 @@ async function showFinalLeaderboard(){
   // Reveal bottom→top with growing suspense on the podium, climbing the list so
   // higher ranks stay in view. When 1st lands: paint champion, confetti,
   // marquee, AND signal the phones so each player sees their placement THEN.
-  revealStandingsBottomUp(() => {
+  revealStandingsBottomUp(async () => {
     paintChampion();
     if(champCard) champCard.classList.remove('pending');
     if(marquee) marquee.style.visibility = '';
@@ -4994,10 +5097,37 @@ async function showFinalLeaderboard(){
     setCrowd('podium', 0.4);                  // champion revealed — the crowd erupts
     playSound('cheer', { volume:1.0 });
     playSound('fanfare', { volume:0.9 });
-    playVoice('winner');
-    _voiceAfter('winner', 'closing', 400);   // general sign-off: congrats to our champion, hope you had fun
     startMarquee();
     signalFinalReveal();   // tell phones to reveal placements now
+
+    // Winner + closing sign-off. Two fixes over the old fire-at-once version:
+    //  1) LANGUAGE — switch to the deliberately-chosen finale language (and wait
+    //     for its clips to decode) so the sign-off isn't in whatever tongue the
+    //     last race left active, and so a cold clip isn't a silent no-op.
+    //  2) TIMING — the old code played the winner line on the SAME tick as the
+    //     fanfare, so the voice was masked under the sting (on the music bus) and
+    //     effectively inaudible. We now hold the voice until the fanfare has
+    //     mostly rung out, then play winner, then closing after it — each spaced
+    //     by its own measured clip length.
+    try{ await setVoiceLanguage(_finaleLang); }catch(e){}
+
+    const clipMs = (key)=>{
+      const arr = VOICE_MANIFEST[key];
+      const b = arr && arr.length ? _buf(Array.isArray(arr)?arr[0]:arr) : null;
+      return b ? b.duration*1000 : 1400;
+    };
+    const fanfareSpec = SOUND_MANIFEST.fanfare;
+    const fanfareUrl  = fanfareSpec && (Array.isArray(fanfareSpec.url)?fanfareSpec.url[0]:fanfareSpec.url);
+    const fanfareBuf  = fanfareUrl ? _buf(fanfareUrl) : null;
+    // Wait out most of the sting (cap so a long fanfare doesn't stall the finale).
+    const afterFanfare = Math.min(fanfareBuf ? fanfareBuf.duration*1000*0.85 : 1800, 2600);
+
+    setTimeout(()=>{
+      playVoice('winner');
+      // closing follows once winner has finished (+ a short beat).
+      setTimeout(()=>playVoice('closing'), clipMs('winner') + 450);
+    }, afterFanfare);
+
     // Let the roar + fanfare land, then settle the house to a low murmur so the
     // leaderboard sits quiet (and AGAIN / MAIN MENU don't start from a loud bed).
     setTimeout(()=>setCrowd('idle', 3.0), 4000);
@@ -5551,8 +5681,28 @@ async function preloadVoiceClips(){ await _decodeUrls(_allVoiceUrls()); }
    a cold pack like Japanese on a first race. */
 function _priorityVoiceUrls(){
   const urls = new Set();
-  ['preraceIntro','intro','theyreOff'].forEach(k=>
-    (VOICE_MANIFEST[k]||[]).forEach(u=>urls.add(u)));
+  // Everything that can fire from the moment betting closes through to the photo
+  // finish must be decoded before the FIRST race in a given language — otherwise
+  // a cold pack (notably Japanese on race 1) silently no-ops these because their
+  // buffers aren't ready yet, and they only "come alive" from race 2 once the
+  // background decode has caught up. bettingClosed/handover fire seconds after
+  // this preload; the milestone + finish + podium families all fire within the
+  // same ~90s race, so include them here rather than in the fire-and-forget pass.
+  [
+    'preraceIntro','bettingClosed','handover','intro','theyreOff',
+    'quarter','half','threeQ','lastCorner','finalStraight','firstPastPost',
+    'down','photoClose','photoNose',
+    'placeFirst','placeSecond','placeThird',
+    'placeFirstPhoto','placeSecondPhoto','placeThirdPhoto',
+    'bigWin','bigLoss','winner','closing',
+  ].forEach(k=> (VOICE_MANIFEST[k]||[]).forEach(u=>urls.add(u)));
+  // Per-horse finish lines (down / firstPastPost / place*) live under
+  // VOICE_HORSE_LINES; decode those too so named finish calls aren't cold.
+  ['down','firstPastPost','placeFirst','placeSecond','placeThird',
+   'placeFirstPhoto','placeSecondPhoto','placeThirdPhoto'].forEach(k=>{
+    const byHorse = (typeof VOICE_HORSE_LINES !== 'undefined' && VOICE_HORSE_LINES[k]) || {};
+    Object.values(byHorse).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  });
   Object.values(VOICE_COURSE_LINES).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
   ['weather','distance','field'].forEach(grp=>
     Object.values((VOICE_CONDITION_LINES||{})[grp]||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u))));
@@ -5975,8 +6125,20 @@ function _voiceAfter(afterKey, nextKey, gapMs=250){
    falls back to the horse's normal placement line. So in a race where 1st/2nd was a
    photo but 3rd cruised in, 1st and 2nd get photo lines and 3rd gets a normal line.
    Interruptible by the roll-call token. */
+/* Resolves when the most recent podium read-out has finished speaking (or
+   immediately if there was none). The big-moment flourish awaits this so its
+   congratulate/console line lands AFTER the placings instead of over them. Reset
+   to a fresh pending promise at the start of every podium sequence. */
+let _podiumDone = Promise.resolve();
+let _resolvePodiumDone = null;
+
 async function playPodiumPlacers(placers){
-  if(!Audio_.ready || Audio_.muted || !placers || placers.length < 2) return;
+  // Arm the gate up-front (even on the early-return paths below) so a waiter
+  // never hangs: if we're not going to speak, resolve straight away.
+  _podiumDone = new Promise(res=>{ _resolvePodiumDone = res; });
+  const finishPodium = ()=>{ if(_resolvePodiumDone){ _resolvePodiumDone(); _resolvePodiumDone = null; } };
+
+  if(!Audio_.ready || Audio_.muted || !placers || placers.length < 2){ finishPodium(); return; }
   const token = ++_rollCallToken;
 
   // Pick the photo-variant key for a position when it's contested and that horse
@@ -6017,17 +6179,44 @@ async function playPodiumPlacers(placers){
     }
   } finally {
     _duck(false);
+    finishPodium();   // release the big-moment flourish now the podium has spoken
   }
 }
 
 /* Post-race betting-outcome flourish. Given the computed big moments for the
-   race just run, play a single congratulate/console line: bigWin if the top
-   moment is a win, bigLoss if it's a loss. No-op when there were no standout
-   moments. Kept generic (no name) so it needs no personalisation. */
-function playBigMomentVoice(moments){
+   race just run, congratulate the standout WIN and/or console the standout LOSS.
+   Kept generic (no name) so it needs no personalisation.
+
+   Two behaviours the old version got wrong:
+   1. TIMING — it fired on a fixed 3.2s timer, independent of the podium recap,
+      so bigWin/bigLoss routinely spoke over the place_ calls. It now WAITS for
+      the podium read-out to finish (_podiumDone) before saying anything.
+   2. WIN *AND* LOSS — moments can contain both a big win and a big loss in the
+      same race; the old code only ever voiced moments[0]. It now plays the top
+      win then the top loss back-to-back (each spoken once), or just whichever
+      one occurred. Order: celebrate first, commiserate second. */
+async function playBigMomentVoice(moments){
   if(!Audio_.ready || Audio_.muted || !moments || !moments.length) return;
-  const top = moments[0];
-  playVoice(top.won ? 'bigWin' : 'bigLoss');
+  // Wait until the podium placings have finished so we don't talk over them.
+  // Guarded by a timeout so a stalled/absent podium can't hang this forever.
+  try{
+    await Promise.race([ _podiumDone, _wait(20000) ]);
+  }catch(e){}
+  await _wait(400);   // small beat after the winner is named
+
+  const topWin  = moments.find(m=>m.won);
+  const topLoss = moments.find(m=>!m.won);
+
+  const say = (key)=> new Promise(res=>{
+    const s = playVoice(key);
+    if(!s){ res(); return; }
+    const arr = VOICE_MANIFEST[key];
+    const b = _buf(Array.isArray(arr)?arr[0]:arr);
+    setTimeout(res, b ? (b.duration*1000)+250 : 900);
+  });
+
+  if(topWin)  await say('bigWin');
+  if(topLoss) await say('bigLoss');
 }
 
 /* Orchestrates the full pre-race announcer sequence during betting:
@@ -6165,8 +6354,181 @@ loadGameData().then(()=>{
   lq('#lobby-room-msg').textContent = 'Could not load race data (horses/courses/weather json)';
 });
 
-/* boot wipe: the page opens fully covered by the wipe overlay; hold it a touch
-   longer than the lobby transitions, then slide it away to reveal the lobby. */
+/* ══════════════════════════════════════════════════════════════════════════
+   CYCLING AD / MEDIA SLOTS
+   Fills the top-left tile on the pre-race (#ad-slot-prerace) and post-race
+   (#ad-slot-postrace) screens with a rotating playlist of images and SILENT
+   videos, cross-fading between them.
+
+   PLAYLIST — edited in one of two ways:
+     1. Drop a data/ads.json file (served alongside horses/courses json) shaped:
+          { "basePath": "assets/ads/",
+            "items": [
+              { "type":"image", "src":"sponsor_a.png", "ms":6000 },
+              { "type":"video", "src":"promo_b.mp4",  "fit":"cover" },
+              { "type":"image", "src":"sponsor_c.jpg", "ms":8000, "fit":"cover" }
+            ] }
+     2. Or leave ads.json out and just edit AD_PLAYLIST_FALLBACK below.
+
+   Each item:
+     type : 'image' | 'video'   (inferred from the extension if omitted)
+     src  : path (prefixed with basePath); .mp4/.webm ⇒ video, images otherwise
+     ms   : how long an IMAGE holds before advancing (default AD_DEFAULT_MS).
+            Ignored for video — the clip's own length drives the advance.
+     fit  : 'contain' (default, never crops — good for logos/ads with text) or
+            'cover' (fills the tile, may crop — good for full-bleed footage).
+     alt  : accessible label for images.
+
+   REPO NOTES on video: mp4s live in the repo exactly like the mp3s do — they're
+   just static assets fetched by relative path. Use H.264 .mp4 (optionally a
+   .webm too) and keep them SILENT: a muted/soundless clip autoplays everywhere
+   (browsers only block autoplay of *audible* media). Short, well-compressed
+   clips commit fine; if they get large or numerous, prefer Git LFS or a CDN and
+   just point src/basePath at the hosted URL.
+
+   Robust by design: a missing ads.json falls back to the list below; a single
+   file that 404s or a video that won't play is skipped; an empty playlist shows
+   the original logo. Cycling pauses while the tab is hidden. */
+
+const AD_DEFAULT_MS = 7000;   // default image hold
+const AD_LOGO = 'assets/jalf_logo.png';   // shown if the playlist is empty
+// Fallback playlist used when data/ads.json is absent. Keep it to the logo so
+// behaviour is unchanged until you add real ads (via ads.json or here).
+const AD_PLAYLIST_FALLBACK = {
+  basePath: '',
+  items: [ { type:'image', src: AD_LOGO, ms: AD_DEFAULT_MS, alt:'JustaLittleFun Racing' } ],
+};
+
+let _adPlaylist = null;   // { basePath, items:[…] } once resolved
+
+function _adInferType(src, given){
+  if(given) return given;
+  return /\.(mp4|webm|ogv|mov)(\?|$)/i.test(src) ? 'video' : 'image';
+}
+
+/* Fetch data/ads.json (optional); fall back to AD_PLAYLIST_FALLBACK. Normalises
+   every item (type inferred, basePath prepended, bad entries dropped). */
+async function loadAdPlaylist(){
+  if(_adPlaylist) return _adPlaylist;
+  let raw = null;
+  try{
+    const r = await fetch('./data/ads.json');
+    if(r.ok) raw = await r.json();
+  }catch(e){ /* optional file — ignore */ }
+  if(!raw || !Array.isArray(raw.items) || !raw.items.length) raw = AD_PLAYLIST_FALLBACK;
+  const base = raw.basePath || '';
+  const items = raw.items
+    .filter(it => it && it.src)
+    .map(it => ({
+      type: _adInferType(it.src, it.type),
+      src:  base + it.src,
+      ms:   Number(it.ms) > 0 ? Number(it.ms) : AD_DEFAULT_MS,
+      fit:  it.fit === 'cover' ? 'cover' : 'contain',
+      alt:  it.alt || '',
+    }));
+  _adPlaylist = { items: items.length ? items : AD_PLAYLIST_FALLBACK.items.map(it=>({
+    type:'image', src: it.src, ms: it.ms||AD_DEFAULT_MS, fit:'contain', alt: it.alt||''
+  })) };
+  return _adPlaylist;
+}
+
+/* One cycler per slot element. Two stacked layers cross-fade; the next item is
+   built while the current one shows, so transitions are seamless. A single
+   shared playlist drives every slot, but each cycler keeps its OWN index/timer
+   so the two screens aren't forced into lockstep. */
+function createAdCycler(slotEl, playlist){
+  if(!slotEl || !playlist || !playlist.items.length) return null;
+  const items = playlist.items;
+  let idx = -1;
+  let front = null;          // currently-visible layer
+  let timer = null;
+  let stopped = false;
+
+  const clearTimer = ()=>{ if(timer){ clearTimeout(timer); timer = null; } };
+
+  // Build a fresh media element for an item (not yet attached).
+  const build = (item)=>{
+    let el;
+    if(item.type === 'video'){
+      el = document.createElement('video');
+      el.muted = true; el.defaultMuted = true; el.playsInline = true;
+      el.setAttribute('muted',''); el.setAttribute('playsinline','');
+      el.autoplay = true; el.loop = false; el.preload = 'auto';
+      el.src = item.src;
+    } else {
+      el = document.createElement('img');
+      el.src = item.src;
+      el.alt = item.alt || '';
+    }
+    el.className = 'ad-media' + (item.fit === 'cover' ? ' cover' : '');
+    return el;
+  };
+
+  // Advance to the next PLAYABLE item. Skips any element that errors (404, bad
+  // codec) so one broken file can't stall the rotation. `tries` guards against
+  // an all-broken playlist looping forever.
+  const advance = (tries = 0)=>{
+    if(stopped || tries > items.length) return;
+    idx = (idx + 1) % items.length;
+    const item = items[idx];
+    const el = build(item);
+
+    const onFail = ()=>{ el.remove(); advance(tries + 1); };
+
+    const reveal = ()=>{
+      if(stopped){ el.remove(); return; }
+      slotEl.appendChild(el);
+      // Force layout then fade in; fade out + remove the previous layer.
+      requestAnimationFrame(()=>{
+        el.classList.add('show');
+        const prev = front; front = el;
+        if(prev){ prev.classList.remove('show'); setTimeout(()=>prev.remove(), 700); }
+      });
+      // Schedule the next advance.
+      if(item.type === 'video'){
+        // Video governs its own duration: advance when it ends. A safety timer
+        // covers a clip that never fires 'ended' (e.g. stalled).
+        el.onended = ()=>{ clearTimer(); advance(); };
+        const safety = ()=>{ timer = setTimeout(()=>advance(), (el.duration ? el.duration*1000 : 15000) + 1000); };
+        if(el.readyState >= 1 && el.duration) safety(); else el.onloadedmetadata = safety;
+        const p = el.play(); if(p && p.catch) p.catch(()=>{ /* if it won't play, safety timer still advances */ });
+      } else {
+        clearTimer();
+        timer = setTimeout(()=>advance(), item.ms);
+      }
+    };
+
+    if(item.type === 'video'){
+      el.oncanplay = reveal;
+      el.onerror = onFail;
+    } else {
+      el.onload = reveal;
+      el.onerror = onFail;
+    }
+  };
+
+  const start = ()=>{ if(stopped) return; if(!front && timer===null) advance(); };
+  const stop  = ()=>{ stopped = true; clearTimer(); };
+
+  return { start, stop, _pause: ()=>clearTimer(), _resume: ()=>{ if(!stopped && !timer && front && front.tagName==='IMG') advance(); } };
+}
+
+let _adCyclers = [];
+async function initAdSlots(){
+  const playlist = await loadAdPlaylist();
+  ['ad-slot-prerace','ad-slot-postrace'].forEach(id=>{
+    const el = document.getElementById(id);
+    const c = createAdCycler(el, playlist);
+    if(c){ c.start(); _adCyclers.push(c); }
+  });
+  // Save resources while the tab is backgrounded; resume on return.
+  document.addEventListener('visibilitychange', ()=>{
+    _adCyclers.forEach(c => document.hidden ? c._pause() : c._resume());
+  });
+}
+initAdSlots();
+
+
 function revealOnBoot(){
   const w = document.getElementById('wipe-overlay');
   if(!w) return;
