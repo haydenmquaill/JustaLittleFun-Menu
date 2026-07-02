@@ -95,616 +95,6 @@
     ]
   },
   "horseLines": {
-    "quarter": {
-      "a01": [
-        "quarter/a01/1.mp3",
-        "quarter/a01/2.mp3"
-      ],
-      "a02": [
-        "quarter/a02/1.mp3",
-        "quarter/a02/2.mp3"
-      ],
-      "a03": [
-        "quarter/a03/1.mp3",
-        "quarter/a03/2.mp3"
-      ],
-      "a04": [
-        "quarter/a04/1.mp3",
-        "quarter/a04/2.mp3"
-      ],
-      "a05": [
-        "quarter/a05/1.mp3",
-        "quarter/a05/2.mp3"
-      ],
-      "a06": [
-        "quarter/a06/1.mp3",
-        "quarter/a06/2.mp3"
-      ],
-      "a07": [
-        "quarter/a07/1.mp3",
-        "quarter/a07/2.mp3"
-      ],
-      "a08": [
-        "quarter/a08/1.mp3",
-        "quarter/a08/2.mp3"
-      ],
-      "a09": [
-        "quarter/a09/1.mp3",
-        "quarter/a09/2.mp3"
-      ],
-      "a10": [
-        "quarter/a10/1.mp3",
-        "quarter/a10/2.mp3"
-      ],
-      "a11": [
-        "quarter/a11/1.mp3",
-        "quarter/a11/2.mp3"
-      ],
-      "a12": [
-        "quarter/a12/1.mp3",
-        "quarter/a12/2.mp3"
-      ],
-      "a13": [
-        "quarter/a13/1.mp3",
-        "quarter/a13/2.mp3"
-      ],
-      "a14": [
-        "quarter/a14/1.mp3",
-        "quarter/a14/2.mp3"
-      ],
-      "a15": [
-        "quarter/a15/1.mp3",
-        "quarter/a15/2.mp3"
-      ],
-      "a16": [
-        "quarter/a16/1.mp3",
-        "quarter/a16/2.mp3"
-      ],
-      "a17": [
-        "quarter/a17/1.mp3",
-        "quarter/a17/2.mp3"
-      ],
-      "a18": [
-        "quarter/a18/1.mp3",
-        "quarter/a18/2.mp3"
-      ],
-      "a19": [
-        "quarter/a19/1.mp3",
-        "quarter/a19/2.mp3"
-      ],
-      "a20": [
-        "quarter/a20/1.mp3",
-        "quarter/a20/2.mp3"
-      ],
-      "a21": [
-        "quarter/a21/1.mp3",
-        "quarter/a21/2.mp3"
-      ],
-      "a22": [
-        "quarter/a22/1.mp3",
-        "quarter/a22/2.mp3"
-      ],
-      "a23": [
-        "quarter/a23/1.mp3",
-        "quarter/a23/2.mp3"
-      ],
-      "a24": [
-        "quarter/a24/1.mp3",
-        "quarter/a24/2.mp3"
-      ],
-      "a25": [
-        "quarter/a25/1.mp3",
-        "quarter/a25/2.mp3"
-      ],
-      "a26": [
-        "quarter/a26/1.mp3",
-        "quarter/a26/2.mp3"
-      ],
-      "a27": [
-        "quarter/a27/1.mp3",
-        "quarter/a27/2.mp3"
-      ],
-      "a28": [
-        "quarter/a28/1.mp3",
-        "quarter/a28/2.mp3"
-      ],
-      "a29": [
-        "quarter/a29/1.mp3",
-        "quarter/a29/2.mp3"
-      ],
-      "a30": [
-        "quarter/a30/1.mp3",
-        "quarter/a30/2.mp3"
-      ]
-    },
-    "half": {
-      "a01": [
-        "half/a01/1.mp3",
-        "half/a01/2.mp3"
-      ],
-      "a02": [
-        "half/a02/1.mp3",
-        "half/a02/2.mp3"
-      ],
-      "a03": [
-        "half/a03/1.mp3",
-        "half/a03/2.mp3"
-      ],
-      "a04": [
-        "half/a04/1.mp3",
-        "half/a04/2.mp3"
-      ],
-      "a05": [
-        "half/a05/1.mp3",
-        "half/a05/2.mp3"
-      ],
-      "a06": [
-        "half/a06/1.mp3",
-        "half/a06/2.mp3"
-      ],
-      "a07": [
-        "half/a07/1.mp3",
-        "half/a07/2.mp3"
-      ],
-      "a08": [
-        "half/a08/1.mp3",
-        "half/a08/2.mp3"
-      ],
-      "a09": [
-        "half/a09/1.mp3",
-        "half/a09/2.mp3"
-      ],
-      "a10": [
-        "half/a10/1.mp3",
-        "half/a10/2.mp3"
-      ],
-      "a11": [
-        "half/a11/1.mp3",
-        "half/a11/2.mp3"
-      ],
-      "a12": [
-        "half/a12/1.mp3",
-        "half/a12/2.mp3"
-      ],
-      "a13": [
-        "half/a13/1.mp3",
-        "half/a13/2.mp3"
-      ],
-      "a14": [
-        "half/a14/1.mp3",
-        "half/a14/2.mp3"
-      ],
-      "a15": [
-        "half/a15/1.mp3",
-        "half/a15/2.mp3"
-      ],
-      "a16": [
-        "half/a16/1.mp3",
-        "half/a16/2.mp3"
-      ],
-      "a17": [
-        "half/a17/1.mp3",
-        "half/a17/2.mp3"
-      ],
-      "a18": [
-        "half/a18/1.mp3",
-        "half/a18/2.mp3"
-      ],
-      "a19": [
-        "half/a19/1.mp3",
-        "half/a19/2.mp3"
-      ],
-      "a20": [
-        "half/a20/1.mp3",
-        "half/a20/2.mp3"
-      ],
-      "a21": [
-        "half/a21/1.mp3",
-        "half/a21/2.mp3"
-      ],
-      "a22": [
-        "half/a22/1.mp3",
-        "half/a22/2.mp3"
-      ],
-      "a23": [
-        "half/a23/1.mp3",
-        "half/a23/2.mp3"
-      ],
-      "a24": [
-        "half/a24/1.mp3",
-        "half/a24/2.mp3"
-      ],
-      "a25": [
-        "half/a25/1.mp3",
-        "half/a25/2.mp3"
-      ],
-      "a26": [
-        "half/a26/1.mp3",
-        "half/a26/2.mp3"
-      ],
-      "a27": [
-        "half/a27/1.mp3",
-        "half/a27/2.mp3"
-      ],
-      "a28": [
-        "half/a28/1.mp3",
-        "half/a28/2.mp3"
-      ],
-      "a29": [
-        "half/a29/1.mp3",
-        "half/a29/2.mp3"
-      ],
-      "a30": [
-        "half/a30/1.mp3",
-        "half/a30/2.mp3"
-      ]
-    },
-    "finalStraight": {
-      "a01": [
-        "final_straight/a01/1.mp3",
-        "final_straight/a01/2.mp3"
-      ],
-      "a02": [
-        "final_straight/a02/1.mp3",
-        "final_straight/a02/2.mp3"
-      ],
-      "a03": [
-        "final_straight/a03/1.mp3",
-        "final_straight/a03/2.mp3"
-      ],
-      "a04": [
-        "final_straight/a04/1.mp3",
-        "final_straight/a04/2.mp3"
-      ],
-      "a05": [
-        "final_straight/a05/1.mp3",
-        "final_straight/a05/2.mp3"
-      ],
-      "a06": [
-        "final_straight/a06/1.mp3",
-        "final_straight/a06/2.mp3"
-      ],
-      "a07": [
-        "final_straight/a07/1.mp3",
-        "final_straight/a07/2.mp3"
-      ],
-      "a08": [
-        "final_straight/a08/1.mp3",
-        "final_straight/a08/2.mp3"
-      ],
-      "a09": [
-        "final_straight/a09/1.mp3",
-        "final_straight/a09/2.mp3"
-      ],
-      "a10": [
-        "final_straight/a10/1.mp3",
-        "final_straight/a10/2.mp3"
-      ],
-      "a11": [
-        "final_straight/a11/1.mp3",
-        "final_straight/a11/2.mp3"
-      ],
-      "a12": [
-        "final_straight/a12/1.mp3",
-        "final_straight/a12/2.mp3"
-      ],
-      "a13": [
-        "final_straight/a13/1.mp3",
-        "final_straight/a13/2.mp3"
-      ],
-      "a14": [
-        "final_straight/a14/1.mp3",
-        "final_straight/a14/2.mp3"
-      ],
-      "a15": [
-        "final_straight/a15/1.mp3",
-        "final_straight/a15/2.mp3"
-      ],
-      "a16": [
-        "final_straight/a16/1.mp3",
-        "final_straight/a16/2.mp3"
-      ],
-      "a17": [
-        "final_straight/a17/1.mp3",
-        "final_straight/a17/2.mp3"
-      ],
-      "a18": [
-        "final_straight/a18/1.mp3",
-        "final_straight/a18/2.mp3"
-      ],
-      "a19": [
-        "final_straight/a19/1.mp3",
-        "final_straight/a19/2.mp3"
-      ],
-      "a20": [
-        "final_straight/a20/1.mp3",
-        "final_straight/a20/2.mp3"
-      ],
-      "a21": [
-        "final_straight/a21/1.mp3",
-        "final_straight/a21/2.mp3"
-      ],
-      "a22": [
-        "final_straight/a22/1.mp3",
-        "final_straight/a22/2.mp3"
-      ],
-      "a23": [
-        "final_straight/a23/1.mp3",
-        "final_straight/a23/2.mp3"
-      ],
-      "a24": [
-        "final_straight/a24/1.mp3",
-        "final_straight/a24/2.mp3"
-      ],
-      "a25": [
-        "final_straight/a25/1.mp3",
-        "final_straight/a25/2.mp3"
-      ],
-      "a26": [
-        "final_straight/a26/1.mp3",
-        "final_straight/a26/2.mp3"
-      ],
-      "a27": [
-        "final_straight/a27/1.mp3",
-        "final_straight/a27/2.mp3"
-      ],
-      "a28": [
-        "final_straight/a28/1.mp3",
-        "final_straight/a28/2.mp3"
-      ],
-      "a29": [
-        "final_straight/a29/1.mp3",
-        "final_straight/a29/2.mp3"
-      ],
-      "a30": [
-        "final_straight/a30/1.mp3",
-        "final_straight/a30/2.mp3"
-      ]
-    },
-    "firstPastPost": {
-      "a01": [
-        "first_past_post/a01/1.mp3",
-        "first_past_post/a01/2.mp3"
-      ],
-      "a02": [
-        "first_past_post/a02/1.mp3",
-        "first_past_post/a02/2.mp3"
-      ],
-      "a03": [
-        "first_past_post/a03/1.mp3",
-        "first_past_post/a03/2.mp3"
-      ],
-      "a04": [
-        "first_past_post/a04/1.mp3",
-        "first_past_post/a04/2.mp3"
-      ],
-      "a05": [
-        "first_past_post/a05/1.mp3",
-        "first_past_post/a05/2.mp3"
-      ],
-      "a06": [
-        "first_past_post/a06/1.mp3",
-        "first_past_post/a06/2.mp3"
-      ],
-      "a07": [
-        "first_past_post/a07/1.mp3",
-        "first_past_post/a07/2.mp3"
-      ],
-      "a08": [
-        "first_past_post/a08/1.mp3",
-        "first_past_post/a08/2.mp3"
-      ],
-      "a09": [
-        "first_past_post/a09/1.mp3",
-        "first_past_post/a09/2.mp3"
-      ],
-      "a10": [
-        "first_past_post/a10/1.mp3",
-        "first_past_post/a10/2.mp3"
-      ],
-      "a11": [
-        "first_past_post/a11/1.mp3",
-        "first_past_post/a11/2.mp3"
-      ],
-      "a12": [
-        "first_past_post/a12/1.mp3",
-        "first_past_post/a12/2.mp3"
-      ],
-      "a13": [
-        "first_past_post/a13/1.mp3",
-        "first_past_post/a13/2.mp3"
-      ],
-      "a14": [
-        "first_past_post/a14/1.mp3",
-        "first_past_post/a14/2.mp3"
-      ],
-      "a15": [
-        "first_past_post/a15/1.mp3",
-        "first_past_post/a15/2.mp3"
-      ],
-      "a16": [
-        "first_past_post/a16/1.mp3",
-        "first_past_post/a16/2.mp3"
-      ],
-      "a17": [
-        "first_past_post/a17/1.mp3",
-        "first_past_post/a17/2.mp3"
-      ],
-      "a18": [
-        "first_past_post/a18/1.mp3",
-        "first_past_post/a18/2.mp3"
-      ],
-      "a19": [
-        "first_past_post/a19/1.mp3",
-        "first_past_post/a19/2.mp3"
-      ],
-      "a20": [
-        "first_past_post/a20/1.mp3",
-        "first_past_post/a20/2.mp3"
-      ],
-      "a21": [
-        "first_past_post/a21/1.mp3",
-        "first_past_post/a21/2.mp3"
-      ],
-      "a22": [
-        "first_past_post/a22/1.mp3",
-        "first_past_post/a22/2.mp3"
-      ],
-      "a23": [
-        "first_past_post/a23/1.mp3",
-        "first_past_post/a23/2.mp3"
-      ],
-      "a24": [
-        "first_past_post/a24/1.mp3",
-        "first_past_post/a24/2.mp3"
-      ],
-      "a25": [
-        "first_past_post/a25/1.mp3",
-        "first_past_post/a25/2.mp3"
-      ],
-      "a26": [
-        "first_past_post/a26/1.mp3",
-        "first_past_post/a26/2.mp3"
-      ],
-      "a27": [
-        "first_past_post/a27/1.mp3",
-        "first_past_post/a27/2.mp3"
-      ],
-      "a28": [
-        "first_past_post/a28/1.mp3",
-        "first_past_post/a28/2.mp3"
-      ],
-      "a29": [
-        "first_past_post/a29/1.mp3",
-        "first_past_post/a29/2.mp3"
-      ],
-      "a30": [
-        "first_past_post/a30/1.mp3",
-        "first_past_post/a30/2.mp3"
-      ]
-    },
-    "down": {
-      "a01": [
-        "down/a01/1.mp3",
-        "down/a01/2.mp3"
-      ],
-      "a02": [
-        "down/a02/1.mp3",
-        "down/a02/2.mp3"
-      ],
-      "a03": [
-        "down/a03/1.mp3",
-        "down/a03/2.mp3"
-      ],
-      "a04": [
-        "down/a04/1.mp3",
-        "down/a04/2.mp3"
-      ],
-      "a05": [
-        "down/a05/1.mp3",
-        "down/a05/2.mp3"
-      ],
-      "a06": [
-        "down/a06/1.mp3",
-        "down/a06/2.mp3"
-      ],
-      "a07": [
-        "down/a07/1.mp3",
-        "down/a07/2.mp3"
-      ],
-      "a08": [
-        "down/a08/1.mp3",
-        "down/a08/2.mp3"
-      ],
-      "a09": [
-        "down/a09/1.mp3",
-        "down/a09/2.mp3"
-      ],
-      "a10": [
-        "down/a10/1.mp3",
-        "down/a10/2.mp3"
-      ],
-      "a11": [
-        "down/a11/1.mp3",
-        "down/a11/2.mp3"
-      ],
-      "a12": [
-        "down/a12/1.mp3",
-        "down/a12/2.mp3"
-      ],
-      "a13": [
-        "down/a13/1.mp3",
-        "down/a13/2.mp3"
-      ],
-      "a14": [
-        "down/a14/1.mp3",
-        "down/a14/2.mp3"
-      ],
-      "a15": [
-        "down/a15/1.mp3",
-        "down/a15/2.mp3"
-      ],
-      "a16": [
-        "down/a16/1.mp3",
-        "down/a16/2.mp3"
-      ],
-      "a17": [
-        "down/a17/1.mp3",
-        "down/a17/2.mp3"
-      ],
-      "a18": [
-        "down/a18/1.mp3",
-        "down/a18/2.mp3"
-      ],
-      "a19": [
-        "down/a19/1.mp3",
-        "down/a19/2.mp3"
-      ],
-      "a20": [
-        "down/a20/1.mp3",
-        "down/a20/2.mp3"
-      ],
-      "a21": [
-        "down/a21/1.mp3",
-        "down/a21/2.mp3"
-      ],
-      "a22": [
-        "down/a22/1.mp3",
-        "down/a22/2.mp3"
-      ],
-      "a23": [
-        "down/a23/1.mp3",
-        "down/a23/2.mp3"
-      ],
-      "a24": [
-        "down/a24/1.mp3",
-        "down/a24/2.mp3"
-      ],
-      "a25": [
-        "down/a25/1.mp3",
-        "down/a25/2.mp3"
-      ],
-      "a26": [
-        "down/a26/1.mp3",
-        "down/a26/2.mp3"
-      ],
-      "a27": [
-        "down/a27/1.mp3",
-        "down/a27/2.mp3"
-      ],
-      "a28": [
-        "down/a28/1.mp3",
-        "down/a28/2.mp3"
-      ],
-      "a29": [
-        "down/a29/1.mp3",
-        "down/a29/2.mp3"
-      ],
-      "a30": [
-        "down/a30/1.mp3",
-        "down/a30/2.mp3"
-      ]
-    },
     "placeFirst": {
       "a01": [
         "place_first/a01/1.mp3",
@@ -1436,6 +826,165 @@
         "place_third_photo/a30/1.mp3",
         "place_third_photo/a30/2.mp3"
       ]
+    }
+  },
+  "raceFrames": {
+    "quarter": [
+      "race_frames/quarter/1.mp3",
+      "race_frames/quarter/2.mp3",
+      "race_frames/quarter/3.mp3",
+      "race_frames/quarter/4.mp3",
+      "race_frames/quarter/5.mp3"
+    ],
+    "half": [
+      "race_frames/half/1.mp3",
+      "race_frames/half/2.mp3",
+      "race_frames/half/3.mp3",
+      "race_frames/half/4.mp3",
+      "race_frames/half/5.mp3"
+    ],
+    "finalStraight": [
+      "race_frames/final_straight/1.mp3",
+      "race_frames/final_straight/2.mp3",
+      "race_frames/final_straight/3.mp3",
+      "race_frames/final_straight/4.mp3",
+      "race_frames/final_straight/5.mp3"
+    ],
+    "firstPastPost": [
+      "race_frames/first_past_post/1.mp3",
+      "race_frames/first_past_post/2.mp3",
+      "race_frames/first_past_post/3.mp3",
+      "race_frames/first_past_post/4.mp3",
+      "race_frames/first_past_post/5.mp3"
+    ],
+    "down": [
+      "race_frames/down/1.mp3",
+      "race_frames/down/2.mp3",
+      "race_frames/down/3.mp3",
+      "race_frames/down/4.mp3",
+      "race_frames/down/5.mp3"
+    ]
+  },
+  "raceName": {
+    "a01": {
+      "neutral": "race_name/a01/neutral.mp3",
+      "emphatic": "race_name/a01/emphatic.mp3"
+    },
+    "a02": {
+      "neutral": "race_name/a02/neutral.mp3",
+      "emphatic": "race_name/a02/emphatic.mp3"
+    },
+    "a03": {
+      "neutral": "race_name/a03/neutral.mp3",
+      "emphatic": "race_name/a03/emphatic.mp3"
+    },
+    "a04": {
+      "neutral": "race_name/a04/neutral.mp3",
+      "emphatic": "race_name/a04/emphatic.mp3"
+    },
+    "a05": {
+      "neutral": "race_name/a05/neutral.mp3",
+      "emphatic": "race_name/a05/emphatic.mp3"
+    },
+    "a06": {
+      "neutral": "race_name/a06/neutral.mp3",
+      "emphatic": "race_name/a06/emphatic.mp3"
+    },
+    "a07": {
+      "neutral": "race_name/a07/neutral.mp3",
+      "emphatic": "race_name/a07/emphatic.mp3"
+    },
+    "a08": {
+      "neutral": "race_name/a08/neutral.mp3",
+      "emphatic": "race_name/a08/emphatic.mp3"
+    },
+    "a09": {
+      "neutral": "race_name/a09/neutral.mp3",
+      "emphatic": "race_name/a09/emphatic.mp3"
+    },
+    "a10": {
+      "neutral": "race_name/a10/neutral.mp3",
+      "emphatic": "race_name/a10/emphatic.mp3"
+    },
+    "a11": {
+      "neutral": "race_name/a11/neutral.mp3",
+      "emphatic": "race_name/a11/emphatic.mp3"
+    },
+    "a12": {
+      "neutral": "race_name/a12/neutral.mp3",
+      "emphatic": "race_name/a12/emphatic.mp3"
+    },
+    "a13": {
+      "neutral": "race_name/a13/neutral.mp3",
+      "emphatic": "race_name/a13/emphatic.mp3"
+    },
+    "a14": {
+      "neutral": "race_name/a14/neutral.mp3",
+      "emphatic": "race_name/a14/emphatic.mp3"
+    },
+    "a15": {
+      "neutral": "race_name/a15/neutral.mp3",
+      "emphatic": "race_name/a15/emphatic.mp3"
+    },
+    "a16": {
+      "neutral": "race_name/a16/neutral.mp3",
+      "emphatic": "race_name/a16/emphatic.mp3"
+    },
+    "a17": {
+      "neutral": "race_name/a17/neutral.mp3",
+      "emphatic": "race_name/a17/emphatic.mp3"
+    },
+    "a18": {
+      "neutral": "race_name/a18/neutral.mp3",
+      "emphatic": "race_name/a18/emphatic.mp3"
+    },
+    "a19": {
+      "neutral": "race_name/a19/neutral.mp3",
+      "emphatic": "race_name/a19/emphatic.mp3"
+    },
+    "a20": {
+      "neutral": "race_name/a20/neutral.mp3",
+      "emphatic": "race_name/a20/emphatic.mp3"
+    },
+    "a21": {
+      "neutral": "race_name/a21/neutral.mp3",
+      "emphatic": "race_name/a21/emphatic.mp3"
+    },
+    "a22": {
+      "neutral": "race_name/a22/neutral.mp3",
+      "emphatic": "race_name/a22/emphatic.mp3"
+    },
+    "a23": {
+      "neutral": "race_name/a23/neutral.mp3",
+      "emphatic": "race_name/a23/emphatic.mp3"
+    },
+    "a24": {
+      "neutral": "race_name/a24/neutral.mp3",
+      "emphatic": "race_name/a24/emphatic.mp3"
+    },
+    "a25": {
+      "neutral": "race_name/a25/neutral.mp3",
+      "emphatic": "race_name/a25/emphatic.mp3"
+    },
+    "a26": {
+      "neutral": "race_name/a26/neutral.mp3",
+      "emphatic": "race_name/a26/emphatic.mp3"
+    },
+    "a27": {
+      "neutral": "race_name/a27/neutral.mp3",
+      "emphatic": "race_name/a27/emphatic.mp3"
+    },
+    "a28": {
+      "neutral": "race_name/a28/neutral.mp3",
+      "emphatic": "race_name/a28/emphatic.mp3"
+    },
+    "a29": {
+      "neutral": "race_name/a29/neutral.mp3",
+      "emphatic": "race_name/a29/emphatic.mp3"
+    },
+    "a30": {
+      "neutral": "race_name/a30/neutral.mp3",
+      "emphatic": "race_name/a30/emphatic.mp3"
     }
   },
   "courseLines": {
