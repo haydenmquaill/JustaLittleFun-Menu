@@ -20,7 +20,7 @@
     },
     "country": "AU",
     "_designNote": "Green with gold horseshoe | Make this one like a coin flip (think 50/50 chance of winning)",
-    "about": "A true coin-flip of a horse — some days brilliant, some days baffling. Phil swears it's all part of the plan."
+    "about": "Gets by in life by chanting his personal mantra daily: 'I'll be buggered'"
   },
   {
     "id": "a02",
@@ -89,7 +89,7 @@
     },
     "country": "AU",
     "_designNote": "White with light blue splatter? | Make this one more of a dud horse",
-    "about": "Long on attitude, short on results. Gobs at the barrier, fades in the straight, apologises to nobody."
+    "about": "Spitboy earned his name after refusing to swallow saliva when sick, fearing it would hurt his sore throat. A bucket was given to him, and the nickname stuck."
   },
   {
     "id": "a05",
@@ -135,7 +135,7 @@
     },
     "country": "AU",
     "_designNote": "Deep purple with thin gold vertical centered column (think stripper pole)",
-    "about": "Struts to the gate utterly convinced he's the real deal, and dares you to prove otherwise."
+    "about": "A barely teenage child once outperformed him with a flawless pole routine to his own song. To this day, he has no idea where the routine came from."
   },
   {
     "id": "a07",
@@ -158,7 +158,7 @@
     },
     "country": "AU",
     "_designNote": "Pattern and colours must evoke Boeing logo feel",
-    "about": "A discreet operator with a past he'd rather not discuss. Says little, does his talking on the track."
+    "about": "A horse tied to a mysterious encounter with a certain engineer. He hopes his performances on the track will eventually define him more than his infamous past."
   },
   {
     "id": "a08",
@@ -273,7 +273,7 @@
     },
     "country": "AU",
     "_designNote": "Brown square with dark brown star",
-    "about": "A snack, and he knows it. All preening confidence — best appreciated before he goes off the boil."
+    "about": "A snack, and he knows it. A preening show-off at heart, best enjoyed before his confidence starts to cool."
   },
   {
     "id": "a13",
@@ -296,7 +296,7 @@
     },
     "country": "AU",
     "_designNote": "Maroon with vertical strip (offset right of centre)",
-    "about": "Started as a birthday-wish and stuck around. Wants the spotlight and won't be talked out of it."
+    "about": "'Cause there's nobody else like you' - Mark Maher 1996"
   },
   {
     "id": "a14",
@@ -334,11 +334,11 @@
     },
     "country": "AU",
     "_designNote": "Three horizontal bands - pale green 1 part, slightly off white 3 parts, brown 2 parts",
-    "about": "Insists he belongs in the field, talks the whole way round, and somehow keeps pace anyway."
+    "about": "This horse was once captured by a dragon, but escaped and ended up marrying his fire-breathing captor."
   },
   {
     "id": "a15",
-    "name": "Neigh Palpatine Skywalker",
+    "name": "Neigh ~~Palpatine~~ Skywalker",
     "sheet": "assets/horse_black.png",
     "filter": "saturate(1.1) brightness(1.0)",
     "scale": 1,
@@ -357,7 +357,7 @@
     },
     "country": "AU",
     "_designNote": "crimson red with black point top hexagon",
-    "about": "Has a scheme within every scheme and an identity crisis to match. Nobody's quite sure which one turns up."
+    "about": "A horse who claims Skywalker lineage with no proof to back it up. With no Skywalkers around to dispute it, the claim stands unanswered."
   },
   {
     "id": "a16",
@@ -403,7 +403,7 @@
     },
     "country": "AU",
     "_designNote": "beige with dark brown centred semi circle arching upward",
-    "about": "Meant to be a racehorse. Six subcommittees later, this is what came out. Runs anyway."
+    "about": "Meant to be a camel. Six subcommittees later, this is what came out. Attempts to race anyway."
   },
   {
     "id": "a18",
@@ -589,7 +589,7 @@
     },
     "country": "AU",
     "_designNote": "Dark blue square, white star",
-    "about": "Wholesome to a fault and tireless with it — he could canter all day, and he'll tell you so."
+    "about": "Wholesome to a fault and tireless with it - he could canter all day, and he'll tell you so."
   },
   {
     "id": "a26",
@@ -658,7 +658,7 @@
     },
     "country": "AU",
     "_designNote": "Solid Brown (similar colour to horse if possible)",
-    "about": "Just Juan. The one and only, no theme, no gimmick — deceptively hard to beat."
+    "about": "Just Juan. The one and only, no theme, no gimmick and deceptively hard to beat."
   },
   {
     "id": "a29",
@@ -704,7 +704,7 @@
     },
     "country": "AU",
     "_designNote": "Light Blue with White Centered Down Arrow | Make this a favourite",
-    "about": "The chosen one of the four stables — master of every gait, when he remembers he's the hero."
+    "about": "When the fire nation attacked...he vanished. He was next sighted winning the Melbourne Cup."
   },
   {
     "id": "j01",
@@ -748,7 +748,7 @@
       "places": 22
     },
     "country": "JP",
-    "about": "A temperamental genius who might win by ten or forget to try — nobody, including him, knows which."
+    "about": "A temperamental genius who might win by ten or forget to try. Nobody, including him, knows which."
   },
   {
     "id": "j03",
@@ -814,7 +814,7 @@
       "places": 11
     },
     "country": "JP",
-    "about": "A big-hearted country girl chasing the title of Japan's best — and never turning down a meal."
+    "about": "A big-hearted country girl chasing the title of Japan's best. Never turns down a meal."
   },
   {
     "id": "j06",
@@ -924,7 +924,7 @@
       "places": 10
     },
     "country": "JP",
-    "about": "Tougher than the boys and twice as stubborn. No frills — just head down and power through."
+    "about": "Tougher than the boys and twice as stubborn. No frills, just keeps her head down and powers through."
   },
   {
     "id": "j11",
@@ -990,7 +990,7 @@
       "places": 15
     },
     "country": "JP",
-    "about": "Pure sprinting joy. One speed — flat out — and endlessly, cheerfully certain it'll work."
+    "about": "Pure sprinting joy. One speed: flat out. Endlessly, cheerfully certain it'll work."
   },
   {
     "id": "j14",
@@ -1144,7 +1144,7 @@
       "places": 12
     },
     "country": "JP",
-    "about": "White lightning from humble roots — all grit and grind, a late-blooming powerhouse."
+    "about": "White lightning from humble roots. All grit and grind, a late-blooming powerhouse."
   },
   {
     "id": "j21",
@@ -1298,7 +1298,7 @@
       "places": 8
     },
     "country": "JP",
-    "about": "A princess through and through — tiara, poise, and a surprisingly steely will to win."
+    "about": "A princess through and through. Tiara, poise, and a surprisingly steely will to win."
   },
   {
     "id": "j28",
@@ -1364,6 +1364,6 @@
       "places": 20
     },
     "country": "JP",
-    "about": "Everyone's mother figure — calm, warm, and quietly unstoppable when she flows past them late."
+    "about": "Everyone's mother figure. Calm, warm, and quietly unstoppable when she flows past them late."
   }
 ]
