@@ -160,6 +160,10 @@ body {
   background:var(--blue); color:var(--white); line-height:1;
 }
 .stepper button:active { background:var(--dark); }
+.stepper button:disabled {
+  background:#c7cdd8; color:#eef1f7; cursor:default;
+}
+.stepper button:disabled:active { background:#c7cdd8; }
 .stepper .val {
   font-family:'Oswald',sans-serif; font-weight:700; font-size:2.2rem;
   min-width:120px; text-align:center; color:var(--dark);
@@ -169,7 +173,21 @@ body {
 /* Course picker — grouped chips inside a lobby-card, toggled on/off by the host.
    Kept compact and two-up (AU | JP side by side) so the config fits the fixed
    TV viewport without overflowing the Confirm/Cancel buttons. */
-.course-picker { padding:12px 20px 14px; display:flex; gap:24px; }
+/* Courses disclosure row — the tappable value in the settings list that expands
+   the picker below. Styled to sit in a .lobby-row like a stepper's counterpart. */
+.cfg-disclose {
+  display:flex; align-items:center; gap:12px; cursor:pointer;
+  background:#eef1f7; border:2px solid #c3ccdd; border-radius:6px;
+  padding:8px 16px; font-family:'Oswald',sans-serif; color:var(--dark);
+}
+.cfg-disclose-val { font-weight:700; font-size:1.6rem; }
+.cfg-disclose-caret { font-size:1.2rem; color:var(--mid); transition:transform .15s; }
+.cfg-disclose[aria-expanded="true"] { border-color:var(--blue); }
+.cfg-disclose[aria-expanded="true"] .cfg-disclose-caret { transform:rotate(180deg); }
+
+/* The picker now lives inside the settings card, revealed under the rows. */
+.course-picker { padding:14px 20px 16px; display:flex; gap:24px; border-top:1px solid #e2e2e2; }
+.course-picker[hidden] { display:none; }
 .course-picker .cp-group { flex:1; min-width:0; }
 .course-picker .cp-head {
   display:flex; align-items:baseline; justify-content:space-between;
@@ -992,11 +1010,15 @@ body {
               <button data-dir="1">+</button>
             </div>
           </div>
+          <div class="lobby-row">
+            <span class="lab">Courses<small>Which tracks can come up this session</small></span>
+            <button class="cfg-disclose" id="courses-toggle" aria-expanded="false">
+              <span class="cfg-disclose-val" id="courses-count">All</span>
+              <span class="cfg-disclose-caret">▾</span>
+            </button>
+          </div>
         </div>
-      </div>
-      <div class="lobby-card">
-        <div class="lobby-card-head">Courses in play<small>Which tracks can come up this session. At least one required.</small></div>
-        <div class="course-picker" id="course-picker">
+        <div class="course-picker" id="course-picker" hidden>
           <div class="cp-empty">Loading courses…</div>
         </div>
       </div>
@@ -4051,9 +4073,22 @@ document.querySelectorAll('.stepper').forEach(st=>{
       const dir=+b.dataset.dir;
       lobby.cfg[key]=Math.max(min,Math.min(max, lobby.cfg[key]+dir*step));
       numEl.textContent = lobby.cfg[key];
+      refreshStepperBounds(st);
     });
   });
+  refreshStepperBounds(st);
 });
+
+/* Grey out (disable) the − button at the minimum and the + button at the maximum
+   for a given stepper, so the host sees when a value can't go further. */
+function refreshStepperBounds(st){
+  const key=st.dataset.cfg, min=+st.dataset.min, max=+st.dataset.max;
+  const val=lobby.cfg[key];
+  const minus=st.querySelector('button[data-dir="-1"]');
+  const plus =st.querySelector('button[data-dir="1"]');
+  if(minus) minus.disabled = (val<=min);
+  if(plus)  plus.disabled  = (val>=max);
+}
 
 /* Push lobby.cfg values into the stepper number displays (used when opening the
    editor so it reflects the current settings, not stale DOM). */
@@ -4061,6 +4096,7 @@ function syncStepperDisplays(){
   document.querySelectorAll('.stepper').forEach(st=>{
     const key=st.dataset.cfg, numEl=st.querySelector('.num');
     if(numEl && lobby.cfg[key] != null) numEl.textContent = lobby.cfg[key];
+    refreshStepperBounds(st);
   });
 }
 
@@ -4169,7 +4205,30 @@ function updateCoursePickerMsg(){
   if(msg && none){ msg.textContent = 'Pick at least one course to run.'; }
   else if(msg && msg.textContent==='Pick at least one course to run.'){ msg.textContent=''; }
   if(btn) btn.disabled = none;
+  updateCoursesCount();
 }
+
+/* Reflect the current selection as a short count on the disclosure row, e.g.
+   "All 24" or "8 of 24", so the host sees the state without opening the grid. */
+function updateCoursesCount(){
+  const el = lq('#courses-count'); if(!el) return;
+  const total = (COURSES_DATA||[]).length;
+  const inc = lobby.cfg.includedCourses;
+  el.textContent = (!inc || inc.length===0 || inc.length===total)
+    ? `All ${total||''}`.trim()
+    : `${inc.length} of ${total}`;
+}
+
+/* Disclosure row toggles the picker open/closed. */
+(function wireCoursesToggle(){
+  const btn = lq('#courses-toggle'), picker = lq('#course-picker');
+  if(!btn || !picker) return;
+  btn.addEventListener('click', ()=>{
+    const open = picker.hasAttribute('hidden');
+    if(open){ picker.removeAttribute('hidden'); btn.setAttribute('aria-expanded','true'); }
+    else    { picker.setAttribute('hidden',''); btn.setAttribute('aria-expanded','false'); }
+  });
+})();
 
 /* Start session → create the session immediately with the default config and go
    straight to the room screen. Config is edited from there (Edit settings). */
