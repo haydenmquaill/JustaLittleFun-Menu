@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', scaleToFit);
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;600&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
+s { text-decoration:line-through; text-decoration-thickness:2px; }
 :root {
   --blue:#1a2e5a; --blue-lt:#243d7a; --red:#c8102e;
   --white:#fff; --offwhite:#f4f4f4; --silver:#e0e0e0;
@@ -2108,7 +2109,7 @@ function updateFinishBoard() {
       const bn=document.createElement('span'); bn.textContent=h.def.num;
       bn.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:#fff;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;font-family:Oswald,sans-serif;';
       numEl.appendChild(bn);
-      nameEl.textContent = h.def.name.toUpperCase();
+      nameEl.innerHTML = fmtName(h.def.name.toUpperCase());
       nameEl.style.color = '';
       timeEl.textContent = h.finishTick != null ? formatTime(h.finishTick / TARGET_FPS) : '';
       mrgEl.textContent = i === 0 ? '' : winLength(gapPrev, h.finishSpeed);
@@ -2134,7 +2135,7 @@ function updateDNFBoard() {
     const dn=document.createElement('span'); dn.textContent=h.def.num;
     dn.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:#fff;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;font-family:Oswald,sans-serif;';
     numEl.appendChild(dn);
-    nameEl.textContent  = h.def.name.toUpperCase();
+    nameEl.innerHTML  = fmtName(h.def.name.toUpperCase());
     nameEl.style.color  = '#e55';
     timeEl.textContent  = 'DNF';
     timeEl.style.color  = '#e55';
@@ -3441,7 +3442,7 @@ function populatePostRace(placingsHidden, photoFinish) {
       const numCell = h.def.silk
         ? `<td class="num-cell" style="position:relative;padding:0;width:56px;overflow:hidden;"><img src="${silkDataUri(h.def.silk,56)}" width="56" height="56" style="display:block;"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Oswald',sans-serif;font-size:1.6rem;font-weight:800;color:#fff;text-shadow:-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000;">${h.def.num}</span></td>`
         : `<td class="num-cell" style="background:#555"><span class="silk">${h.def.num}</span></td>`;
-      tr.innerHTML = `${numCell}<td class="name-cell">${h.def.name.toUpperCase()}${styleBadge}${favTag}</td><td class="odds-cell">${win}</td><td class="odds-cell">${plc}</td><td class="odds-cell">${shw}</td><td class="odds-cell">${margin}</td>`;
+      tr.innerHTML = `${numCell}<td class="name-cell">${fmtName(h.def.name.toUpperCase())}${styleBadge}${favTag}</td><td class="odds-cell">${win}</td><td class="odds-cell">${plc}</td><td class="odds-cell">${shw}</td><td class="odds-cell">${margin}</td>`;
     }
     tbody.appendChild(tr);
   });
@@ -3670,7 +3671,7 @@ function buildGrids() {
         <img src="${silkDataUri(h.silk, 56)}" width="56" height="56" style="display:block;">
         <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Oswald',sans-serif;font-size:1.6rem;font-weight:800;color:#fff;text-shadow:-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000;">${h.num}</span>
       </td>
-      <td class="name-cell">${h.name}${styleBadge}${fav}</td>
+      <td class="name-cell">${fmtName(h.name)}${styleBadge}${fav}</td>
       <td class="odds-cell">${fmtPrice(odds[i].win)}</td>
       <td class="odds-cell">${fmtPrice(odds[i].place)}</td>
       <td class="odds-cell">${fmtPrice(odds[i].show)}</td>
@@ -4107,6 +4108,11 @@ function renderPlayers(){
   }
 }
 function escapeHtml(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+/* Horse-name markers: the JSON may wrap part of a name in ~~...~~ to strike it
+   through. stripMarks() removes the markers for plain-text contexts; fmtName()
+   escapes then renders <s> for HTML contexts. Keep in sync with the player. */
+function stripMarks(s){ return (s||'').replace(/~~(.+?)~~/g,'$1'); }
+function fmtName(s){ return escapeHtml(s).replace(/~~(.+?)~~/g,'<s>$1</s>'); }
 
 /* Start game → cover the screen with the wipe FIRST, then hide the lobby and
    build the prerace underneath it, so the prerace never flashes before the
@@ -4635,11 +4641,11 @@ function bigMomentTileHTML(m, { showCourse = false } = {}){
     selHTML = '<div class="mq-legs">' + horses.map((n,i)=>
       `<div class="mq-legrow">`+
         (ordered ? `<span class="mq-ord">${bmOrdinal(i+1)}</span>` : '')+
-        `${bmSilkChip(n, m.smap)}<span class="mq-hname">${escapeHtml(nm(n))}</span>`+
+        `${bmSilkChip(n, m.smap)}<span class="mq-hname">${fmtName(nm(n))}</span>`+
       `</div>`).join('') + '</div>';
   } else {
     selHTML = horses[0] != null
-      ? `<span class="mq-leg">${bmSilkChip(horses[0], m.smap)}<span class="mq-hname">${escapeHtml(nm(horses[0]))}</span></span>`
+      ? `<span class="mq-leg">${bmSilkChip(horses[0], m.smap)}<span class="mq-hname">${fmtName(nm(horses[0]))}</span></span>`
       : '—';
   }
   const typeLbl = BM_TYPE_LABEL[sel.type] || (sel.type||'Bet');
