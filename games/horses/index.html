@@ -2255,6 +2255,14 @@ function updateFinishBoard() {
       nameEl.style.color = '#f0c040';
       timeEl.textContent = '';
       mrgEl.textContent = '';
+      // A row just resolved to PHOTO FINISH. Play the close-finish call once per
+      // race, the first time any row goes to photo review. Nose vs close is chosen
+      // from this row's actual finish gap (same threshold as the replay used).
+      if(!_closeCallPlayed){
+        _closeCallPlayed = true;
+        const isNose = finishGapLengths(i) <= 0.1;
+        playVoice(isNose ? 'photoNose' : 'photoClose');
+      }
     } else {
       numEl.style.cssText = 'position:relative;width:24px;height:20px;flex-shrink:0;border-radius:2px;overflow:hidden;';
       numEl.innerHTML = '';
@@ -2268,6 +2276,16 @@ function updateFinishBoard() {
       mrgEl.textContent = i === 0 ? '' : winLength(gapPrev, h.finishSpeed);
     }
   });
+
+  // First past the post: fire once, the instant row 0 (the winner) is settled.
+  // Row 0 is settled as soon as 2nd has crossed, at which point the photo-finish
+  // detection above has already decided whether row 0 is a PHOTO FINISH. If it is,
+  // the winner is under review — stay silent (the podium recap names them later).
+  // If it isn't, 1st is a clear winner — announce it now, at the line.
+  if(!_firstPastPostCalled && finishOrder.length >= 2 && finishOrder[0]){
+    _firstPastPostCalled = true;
+    if(!isPhotoFinishPosition(0)) playRaceCall('firstPastPost', finishOrder[0].def.id);
+  }
 }
 
 // Fills board rows from the bottom up with DNF entries as horses die.
@@ -2424,6 +2442,8 @@ let phase='prerace';
 let slowmoActive=false;
 let replayFrames=[];   // unused legacy
 let replaySlot=null;   // {frames, gap} if a close finish was recorded
+let _firstPastPostCalled=false;   // firstPastPost fires once per race, when row 0 settles as a clear (non-photo) winner
+let _closeCallPlayed=false;       // close-finish photoNose/photoClose call fires once per race, when the first PHOTO FINISH row appears
 let activeSlot=null;   // currently recording
 let isRecording=false;
 let secondaryCloseGap=null;  // gap of any subsequent close cluster not recorded for replay
@@ -3268,11 +3288,6 @@ function raceTick(ts) {
       // when the second horse arrives. stopClusterRecording() re-confirms the final state.
       updateFinishBoard();
       if(horse.finishRank===0){
-        // Winner's name is NOT announced here: at the instant of crossing we can't
-        // yet know whether 1st is part of a photo cluster (the trailing horse of a
-        // tight pair may not have crossed). The firstPastPost voice is deferred to
-        // the reveal in startPostRaceTransition — called live there only if 1st is
-        // NOT in a photo cluster, otherwise held until the podium placers settle.
         flashScreen('rgba(200,151,26,0.4)'); shakeViewport();
       }
     }
@@ -3452,10 +3467,10 @@ function triggerFinishSequence() {
         const liveCamX = cameraX;
         const liveZoom = currentZoom;
         document.getElementById('progress-bar-overlay').style.display='none';
-        const isNose = gapToLengths(replaySlot.gap, 4.3) <= 0.1;
-        // Photo review: hush the house, expectant.
+        // Photo review: hush the house, expectant. (The spoken photoNose/photoClose
+        // call already fired when the PHOTO FINISH row appeared on the board — see
+        // updateFinishBoard — so we don't repeat it here at the replay.)
         setCrowd('review', 1.5);
-        playVoice(isNose ? 'photoNose' : 'photoClose');
         document.getElementById('slowmo-overlay').style.display='flex';
         playReplayIn('race', replaySlot.frames, 1, REPLAY_INTERVAL_SLOW, ()=>{
           setTimeout(() => doWipe(() => {
@@ -3512,14 +3527,11 @@ function startPostRaceTransition(hadSlowmo) {
     // window elapses and the podium rows are populated below.
     if(typeof multiGame !== 'undefined' && multiGame.active){ enterPhotoReview(); }
 
-    // Winner announcement: only 1st being IN the photo cluster suppresses the live
-    // call. If the photo is elsewhere (e.g. a 3rd/4th battle), 1st is a clear
-    // winner and is announced now, at the reveal. If 1st IS contested, the winner
-    // is held and named later, when the review settles (see playPodiumPlacers).
-    const firstIsPhoto = isPhotoFinishPosition(0);
-    if(!firstIsPhoto && finishOrder[0]){
-      playRaceCall('firstPastPost', finishOrder[0].def.id);
-    }
+    // firstPastPost is no longer announced here. It now fires LIVE, at the line,
+    // the moment 1st is confirmed a clear (non-photo) winner — see the crossing
+    // block in raceTick. If 1st was genuinely in the photo cluster, the excitable
+    // "first past the post" call is intentionally skipped entirely; the winner is
+    // still named by the formal podium recap (playPodiumPlacers) when it settles.
 
     // Stop raceTick so it doesn't fight replay over camera/positions
     if(animFrame) { cancelAnimationFrame(animFrame); animFrame=null; }
@@ -3564,9 +3576,8 @@ function startPostRaceTransition(hadSlowmo) {
     // and settle immediately (status → 'settling'), then run the winner trot cam.
     populatePostRace(false, false);
     if(typeof multiGame !== 'undefined' && multiGame.active){ onRaceFinished(); }
-    // No photo anywhere, so 1st is a clear winner: announce the winner now, at the
-    // board reveal, then name 2nd and 3rd shortly after.
-    if(finishOrder[0]) playRaceCall('firstPastPost', finishOrder[0].def.id);
+    // firstPastPost already fired live, at the line, as 1st crossed clear (see the
+    // crossing block in raceTick). Here we only run the formal podium recap.
     setTimeout(()=>playPodiumPlacers(finishOrder), 1200);
     startWinnerTrotCam();
   }
@@ -3811,6 +3822,7 @@ function beginRace() {
     ? Math.round(rand(5, 15) * 60)
     : 300;
   slowmoActive=false; replayFrames=[]; replaySlot=null; activeSlot=null; isRecording=false; secondaryCloseGap=null; photoFinishPositions=new Set();
+  _firstPastPostCalled=false; _closeCallPlayed=false;
 
   buildGates();
   buildProgressMap();
