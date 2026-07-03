@@ -2647,16 +2647,30 @@ function buildRaceParams(horseDef, raceLuck) {
   const accelRoll    = skew();
   const staminaRoll  = skew();
 
-  // Map rolls to actual values. Top-speed band narrowed from 3.4–5.2 to 4.3–5.2:
-  // the width of this band is what drives the finish SPREAD (a wider band lets the
-  // field string out more over distance). 4.3–5.2 keeps 3000m spread ~33s while
-  // still giving fast/slow horses a meaningful gap. Widen to spread more, narrow
-  // to bunch tighter.
-  const rawTopSpeed = 4.3 + topSpeedRoll * 0.9;  // 4.3–5.2 px/frame
+  // Map rolls to actual values. Top-speed band NARROWED to 4.575–4.925 (width 0.35),
+  // keeping the SAME midpoint (4.75) as the previous 4.3–5.2 band so average pace /
+  // finish times are unchanged (~60s/1000m). Why narrow it: the width of this band is
+  // the sustained speed advantage a horse carries the WHOLE race. When it was wide
+  // (0.9), one high top-speed roll simply led wire-to-wire and nothing — no late kick
+  // or surge — could reorder the field, so whoever led at the first quarter won ~68%
+  // of the time and closers almost never got past. Narrowing the sustained advantage
+  // lets the style-based late kicks (PC kick, LS burst, EC close) actually change the
+  // result, producing real contests and come-from-behind wins without touching pace.
+  // Widen again toward 0.9 to return to runaway, wire-to-wire racing; keep narrow for
+  // closer, more competitive finishes.
+  const rawTopSpeed = 4.575 + topSpeedRoll * 0.35;  // 4.575–4.925 px/frame (midpoint 4.75)
   const topSpeed    = rawTopSpeed * RACE_WEATHER.speedModifier * raceLuck * (CONFIG.racePaceScale || 1);
 
-  const styleAccelBoost = horseDef.style === 'END_CLOSER'  ? 1.3 :
-                          horseDef.style === 'LATE_SURGER' ? 2.5 : 1.0;
+  // Acceleration (how fast a horse can CHANGE speed). The come-from-behind styles get
+  // a large boost because their whole identity is a late change of pace: they hold off
+  // the pace early, then must climb to a burst target (LS 1.5×top, EC top+) over the
+  // final stretch. With the old boosts (LS 2.5, EC 1.3) _currentSpeed lagged that steep
+  // target so badly the burst was never realised before the line — the surger reached
+  // full flight too late and too briefly to overhaul the gap it gave away, so it won
+  // ~2% of races despite the biggest multiplier. Raising the boosts lets the surge/close
+  // actually cash in, which is what makes a horse "rocket past" in the final furlong.
+  const styleAccelBoost = horseDef.style === 'END_CLOSER'  ? 3.4 :
+                          horseDef.style === 'LATE_SURGER' ? 4.5 : 1.0;
   const accel = (0.010 + accelRoll * 0.032) * styleAccelBoost;
 
   // Stamina pool. NOTE: fade is kept length-independent by normalising the DRAIN
@@ -2671,15 +2685,20 @@ function buildRaceParams(horseDef, raceLuck) {
   const paceVariance = {
     frPushStart:   0.72 + tri() * 0.06,   // 69-75%
     frPushEnd:     0.08 + tri() * 0.04,   // 6-10%
-    frCruise:      0.83 + tri() * 0.06,   // 80-86% — reduced from 0.88 to bring FR in line
-    pcCruise:      0.84 + tri() * 0.04,   // 82-86%
-    pcKickTarget:  1.12 + Math.pow(tri(), 1.5) * 0.06, // 1.12-1.18 — meaningful kick above cruise
-    lsHold:        0.68 + tri() * 0.06,   // 65-71% — holds back a touch more
-    lsSurgeStart:  0.45 + tri() * 0.06,   // 42-48% — surges earlier to reach burst by line
-    lsBurstTop:    1.50 + tri() * 0.06,   // 147-153% — strong burst, calibrated vs EC
+    frCruise:      0.822 + tri() * 0.06,  // ~82-88%
+    // PACE_CHASER was the strongest style at equal luck (~44% of wins) because it
+    // cruised as fast as the front-runner AND kicked late — front positioning with no
+    // early cost. pcCruise now sits just BELOW frCruise (0.818 < 0.822) and the kick is
+    // trimmed, so PC no longer gets free front-running; it has to earn the front with
+    // its kick. This is the core of the even-split rebalance (targets ~25/25/25/25).
+    pcCruise:      0.818 + tri() * 0.04,  // ~82-86%, now marginally below FR cruise
+    pcKickTarget:  1.09 + Math.pow(tri(), 1.5) * 0.06, // trimmed from 1.12 to bring PC in line
+    lsHold:        0.795 + tri() * 0.06,  // sits closer to the pace so the late burst can overhaul the leaders
+    lsSurgeStart:  0.35 + tri() * 0.06,   // 32-38% — surge begins early enough for the accel to reach full flight
+    lsBurstTop:    1.62 + tri() * 0.06,   // stronger finishing burst — lifts LS toward parity
     ecRollStart:   0.15 + tri() * 0.10,   // 15-25%
     ecEarlyPace:   0.72 + tri() * 0.06,   // 69-75%
-    ecPeakMult:    0.20 + tri() * 0.06,   // 0.20-0.26 — pulled back from 0.30 to stop EC dominating
+    ecPeakMult:    0.44 + tri() * 0.06,   // genuine closing kick — lifts EC toward parity
   };
 
   return { topSpeed, accel, staminaPool, paceVariance };
@@ -2722,8 +2741,11 @@ function getTargetSpeed(horse, prog) {
       if(prog < pv.lsSurgeStart) {
         return top * pv.lsHold;
       }
-      // Surge reaches full burst speed by 93% progress — then holds it through the line
-      const PEAK_AT = 0.93;
+      // Surge reaches full burst speed by 83% progress — then holds it through the line.
+      // (Was 0.93, i.e. peaking right at the post; reaching full flight earlier is what
+      // lets the surger actually draw alongside and pass in the final stretch rather
+      // than only hitting top speed as it crosses the line.)
+      const PEAK_AT = 0.83;
       const burstFrac = Math.min(1.0, (prog - pv.lsSurgeStart) / (PEAK_AT - pv.lsSurgeStart));
       return top * (pv.lsHold + burstFrac * (pv.lsBurstTop - pv.lsHold));
     }
@@ -5533,29 +5555,29 @@ const CROWD_LEVELS = {
    of interchangeable takes (picked at random per play; loops pick once at start).
 
    Like the voice lines, the real manifest is loaded at runtime from
-   audio/sfx-manifest.json (see loadSoundManifest) so clips can be added or the
+   audio/sfx/sfx-manifest.json (see loadSoundManifest) so clips can be added or the
    files renamed without touching this file. The table below is the fallback: it
    keeps every key defined until the JSON resolves, and stays in effect if the
    fetch fails. External entries are overlaid on top of these by key. */
 let SOUND_MANIFEST = {
   // ── one-shots ──
-  postTrumpet:{ url:'audio/post_trumpet.mp3', bus:'music' }, // "Call to the Post" bugle at race-view transition
-  gates:     { url:'audio/gates.mp3',      bus:'sfx' },   // gates clang/spring
-  cheer:     { url:'audio/cheer.mp3',      bus:'crowd' }, // roar swell at the line
-  fanfare:   { url:'audio/fanfare.mp3',    bus:'music' }, // win / leaderboard sting
-  stumble:   { url:['audio/stumble1.mp3','audio/stumble2.mp3'], bus:'sfx' }, // impact as a runner goes down (random take)
-  whinny:    { url:['audio/whinny1.mp3','audio/whinny2.mp3','audio/whinny3.mp3'],    bus:'sfx' }, // horse cry on a fall (random take)
-  thunder:   { url:['audio/thunder1.mp3','audio/thunder2.mp3'], bus:'weather' }, // thunderclap, storm lightning (random take)
-  uiWhoosh:  { url:'audio/ui_whoosh.mp3',  bus:'sfx' },   // screen-wipe transition whoosh
+  postTrumpet:{ url:'audio/sfx/post_trumpet.mp3', bus:'music' }, // "Call to the Post" bugle at race-view transition
+  gates:     { url:'audio/sfx/gates.mp3',      bus:'sfx' },   // gates clang/spring
+  cheer:     { url:'audio/sfx/cheer.mp3',      bus:'crowd' }, // roar swell at the line
+  fanfare:   { url:'audio/sfx/fanfare.mp3',    bus:'music' }, // win / leaderboard sting
+  stumble:   { url:['audio/sfx/stumble1.mp3','audio/sfx/stumble2.mp3'], bus:'sfx' }, // impact as a runner goes down (random take)
+  whinny:    { url:['audio/sfx/whinny1.mp3','audio/sfx/whinny2.mp3','audio/sfx/whinny3.mp3'],    bus:'sfx' }, // horse cry on a fall (random take)
+  thunder:   { url:['audio/sfx/thunder1.mp3','audio/sfx/thunder2.mp3'], bus:'weather' }, // thunderclap, storm lightning (random take)
+  uiWhoosh:  { url:'audio/sfx/ui_whoosh.mp3',  bus:'sfx' },   // screen-wipe transition whoosh
   // ── loops ──
-  crowd:     { url:'audio/crowd.mp3',      bus:'crowd',   loop:true }, // continuous ambience bed
-  hooves:    { url:'audio/hooves.mp3',     bus:'sfx',     loop:true }, // galloping, only while racing
-  gateRattle:{ url:'audio/gate_rattle.mp3',bus:'sfx',     loop:true }, // horses shuffling in the stalls, race-view transition → gate open
-  menuMusic: { url:'audio/menu_music.mp3', bus:'music',   loop:true }, // lobby / pre-show music
-  rainLight: { url:'audio/rain_light.mp3', bus:'weather', loop:true }, // light rain bed
-  rainHeavy: { url:'audio/rain_heavy.mp3', bus:'weather', loop:true }, // heavy rain bed
-  breeze:    { url:'audio/breeze.mp3',     bus:'weather', loop:true }, // soft wind — petals / leaves / light snow
-  windHowl:  { url:'audio/wind_howl.mp3',  bus:'weather', loop:true }, // howling wind — blizzard
+  crowd:     { url:'audio/sfx/crowd.mp3',      bus:'crowd',   loop:true }, // continuous ambience bed
+  hooves:    { url:'audio/sfx/hooves.mp3',     bus:'sfx',     loop:true }, // galloping, only while racing
+  gateRattle:{ url:'audio/sfx/gate_rattle.mp3',bus:'sfx',     loop:true }, // horses shuffling in the stalls, race-view transition → gate open
+  menuMusic: { url:'audio/sfx/menu_music.mp3', bus:'music',   loop:true }, // lobby / pre-show music
+  rainLight: { url:'audio/sfx/rain_light.mp3', bus:'weather', loop:true }, // light rain bed
+  rainHeavy: { url:'audio/sfx/rain_heavy.mp3', bus:'weather', loop:true }, // heavy rain bed
+  breeze:    { url:'audio/sfx/breeze.mp3',     bus:'weather', loop:true }, // soft wind — petals / leaves / light snow
+  windHowl:  { url:'audio/sfx/wind_howl.mp3',  bus:'weather', loop:true }, // howling wind — blizzard
 };
 /* Set of loop names, rebuilt whenever SOUND_MANIFEST changes (initial parse +
    after the external manifest overlays). Not currently read by the engine —
@@ -5751,7 +5773,7 @@ async function setVoiceLanguage(lang){
   await preloadVoiceClipsPrioritised();   // urgent clips now; rest in background
 }
 
-/* Fetch + parse audio/sfx-manifest.json and overlay it onto SOUND_MANIFEST with
+/* Fetch + parse audio/sfx/sfx-manifest.json and overlay it onto SOUND_MANIFEST with
    basePath prepended to every url. Mirrors loadVoiceManifest: skips _comment
    keys, idempotent (returns the same promise), and on any failure the inline
    fallback table above stays in effect. Entries are merged by key, so the JSON
@@ -5762,7 +5784,7 @@ function loadSoundManifest(){
   if(_soundManifestLoaded) return _soundManifestLoaded;
   _soundManifestLoaded = (async ()=>{
     try{
-      const res = await fetch('audio/sfx-manifest.json');
+      const res = await fetch('audio/sfx/sfx-manifest.json');
       if(!res.ok) throw new Error(res.status);
       const m = await res.json();
       const base = m.basePath || '';
