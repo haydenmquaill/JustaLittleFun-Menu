@@ -984,9 +984,9 @@ body {
         <div class="lobby-rows">
           <div class="lobby-row">
             <span class="lab">Number of races<small>How many races before the final leaderboard</small></span>
-            <div class="stepper" data-cfg="numRaces" data-min="1" data-max="20" data-step="1">
+            <div class="stepper" data-cfg="numRaces" data-min="1" data-max="10" data-step="1">
               <button data-dir="-1">–</button>
-              <span class="val"><span class="num">6</span></span>
+              <span class="val"><span class="num">5</span></span>
               <button data-dir="1">+</button>
             </div>
           </div>
@@ -1000,21 +1000,21 @@ body {
           </div>
           <div class="lobby-row">
             <span class="lab">Starting balance<small>Play money each punter begins with</small></span>
-            <div class="stepper" data-cfg="startingBalance" data-min="100" data-max="5000" data-step="50">
+            <div class="stepper" data-cfg="startingBalance" data-min="200" data-max="500" data-step="50">
               <button data-dir="-1">–</button>
               <span class="val"><span class="unit">$</span><span class="num">200</span></span>
               <button data-dir="1">+</button>
             </div>
           </div>
           <div class="lobby-row seg-row">
-            <span class="lab">Country<small>Which country's tracks &amp; horses run this session</small></span>
+            <span class="lab">Countries<small>Which countries' tracks &amp; horses can run — pick one or more</small></span>
             <div class="seg-group" id="country-seg">
               <button class="seg-btn" data-country="AU">Australia</button>
               <button class="seg-btn" data-country="JP">Japan</button>
             </div>
           </div>
           <div class="lobby-row seg-row">
-            <span class="lab">Distance<small>Every race this session runs at this trip</small></span>
+            <span class="lab">Distances<small>Which trips can come up this session — pick one or more</small></span>
             <div class="seg-group" id="distance-seg">
               <button class="seg-btn" data-band="sprint">Sprint<span class="seg-sub">≤1300m</span></button>
               <button class="seg-btn" data-band="mile">Mile<span class="seg-sub">1300–2000m</span></button>
@@ -1536,31 +1536,28 @@ function rollWeather() {
 }
 
 function setupRace() {
-  // Session config fixes the COUNTRY and the DISTANCE BAND (sprint/mile/staying)
-  // for every race. Pick a random course in that country that offers a distance
-  // in the band, then pick a random in-band distance from it. Fallbacks keep a
-  // race from ever being left without a course if the config is missing or a
-  // country/band combo has no match (validated in the config UI, but be safe).
+  // Session config picks the allowed COUNTRIES and DISTANCE BANDS (any mix of
+  // sprint/mile/staying). Each race: pick a random course in an allowed country
+  // that offers a distance in an allowed band, then pick a random in-band distance
+  // from it. Fallbacks keep a race from ever being left without a course if the
+  // config is missing or a combination has no match (validated in the UI, but be safe).
   const cfg = (lobby && lobby.cfg) || {};
-  const wantCountry = cfg.country || 'AU';
-  const wantBand = cfg.distanceBand || null;
+  const wantCountries = new Set((Array.isArray(cfg.countries) && cfg.countries.length) ? cfg.countries : ['AU','JP']);
+  const wantBands = new Set((Array.isArray(cfg.distanceBands) && cfg.distanceBands.length) ? cfg.distanceBands : ['sprint','mile','staying']);
+  const bandOk = (d)=> wantBands.has(distanceBand(d));
 
-  const inCountry = COURSES_DATA.filter(c => (c.country||'AU') === wantCountry);
+  const inCountry = COURSES_DATA.filter(c => wantCountries.has(c.country||'AU'));
   const countryPool = inCountry.length ? inCountry : COURSES_DATA;
 
-  // Courses in the country that actually have an in-band distance.
-  const bandCourses = wantBand
-    ? countryPool.filter(c => (c.distances||[]).some(d => distanceBand(d) === wantBand))
-    : countryPool;
+  // Courses in the chosen countries that actually have a distance in a chosen band.
+  const bandCourses = countryPool.filter(c => (c.distances||[]).some(bandOk));
   const pool = bandCourses.length ? bandCourses : countryPool;
 
   RACECOURSE = pool[Math.floor(Math.random()*pool.length)];
   RACE_TERRAIN = RACECOURSE.terrains[Math.floor(Math.random()*RACECOURSE.terrains.length)];
 
-  // Restrict this course's distances to the chosen band, then pick one at random.
-  const inBand = wantBand
-    ? RACECOURSE.distances.filter(d => distanceBand(d) === wantBand)
-    : RACECOURSE.distances;
+  // Restrict this course's distances to the chosen bands, then pick one at random.
+  const inBand = RACECOURSE.distances.filter(bandOk);
   const distChoices = inBand.length ? inBand : RACECOURSE.distances;
   RACE_DISTANCE = distChoices[Math.floor(Math.random()*distChoices.length)];
   // Roll weather
@@ -4105,7 +4102,7 @@ const PLAYER_JOIN_URL = 'https://haydenmquaill.github.io/JustaLittleFun';
 const sb = _createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const lobby = {
-  cfg: { numRaces:6, bettingSeconds:90, startingBalance:200, payoutCeiling:5000, country:'AU', distanceBand:'sprint', includedCountries:['AU'] },
+  cfg: { numRaces:5, bettingSeconds:90, startingBalance:200, payoutCeiling:5000, countries:['AU','JP'], distanceBands:['sprint','mile','staying'], includedCountries:['AU','JP'] },
   session: null,
   channel: null,
   players: [],
@@ -4167,69 +4164,87 @@ function renderSettingsSummary(){
   if(bal) bal.textContent = '$' + lobby.cfg.startingBalance;
   const c=lq('#ss-courses');
   if(c){
-    const country = COUNTRY_LABEL[lobby.cfg.country] || lobby.cfg.country || 'AU';
-    const band = BAND_LABEL[lobby.cfg.distanceBand] || lobby.cfg.distanceBand || '';
-    c.textContent = band ? `${country} · ${band}` : country;
+    const cs = (lobby.cfg.countries||[]);
+    const bs = (lobby.cfg.distanceBands||[]);
+    const allC = cs.length >= ALL_COUNTRIES.length;
+    const allB = bs.length >= ALL_BANDS.length;
+    const cTxt = allC ? 'All' : cs.map(k=>COUNTRY_LABEL[k]||k).join(', ');
+    const bTxt = allB ? 'All' : bs.map(k=>BAND_LABEL[k]||k).join(', ');
+    c.textContent = `${cTxt} · ${bTxt}`;
   }
 }
 
-/* The player scopes its horse viewer by `includedCountries`. With a single-country
-   session that's just the one chosen country, written here so the player needs no
-   courses.json. */
+/* The player scopes its horse viewer by `includedCountries`. Mirror the chosen
+   countries so the player needs no courses.json. */
 function syncIncludedCountries(){
-  lobby.cfg.includedCountries = [lobby.cfg.country || 'AU'];
+  const cs = Array.isArray(lobby.cfg.countries) && lobby.cfg.countries.length
+    ? lobby.cfg.countries.slice() : ['AU','JP'];
+  lobby.cfg.includedCountries = cs;
 }
 
 const COUNTRY_LABEL = { AU:'Australia', JP:'Japan' };
 const BAND_LABEL    = { sprint:'Sprint', mile:'Mile', staying:'Staying' };
+const ALL_COUNTRIES = ['AU','JP'];
+const ALL_BANDS     = ['sprint','mile','staying'];
 
-/* Render the two segmented selectors (Country, Distance) and wire their clicks.
-   Loads game data first so we can warn if a country/band combo has no track. */
+/* Render the two multi-select selectors (Country, Distance) and wire their
+   clicks. Each is a toggle set — multiple can be on, but never zero (the last
+   remaining ON button can't be turned off). Loads game data first so we can warn
+   if the chosen combination has no track. */
 async function renderRaceConfig(){
   try { await loadGameData(); } catch(e){ /* fall through; validation just won't fire */ }
-  if(!lobby.cfg.country) lobby.cfg.country = 'AU';
-  if(!lobby.cfg.distanceBand) lobby.cfg.distanceBand = 'sprint';
+  if(!Array.isArray(lobby.cfg.countries) || !lobby.cfg.countries.length) lobby.cfg.countries = ALL_COUNTRIES.slice();
+  if(!Array.isArray(lobby.cfg.distanceBands) || !lobby.cfg.distanceBands.length) lobby.cfg.distanceBands = ALL_BANDS.slice();
   syncIncludedCountries();
 
-  const cSeg = lq('#country-seg'), dSeg = lq('#distance-seg');
-  if(cSeg) cSeg.querySelectorAll('.seg-btn').forEach(b=>{
-    b.classList.toggle('on', b.dataset.country === lobby.cfg.country);
-    b.onclick = ()=>{
-      lobby.cfg.country = b.dataset.country;
-      cSeg.querySelectorAll('.seg-btn').forEach(x=>x.classList.toggle('on', x===b));
-      syncIncludedCountries();
-      updateRaceConfigMsg();
+  const wire = (segSel, cfgKey, dataAttr)=>{
+    const seg = lq(segSel); if(!seg) return;
+    const paint = ()=>{
+      const on = new Set(lobby.cfg[cfgKey]);
+      seg.querySelectorAll('.seg-btn').forEach(b=> b.classList.toggle('on', on.has(b.dataset[dataAttr])));
     };
-  });
-  if(dSeg) dSeg.querySelectorAll('.seg-btn').forEach(b=>{
-    b.classList.toggle('on', b.dataset.band === lobby.cfg.distanceBand);
-    b.onclick = ()=>{
-      lobby.cfg.distanceBand = b.dataset.band;
-      dSeg.querySelectorAll('.seg-btn').forEach(x=>x.classList.toggle('on', x===b));
-      updateRaceConfigMsg();
-    };
-  });
+    seg.querySelectorAll('.seg-btn').forEach(b=>{
+      b.onclick = ()=>{
+        const val = b.dataset[dataAttr];
+        const on = new Set(lobby.cfg[cfgKey]);
+        if(on.has(val)){
+          if(on.size <= 1) return;   // never allow zero selected
+          on.delete(val);
+        } else { on.add(val); }
+        // Preserve canonical order.
+        const order = cfgKey==='countries' ? ALL_COUNTRIES : ALL_BANDS;
+        lobby.cfg[cfgKey] = order.filter(x=>on.has(x));
+        paint();
+        if(cfgKey==='countries') syncIncludedCountries();
+        updateRaceConfigMsg();
+      };
+    });
+    paint();
+  };
+  wire('#country-seg', 'countries', 'country');
+  wire('#distance-seg', 'distanceBands', 'band');
   updateRaceConfigMsg();
 }
 
-/* True when at least one course in the chosen country offers a distance in the
-   chosen band — i.e. the session can actually stage a race. */
+/* True when at least one selected country offers at least one selected distance
+   band — i.e. the session can actually stage a race. */
 function raceConfigHasMatch(){
-  const country = lobby.cfg.country || 'AU';
-  const band = lobby.cfg.distanceBand || 'sprint';
+  const countries = (Array.isArray(lobby.cfg.countries) && lobby.cfg.countries.length) ? lobby.cfg.countries : ALL_COUNTRIES;
+  const bands = new Set((Array.isArray(lobby.cfg.distanceBands) && lobby.cfg.distanceBands.length) ? lobby.cfg.distanceBands : ALL_BANDS);
+  const cset = new Set(countries);
   return (COURSES_DATA||[]).some(c =>
-    (c.country||'AU') === country &&
-    (c.distances||[]).some(d => distanceBand(d) === band)
+    cset.has(c.country||'AU') &&
+    (c.distances||[]).some(d => bands.has(distanceBand(d)))
   );
 }
 
-/* Warn (and block Confirm) if the chosen country has no track at the chosen trip. */
+/* Warn (and block Confirm) if the chosen countries have no track at any chosen trip. */
 function updateRaceConfigMsg(){
   const msg = lq('#lobby-config-msg'), btn = lq('#lobby-create');
   const ok = !(COURSES_DATA||[]).length || raceConfigHasMatch();
   if(msg){
-    if(!ok){ msg.textContent = `No ${BAND_LABEL[lobby.cfg.distanceBand]||''} track in ${COUNTRY_LABEL[lobby.cfg.country]||lobby.cfg.country}. Pick another trip.`; }
-    else if(msg.textContent.startsWith('No ')){ msg.textContent=''; }
+    if(!ok){ msg.textContent = 'That country / distance combination has no track. Pick another.'; }
+    else if(msg.textContent.startsWith('That country')){ msg.textContent=''; }
   }
   if(btn) btn.disabled = !ok;
 }
@@ -4302,7 +4317,7 @@ lq('#lobby-create').addEventListener('click', confirmConfig);
 async function confirmConfig(){
   if(!lobby.session){ showStack('lobby-room'); return; }
   if((COURSES_DATA||[]).length && !raceConfigHasMatch()){
-    lq('#lobby-config-msg').textContent = `No ${BAND_LABEL[lobby.cfg.distanceBand]||''} track in ${COUNTRY_LABEL[lobby.cfg.country]||lobby.cfg.country}.`;
+    lq('#lobby-config-msg').textContent = 'That country / distance combination has no track. Pick another.';
     return;
   }
   syncIncludedCountries();
@@ -5426,11 +5441,11 @@ let _nextRaceInterval = null;
 function startNextRaceCountdown(){
   clearInterval(_nextRaceInterval);
 
-  // Is this the final multiplayer race? If so, after the same 20s settling
+  // Is this the final multiplayer race? If so, after the same 30s settling
   // window we reveal the FINAL LEADERBOARD instead of staging a new race.
   const isFinalRace = multiGame.active && (multiGame.raceNumber + 1) >= lobby.cfg.numRaces;
 
-  let secs = 20;   // hard-coded auto-advance / settle window
+  let secs = 30;   // hard-coded auto-advance / settle window
   // Zero-pad the seconds so the ticker text never changes character count
   // (combined with tabular-nums this keeps the scroll width perfectly stable,
   // so the marquee never has to re-measure mid-countdown).
