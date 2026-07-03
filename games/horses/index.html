@@ -4553,6 +4553,7 @@ function teardownFinalScreen(){
   _revealTimers.forEach(t=>clearTimeout(t)); _revealTimers = [];
   clearTimeout(multiGame.closeTimer);
   const ov = document.getElementById('final-overlay'); if(ov) ov.classList.remove('active');
+  if(typeof syncAdSlots === 'function') syncAdSlots();   // leaderboard dismissed — re-evaluate ad tiles
   const cc = document.getElementById('confetti-canvas');
   if(cc){ cc.classList.remove('active'); const c=cc.getContext('2d'); if(c) c.clearRect(0,0,cc.width,cc.height); }
 }
@@ -5178,6 +5179,7 @@ async function showFinalLeaderboard(){
   if(marquee) marquee.style.visibility = 'hidden';
 
   document.getElementById('final-overlay').classList.add('active');
+  if(typeof syncAdSlots === 'function') syncAdSlots();   // leaderboard up — pause ad tiles behind it
 
   // Reveal bottom→top with growing suspense on the podium, climbing the list so
   // higher ranks stay in view. When 1st lands: paint champion, confetti,
@@ -6539,8 +6541,10 @@ loadGameData().then(()=>{
 
    REPO NOTES on video: mp4s live in the repo exactly like the mp3s do — they're
    just static assets fetched by relative path. Use H.264 .mp4 (optionally a
-   .webm too) and keep them SILENT: a muted/soundless clip autoplays everywhere
-   (browsers only block autoplay of *audible* media). Short, well-compressed
+   .webm too) and keep them SILENT: the cycler plays each clip via .play() only
+   when it's revealed on a visible slot, and a muted clip is allowed to play
+   everywhere (browsers only block autoplay/play of *audible* media). Off-screen
+   or pending clips are torn down, not autoplayed. Short, well-compressed
    clips commit fine; if they get large or numerous, prefer Git LFS or a CDN and
    just point src/basePath at the hosted URL.
 
@@ -6611,10 +6615,28 @@ function createAdCycler(slotEl, playlist){
   let cIdx = -1;             // index into rotation (content items)
   let showLogoNext = false;  // alternation flag: true → next shown item is the logo
   let front = null;          // currently-visible layer
+  let pendingEl = null;      // element built + loading but not yet revealed
   let timer = null;
   let stopped = false;
 
   const clearTimer = ()=>{ if(timer){ clearTimeout(timer); timer = null; } };
+
+  // Fully detach a media element from the page AND the network: pause it, drop its
+  // source so the browser releases the decoder/buffer, and remove the node. Used so
+  // a hidden slot leaves NOTHING in the DOM (not even a paused, buffering video)
+  // behind another screen.
+  const teardownEl = (el)=>{
+    if(!el) return;
+    try{
+      if(el.tagName === 'VIDEO'){
+        el.onended = el.oncanplay = el.onloadedmetadata = el.onerror = el.onload = null;
+        el.pause();
+        el.removeAttribute('src');
+        el.load();               // aborts the pending fetch / frees the buffer
+      }
+    }catch(e){}
+    try{ el.remove(); }catch(e){}
+  };
 
   // Build a fresh media element for an item (not yet attached). 'logo' renders as
   // an image — it's just a distinctly-tagged still.
@@ -6624,7 +6646,7 @@ function createAdCycler(slotEl, playlist){
       el = document.createElement('video');
       el.muted = true; el.defaultMuted = true; el.playsInline = true;
       el.setAttribute('muted',''); el.setAttribute('playsinline','');
-      el.autoplay = true; el.loop = false; el.preload = 'auto';
+      el.autoplay = false; el.loop = false; el.preload = 'auto';
       el.src = item.src;
     } else {
       el = document.createElement('img');
@@ -6661,23 +6683,25 @@ function createAdCycler(slotEl, playlist){
     if(stopped || tries > all.length + 1) return;
     const item = nextItem();
     const el = build(item);
+    pendingEl = el;                       // built + loading; not yet on screen
 
     let advanced = false;                 // guard: this item may only advance once
     const nextOnce = ()=>{ if(advanced) return; advanced = true; clearTimer(); advance(); };
     let revealed = false;                 // guard: reveal must run once (canplay can re-fire)
 
-    const onFail = ()=>{ el.remove(); if(!advanced){ advanced = true; advance(tries + 1); } };
+    const onFail = ()=>{ if(pendingEl === el) pendingEl = null; teardownEl(el); if(!advanced){ advanced = true; advance(tries + 1); } };
 
     const reveal = ()=>{
       if(revealed) return;                // canplay/loadeddata can fire repeatedly
       revealed = true;
-      if(stopped){ el.remove(); return; }
+      if(stopped){ if(pendingEl === el) pendingEl = null; teardownEl(el); return; }
+      if(pendingEl === el) pendingEl = null;   // it's about to become `front`
       slotEl.appendChild(el);
       // Force layout then fade in; fade out + remove the previous layer.
       requestAnimationFrame(()=>{
         el.classList.add('show');
         const prev = front; front = el;
-        if(prev){ prev.classList.remove('show'); setTimeout(()=>prev.remove(), 700); }
+        if(prev){ prev.classList.remove('show'); const p = prev; setTimeout(()=>teardownEl(p), 700); }
       });
       // Schedule the next advance.
       if(item.type === 'video'){
@@ -6705,35 +6729,31 @@ function createAdCycler(slotEl, playlist){
   };
 
   const start = ()=>{ if(stopped) return; if(!front && timer===null) advance(); };
-  const stop  = ()=>{ stopped = true; clearTimer(); if(front && front.tagName==='VIDEO'){ try{ front.pause(); }catch(e){} } };
+  const stop  = ()=>{ stopped = true; clearTimer(); teardownEl(pendingEl); pendingEl = null; teardownEl(front); front = null; };
 
-  // Pause: freeze the rotation AND any playing video (otherwise a video keeps
-  // decoding/playing off-screen). Resume: unfreeze — restart a paused video, or
-  // kick the timer for a still.
+  // Pause: freeze the rotation, and fully tear down any video — including one that
+  // was still loading — so nothing keeps decoding or buffering off-screen. Resume
+  // rebuilds from scratch via advance(). (We tear down rather than pause because a
+  // paused <video> still holds a decoded buffer in the DOM; you asked for it gone.)
   const _pause = ()=>{
     clearTimer();
-    if(front && front.tagName === 'VIDEO'){ try{ front.pause(); }catch(e){} }
+    teardownEl(pendingEl); pendingEl = null;
+    if(front){ front.classList.remove('show'); teardownEl(front); front = null; }
   };
   const _resume = ()=>{
     if(stopped) return;
-    if(front && front.tagName === 'VIDEO'){
-      // Resume the current clip; if it had already ended, move on.
-      if(front.ended){ advance(); }
-      else { const p = front.play(); if(p && p.catch) p.catch(()=>{}); }
-    } else if(!front){
-      advance();                 // nothing showing yet — begin
-    } else if(timer === null){
-      advance();                 // a still with no pending timer — advance
-    }
+    if(!front && !pendingEl && timer === null) advance();   // rebuild fresh
   };
 
-  // Hide: stop playback and clear the slot so no video runs behind other screens.
-  // Show: begin (or resume) the rotation for this now-visible slot.
+  // Hide: rip out the visible AND the pending media immediately — no lingering
+  // node, no paused buffer — so absolutely nothing sits behind another screen.
+  // Show: begin the rotation for this now-visible slot.
   const hide = ()=>{
-    _pause();
-    if(front){ front.classList.remove('show'); const f = front; setTimeout(()=>{ try{ f.remove(); }catch(e){} }, 300); front = null; }
+    clearTimer();
+    teardownEl(pendingEl); pendingEl = null;
+    teardownEl(front); front = null;
   };
-  const show = ()=>{ if(stopped) return; if(!front && timer === null) advance(); };
+  const show = ()=>{ if(stopped) return; if(!front && !pendingEl && timer === null) advance(); };
 
   return { start, stop, _pause, _resume, hide, show };
 }
@@ -6762,12 +6782,31 @@ async function initAdSlots(){
    the actual display state of #prerace-ui / #postrace-ui so it stays correct no
    matter which code path changed screens. */
 function syncAdSlots(){
-  const preVisible  = _screenVisible('prerace-ui');
-  const postVisible = _screenVisible('postrace-ui');
+  // The lobby overlay sits on top of #prerace-ui at boot (prerace is display:flex
+  // but hidden BEHIND the lobby). Without this guard, the prerace slot counts as
+  // "visible" the moment the game loads and starts playing ad videos behind the
+  // lobby before any race exists. While the lobby is covering the screen, no ad
+  // slot is active.
+  const covered = _fullScreenOverlayUp();
+  const preVisible  = !covered && _screenVisible('prerace-ui');
+  const postVisible = !covered && _screenVisible('postrace-ui');
   const pre  = _adCyclerBySlot['ad-slot-prerace'];
   const post = _adCyclerBySlot['ad-slot-postrace'];
   if(pre){  preVisible  ? pre.show()  : pre.hide();  }
   if(post){ postVisible ? post.show() : post.hide(); }
+}
+// True while any full-screen overlay is covering the pre/post-race screens. The
+// pre/post-race UIs stay display:flex underneath these, so without this guard an
+// ad video keeps playing behind the cover. Covers:
+//   #lobby-overlay   — pre-game lobby (before the first race)
+//   #final-overlay   — end-of-session leaderboard (after the last race)
+//   #confirm-overlay — the "Main Menu" confirmation modal
+// (Confetti/slow-mo overlays are pointer-events:none decoration and don't count.)
+function _fullScreenOverlayUp(){
+  return ['lobby-overlay','final-overlay','confirm-overlay'].some(id=>{
+    const el = document.getElementById(id);
+    return el && getComputedStyle(el).display !== 'none';
+  });
 }
 function _screenVisible(id){
   const el = document.getElementById(id);
