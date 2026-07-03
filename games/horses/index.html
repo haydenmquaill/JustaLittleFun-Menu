@@ -3281,15 +3281,28 @@ function raceTick(ts) {
       updateFinishBoard();
       if(horse.finishRank===0){
         flashScreen('rgba(200,151,26,0.4)'); shakeViewport();
-        // First past the post — called the instant the winner crosses. The cluster
-        // recorder already knows, at this moment, whether a close finish is brewing:
-        // if the winner is a member of the active photo cluster, 1st is contested, so
-        // stay silent (only the close-finish call fires). Otherwise 1st is a clear
-        // winner — announce now, regardless of how far back the rest of the field is.
-        // (A runaway 1st with a 2nd/3rd battle behind it is NOT a cluster member, so
-        // this fires AND the close-finish call fires later — both in the same race.)
-        const winnerInCluster = isRecording && activeSlot && activeSlot.members.has(horse);
-        if(!_firstPastPostCalled && !winnerInCluster){
+        // First past the post — called the instant the winner crosses. We must
+        // decide right now whether a photo finish is brewing, before any second
+        // horse has crossed to produce a measurable gap. Cluster membership is the
+        // WRONG signal here: the recorder's window (recordingWindowPx ≈ 400px) is
+        // ~2 body-lengths wide and captures the leader on ordinary clear wins, so it
+        // would suppress the call almost every race. A photo finish is far tighter —
+        // photoFinishMaxLengths (0.25L). So test that tight band directly: is any
+        // still-running horse within a quarter-length of the line as 1st crosses?
+        // If yes, 1st is contested → stay silent (the close-finish call handles it).
+        // If no, 1st is a clear winner → announce now, however far back the field is.
+        const lineX = START_X + RACE_LENGTH;
+        // Match the board's photo threshold, with the same ×1.5 headroom the cluster
+        // code uses, so a chaser hovering right at the 0.25L boundary is treated as
+        // contested rather than firing the call one frame before the board resolves
+        // that row to PHOTO FINISH. Real clear wins are lengths clear, so the headroom
+        // never suppresses a genuine runaway.
+        const photoBandPx = CONFIG.photoFinishMaxLengths * DRAW_W * 1.5;
+        const contested = horses.some(h =>
+          h !== horse && !h.finished && !h.dead &&
+          (lineX - h.worldX) >= 0 && (lineX - h.worldX) <= photoBandPx
+        );
+        if(!_firstPastPostCalled && !contested){
           _firstPastPostCalled = true;
           playRaceCall('firstPastPost', horse.def.id);
         }
@@ -5882,6 +5895,33 @@ async function initAudio(){
 
   // Decode SFX + the PRIORITY voice clips before flipping ready — enough to open
   // a race. The rest of the active pack decodes in the background right after.
+  //
+  // BUT the lobby only needs two small looping files — menuMusic + crowd — to come
+  // alive, and those were previously stuck waiting behind the whole (large) priority
+  // voice+SFX decode below, which is why the menu music and crowd murmur took so long
+  // to start. So decode just those two first and start them immediately, independently
+  // of Audio_.ready. Voice readiness (which playVoice/playRaceCall gate on) is left
+  // exactly as before: `ready` still flips only once the full priority set is decoded.
+  const lobbyLoopUrls = new Set();
+  ['menuMusic','crowd'].forEach(k=>{
+    const spec = SOUND_MANIFEST[k];
+    if(spec) _specUrls(spec).forEach(u=>lobbyLoopUrls.add(u));
+  });
+  await _decodeUrls(lobbyLoopUrls);
+  // Start whichever lobby beds have been requested already (the lobby calls
+  // ensureCrowdBed()/startMenuMusic() at boot; those queued on onAudioReady, but we
+  // can satisfy them now that these two buffers exist — without waiting on voice).
+  if(!Audio_.muted){
+    if(!Audio_.loops.crowd)     _startLoopNow('crowd',     { volume:1.0, fade:1.5 });
+    if(!Audio_.loops.menuMusic) _startLoopNow('menuMusic', { volume:1.0, fade:1.5 });
+    // The crowd bus starts at gain 0 and is normally ramped up by setCrowd(), which
+    // the lobby queued behind onAudioReady — i.e. behind the full priority decode.
+    // Nudge it to the idle murmur now so the crowd loop we just started is actually
+    // audible immediately. setCrowd doesn't gate on Audio_.ready (only on ctx), and
+    // the later queued setCrowd('idle') just re-sets the same level — harmless.
+    setCrowd('idle', 2.0);
+  }
+
   const urls = new Set();
   Object.values(SOUND_MANIFEST).forEach(s=>_specUrls(s).forEach(u=>urls.add(u)));
   _priorityVoiceUrls().forEach(u=>urls.add(u));
@@ -5984,6 +6024,16 @@ function playSound(name, { volume=1, rate=1, bus=null } = {}){
 
 function startLoop(name, { volume=1, fade=0.5, rate=1 } = {}){
   if(!Audio_.ready || Audio_.muted || Audio_.loops[name]) return;
+  _startLoopNow(name, { volume, fade, rate });
+}
+
+/* Same as startLoop but without the Audio_.ready gate — used only for the two
+   lobby beds (menuMusic, crowd) during initAudio, so the ambience can start the
+   instant those two buffers decode rather than waiting on the full priority
+   voice/SFX decode that flips Audio_.ready. Still respects mute + already-playing,
+   and still no-ops safely if the buffer isn't present. */
+function _startLoopNow(name, { volume=1, fade=0.5, rate=1 } = {}){
+  if(Audio_.muted || Audio_.loops[name]) return;
   const spec = _spec(name); if(!spec) return;
   const buffer = _buf(_pickUrl(spec)); if(!buffer) return;
   const src = Audio_.ctx.createBufferSource();
