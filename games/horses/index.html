@@ -3920,6 +3920,10 @@ function init() {
     updateWeatherAudio(RACE_WEATHER && RACE_WEATHER.id);   // rain/storm bed to match
     ensureCrowdBed(); setCrowd('prerace', 3.0);            // gentle presence during walk-up/betting
     stageToPrerace();
+    // init() is the FIRST prerace of a session (subsequent preraces go through
+    // resetToPrerace, which syncs). Without this, the first prerace screen never
+    // triggered its ad slot — ads only appeared from the first postrace onward.
+    if(typeof syncAdSlots === 'function') syncAdSlots();
     buildHorses(true); // horses start walking up
     buildGates(); // show gates in walk-up cam
     buildGrids();
@@ -5632,7 +5636,7 @@ function loadVoiceManifest(lang = DEFAULT_LANG){
 
       // Parse into a self-contained data object (don't touch globals yet), then
       // cache it so switching back to this language can re-apply without refetch.
-      const data = { lines:{}, horseLines:{}, courseLines:{}, conditionLines:{weather:{},distance:{},field:{}}, rollCall:{position:{},favourite:[],horseName:{}} };
+      const data = { lines:{}, horseLines:{}, courseLines:{}, conditionLines:{weather:{},distance:{},field:{}}, rollCall:{position:{},favourite:[],horseName:{}}, raceFrames:{}, raceName:{} };
       if(m.lines){
         for(const [ev, arr] of Object.entries(clean(m.lines))){
           if(Array.isArray(arr)) data.lines[ev] = arr.map(pre);
@@ -5665,6 +5669,28 @@ function loadVoiceManifest(lang = DEFAULT_LANG){
         if(Array.isArray(m.rollCall.favourite)) data.rollCall.favourite = m.rollCall.favourite.map(pre);
         for(const [hid, arr] of Object.entries(clean(m.rollCall.horseName))){
           if(Array.isArray(arr)) data.rollCall.horseName[hid] = arr.map(pre);
+        }
+      }
+      // In-race milestone calls: raceFrames is event -> [frame urls] (like lines);
+      // raceName is horseId -> { neutral, emphatic } where each tone is a SINGLE
+      // url string (playRaceCall stitches one frame + one name). Both were missing
+      // from the parser, which left VOICE_RACE_FRAMES/NAME empty and silently
+      // dropped every quarter/half/finalStraight/firstPastPost call.
+      if(m.raceFrames){
+        for(const [ev, arr] of Object.entries(clean(m.raceFrames))){
+          if(Array.isArray(arr)) data.raceFrames[ev] = arr.map(pre);
+        }
+      }
+      if(m.raceName){
+        for(const [hid, tones] of Object.entries(clean(m.raceName))){
+          if(!tones || typeof tones !== 'object') continue;
+          const out = {};
+          for(const tone of ['neutral','emphatic']){
+            const v = tones[tone];
+            if(typeof v === 'string') out[tone] = pre(v);
+            else if(Array.isArray(v) && v.length) out[tone] = pre(v[0]);
+          }
+          if(out.neutral || out.emphatic) data.raceName[hid] = out;
         }
       }
       _voiceDataByLang[lang] = data;
@@ -6683,7 +6709,12 @@ function createAdCycler(slotEl, playlist){
     if(stopped || tries > all.length + 1) return;
     const item = nextItem();
     const el = build(item);
-    pendingEl = el;                       // built + loading; not yet on screen
+    pendingEl = el;                       // built + loading; not yet visible
+    // Attach immediately but INVISIBLE (no .show class). A detached <video> with
+    // preload doesn't reliably progress to 'canplay' in some browsers, so it must
+    // be in the document to load — but the .show class (opacity) is only added once
+    // it can actually play, so nothing flashes before it's ready.
+    slotEl.appendChild(el);
 
     let advanced = false;                 // guard: this item may only advance once
     const nextOnce = ()=>{ if(advanced) return; advanced = true; clearTimer(); advance(); };
@@ -6694,9 +6725,12 @@ function createAdCycler(slotEl, playlist){
     const reveal = ()=>{
       if(revealed) return;                // canplay/loadeddata can fire repeatedly
       revealed = true;
-      if(stopped){ if(pendingEl === el) pendingEl = null; teardownEl(el); return; }
-      if(pendingEl === el) pendingEl = null;   // it's about to become `front`
-      slotEl.appendChild(el);
+      if(stopped || pendingEl !== el){    // hidden/torn down while loading — bail
+        if(pendingEl === el) pendingEl = null;
+        teardownEl(el);
+        return;
+      }
+      pendingEl = null;                   // it's now becoming `front`
       // Force layout then fade in; fade out + remove the previous layer.
       requestAnimationFrame(()=>{
         el.classList.add('show');
@@ -6722,9 +6756,12 @@ function createAdCycler(slotEl, playlist){
     if(item.type === 'video'){
       el.oncanplay = reveal;
       el.onerror = onFail;
+      // If it's already ready (cached), canplay may have fired before we wired it.
+      if(el.readyState >= 3) reveal();
     } else {
       el.onload = reveal;
       el.onerror = onFail;
+      if(el.complete && el.naturalWidth) reveal();
     }
   };
 
