@@ -1262,7 +1262,14 @@ const CONFIG = {
   // spread. Target pace ≈ 60s per 1000m. Left at 1.0 as the clean baseline after
   // the stamina-fade fix; measure a real race, then nudge this to hit the target
   // (raise if pace reads long, lower if short).
-  racePaceScale: 1.0,
+  racePaceScale: 1.17,
+  // Pace / spread — validated by simulation (8-horse fields, hundreds of runs):
+  // with racePaceScale 1.17, the narrowed top-speed band (see rawTopSpeed) and
+  // fadeDepth 0.05, finishes land at ~60s/1000m with first/last of roughly
+  // 0:58/1:09 @1000m, 1:56/2:18 @2000m, 2:55/3:28 @3000m. Raise racePaceScale to
+  // speed all races up; widen the rawTopSpeed band to spread the field more.
+  cruiseFraction: 0.97,
+  fadeDepth: 0.05,
   finishHoldMs: 2500,
   slowmoSpeed: 0.25,
   forceSlowmo: false,
@@ -2620,8 +2627,12 @@ function buildRaceParams(horseDef, raceLuck) {
   const accelRoll    = skew();
   const staminaRoll  = skew();
 
-  // Map rolls to actual values
-  const rawTopSpeed = 3.4 + topSpeedRoll * 1.8;  // 3.4–5.2 px/frame
+  // Map rolls to actual values. Top-speed band narrowed from 3.4–5.2 to 4.3–5.2:
+  // the width of this band is what drives the finish SPREAD (a wider band lets the
+  // field string out more over distance). 4.3–5.2 keeps 3000m spread ~33s while
+  // still giving fast/slow horses a meaningful gap. Widen to spread more, narrow
+  // to bunch tighter.
+  const rawTopSpeed = 4.3 + topSpeedRoll * 0.9;  // 4.3–5.2 px/frame
   const topSpeed    = rawTopSpeed * RACE_WEATHER.speedModifier * raceLuck * (CONFIG.racePaceScale || 1);
 
   const styleAccelBoost = horseDef.style === 'END_CLOSER'  ? 1.3 :
@@ -2710,7 +2721,7 @@ function getTargetSpeed(horse, prog) {
     }
 
     default:
-      return top * 0.90;
+      return top * (CONFIG.cruiseFraction || 0.97);
   }
 }
 
@@ -2734,17 +2745,21 @@ function tickHorseSpeed(horse, prog) {
 
   let target = getTargetSpeed(horse, prog);
 
-  // Stamina taper — gradual reduction as stamina depletes, flat fade after
+  // Stamina taper — gradual reduction as stamina depletes, flat fade after.
+  // fadeDepth controls how far a tiring horse drops below its cruise target; a
+  // smaller value keeps the field's finish times closer together (less tail spread)
+  // and lifts overall pace. Tunable via CONFIG.fadeDepth.
+  const _fadeDepth = (CONFIG.fadeDepth != null ? CONFIG.fadeDepth : 0.12);
   if(staminaUsed < 0.55) {
     // Fresh — running freely
   } else if(horse._stamina > 0) {
-    // Taper begins at 55% used, max 18% reduction at full depletion
+    // Taper begins at 55% used, scaling to fadeDepth at full depletion
     const t = (staminaUsed - 0.55) / 0.45;
-    target *= (1.0 - t * 0.18);
+    target *= (1.0 - t * _fadeDepth);
   } else {
-    // Past depletion — simple flat fade, no guts complexity
-    horse._fadeAccum = (horse._fadeAccum || 0) + 0.002 * frameDt;
-    target = Math.max(p.topSpeed * 0.65, target * (1.0 - horse._fadeAccum));
+    // Past depletion — gentle flat fade, floored so stragglers still move along
+    horse._fadeAccum = (horse._fadeAccum || 0) + 0.0015 * frameDt;
+    target = Math.max(p.topSpeed * 0.78, target * (1.0 - horse._fadeAccum));
   }
 
   // Front runner competition — if another front runner is ahead, burn extra stamina fighting
@@ -3331,6 +3346,7 @@ function raceTick(ts) {
   // 3rd place crossed — wait for ALL living horses to finish before triggering sequence
   if(!raceOver && finishOrder.length >= 3){
     raceOver=true;
+    armPodiumGate();   // close the big-moment-voice race window immediately
     // NOTE: we intentionally do NOT touch the session status here any more.
     // The phone status (photo vs settling) is decided later, at the post-race
     // transition, based on whether a slow-mo replay is actually playing — see
@@ -3463,6 +3479,7 @@ function startPostRaceTransition(hadSlowmo) {
   pr.style.display='flex';
   document.getElementById('race-ui').style.display='none';
   document.getElementById('prerace-ui').style.display='none';
+  if(typeof syncAdSlots === 'function') syncAdSlots();   // post-race ad tile now visible
   hideRaceBigMoments();   // clear any previous race's moments until this one settles
 
   pr.classList.add('visible');
@@ -3753,6 +3770,7 @@ function beginRace() {
   clearInterval(countdownInterval);
 
   document.getElementById('prerace-ui').style.display='none';
+  if(typeof syncAdSlots === 'function') syncAdSlots();   // race view — pause both ad tiles
   stageToRace(true);
   playSound('postTrumpet', { volume:0.9 });   // "Call to the Post" as we enter race view and hold for the off
   startLoop('gateRattle', { volume:0.55, fade:0.6 });   // stalls shuffle under the hold; killed the instant gates open
@@ -3870,6 +3888,7 @@ function resetToPrerace() {
   ['postrace-info-table','podium-table'].forEach(id=>document.getElementById(id).classList.remove('visible'));
   document.getElementById('prerace-ui').style.display='flex';
   document.getElementById('race-ui').style.display='none';
+  if(typeof syncAdSlots === 'function') syncAdSlots();   // pre-race ad tile now visible
 
   // Hide gate overlay so it gets rebuilt fresh by walkUpTick
   document.getElementById('gate-overlay').style.display='none';
@@ -5207,8 +5226,11 @@ async function showFinalLeaderboard(){
     const fanfareSpec = SOUND_MANIFEST.fanfare;
     const fanfareUrl  = fanfareSpec && (Array.isArray(fanfareSpec.url)?fanfareSpec.url[0]:fanfareSpec.url);
     const fanfareBuf  = fanfareUrl ? _buf(fanfareUrl) : null;
-    // Wait out most of the sting (cap so a long fanfare doesn't stall the finale).
-    const afterFanfare = Math.min(fanfareBuf ? fanfareBuf.duration*1000*0.85 : 1800, 2600);
+    // Let the fanfare finish before the voices start — they must not talk over it.
+    // The fanfare sting runs ~19s; wait its full decoded length plus a ~1s beat, and
+    // fall back to 20s if the buffer isn't measurable yet. Capped generously so a
+    // long clip is respected (the previous 2.6s cap made the voices fire over it).
+    const afterFanfare = Math.min(fanfareBuf ? fanfareBuf.duration*1000 + 1000 : 20000, 30000);
 
     setTimeout(async ()=>{
       await playFinaleVoice('winner');
@@ -6257,10 +6279,21 @@ function _voiceAfter(afterKey, nextKey, gapMs=250){
 let _podiumDone = Promise.resolve();
 let _resolvePodiumDone = null;
 
-async function playPodiumPlacers(placers){
-  // Arm the gate up-front (even on the early-return paths below) so a waiter
-  // never hangs: if we're not going to speak, resolve straight away.
+/* Arm the podium "has spoken" gate. Called SYNCHRONOUSLY the instant the finish
+   sequence begins — before either the podium read-out or the big-moment flourish
+   can run — so _podiumDone is always a fresh, unresolved promise by the time
+   playBigMomentVoice awaits it. Without this, _podiumDone could still be the
+   previous race's resolved promise, and the flourish would fire instantly, over
+   the place_ calls. Idempotent within a race: only arms if not already armed. */
+function armPodiumGate(){
+  if(_resolvePodiumDone) return;   // already armed for this race
   _podiumDone = new Promise(res=>{ _resolvePodiumDone = res; });
+}
+
+async function playPodiumPlacers(placers){
+  // Ensure the gate is armed (normally already done synchronously at race finish;
+  // this is a safety net so the promise/resolver always exist here).
+  armPodiumGate();
   const finishPodium = ()=>{ if(_resolvePodiumDone){ _resolvePodiumDone(); _resolvePodiumDone = null; } };
 
   if(!Audio_.ready || Audio_.muted || !placers || placers.length < 2){ finishPodium(); return; }
@@ -6527,7 +6560,7 @@ const AD_PLAYLIST_FALLBACK = {
 let _adPlaylist = null;   // { basePath, items:[…] } once resolved
 
 function _adInferType(src, given){
-  if(given) return given;
+  if(given) return given;   // explicit 'logo' | 'image' | 'video' respected
   return /\.(mp4|webm|ogv|mov)(\?|$)/i.test(src) ? 'video' : 'image';
 }
 
@@ -6563,15 +6596,28 @@ async function loadAdPlaylist(){
    so the two screens aren't forced into lockstep. */
 function createAdCycler(slotEl, playlist){
   if(!slotEl || !playlist || !playlist.items.length) return null;
-  const items = playlist.items;
-  let idx = -1;
+  const all = playlist.items;
+  // Split the playlist: the logo (type 'logo') is pulled OUT of the main rotation
+  // and shown between every content item, so the sequence is
+  //   content → logo → content → logo → …  (the logo is every second slot).
+  // If several logo items exist, the first is used; if none, the cycler simply
+  // rotates the content items with no interstitial.
+  const logoItem    = all.find(it => it.type === 'logo') || null;
+  const contentItems = all.filter(it => it.type !== 'logo');
+  // Nothing but logos? Treat the logo as the sole content so the slot isn't blank.
+  const rotation = contentItems.length ? contentItems : (logoItem ? [logoItem] : []);
+  if(!rotation.length) return null;
+
+  let cIdx = -1;             // index into rotation (content items)
+  let showLogoNext = false;  // alternation flag: true → next shown item is the logo
   let front = null;          // currently-visible layer
   let timer = null;
   let stopped = false;
 
   const clearTimer = ()=>{ if(timer){ clearTimeout(timer); timer = null; } };
 
-  // Build a fresh media element for an item (not yet attached).
+  // Build a fresh media element for an item (not yet attached). 'logo' renders as
+  // an image — it's just a distinctly-tagged still.
   const build = (item)=>{
     let el;
     if(item.type === 'video'){
@@ -6589,13 +6635,31 @@ function createAdCycler(slotEl, playlist){
     return el;
   };
 
-  // Advance to the next PLAYABLE item. Skips any element that errors (404, bad
-  // codec) so one broken file can't stall the rotation. `tries` guards against
-  // an all-broken playlist looping forever.
+  // Pick the next item to show. Alternates content → logo → content → …; the
+  // content items are chosen at RANDOM (not in order), avoiding an immediate repeat
+  // so the same clip doesn't play twice back to back. If there's no logo, it just
+  // keeps picking random content.
+  const nextItem = ()=>{
+    if(logoItem && showLogoNext){
+      showLogoNext = false;
+      return logoItem;
+    }
+    showLogoNext = !!logoItem;      // after a content item, show the logo next
+    if(rotation.length === 1){
+      cIdx = 0;
+    } else {
+      let pick;
+      do { pick = (Math.random() * rotation.length) | 0; } while(pick === cIdx);
+      cIdx = pick;
+    }
+    return rotation[cIdx];
+  };
+
+  // Advance to the next item. Skips an element that errors (404/bad codec) so one
+  // broken file can't stall the rotation. `tries` guards an all-broken playlist.
   const advance = (tries = 0)=>{
-    if(stopped || tries > items.length) return;
-    idx = (idx + 1) % items.length;
-    const item = items[idx];
+    if(stopped || tries > all.length + 1) return;
+    const item = nextItem();
     const el = build(item);
 
     let advanced = false;                 // guard: this item may only advance once
@@ -6641,23 +6705,75 @@ function createAdCycler(slotEl, playlist){
   };
 
   const start = ()=>{ if(stopped) return; if(!front && timer===null) advance(); };
-  const stop  = ()=>{ stopped = true; clearTimer(); };
+  const stop  = ()=>{ stopped = true; clearTimer(); if(front && front.tagName==='VIDEO'){ try{ front.pause(); }catch(e){} } };
 
-  return { start, stop, _pause: ()=>clearTimer(), _resume: ()=>{ if(!stopped && !timer && front && front.tagName==='IMG') advance(); } };
+  // Pause: freeze the rotation AND any playing video (otherwise a video keeps
+  // decoding/playing off-screen). Resume: unfreeze — restart a paused video, or
+  // kick the timer for a still.
+  const _pause = ()=>{
+    clearTimer();
+    if(front && front.tagName === 'VIDEO'){ try{ front.pause(); }catch(e){} }
+  };
+  const _resume = ()=>{
+    if(stopped) return;
+    if(front && front.tagName === 'VIDEO'){
+      // Resume the current clip; if it had already ended, move on.
+      if(front.ended){ advance(); }
+      else { const p = front.play(); if(p && p.catch) p.catch(()=>{}); }
+    } else if(!front){
+      advance();                 // nothing showing yet — begin
+    } else if(timer === null){
+      advance();                 // a still with no pending timer — advance
+    }
+  };
+
+  // Hide: stop playback and clear the slot so no video runs behind other screens.
+  // Show: begin (or resume) the rotation for this now-visible slot.
+  const hide = ()=>{
+    _pause();
+    if(front){ front.classList.remove('show'); const f = front; setTimeout(()=>{ try{ f.remove(); }catch(e){} }, 300); front = null; }
+  };
+  const show = ()=>{ if(stopped) return; if(!front && timer === null) advance(); };
+
+  return { start, stop, _pause, _resume, hide, show };
 }
 
 let _adCyclers = [];
+let _adCyclerBySlot = {};   // id -> cycler
 async function initAdSlots(){
   const playlist = await loadAdPlaylist();
   ['ad-slot-prerace','ad-slot-postrace'].forEach(id=>{
     const el = document.getElementById(id);
     const c = createAdCycler(el, playlist);
-    if(c){ c.start(); _adCyclers.push(c); }
+    if(c){ _adCyclers.push(c); _adCyclerBySlot[id] = c; }
   });
-  // Save resources while the tab is backgrounded; resume on return.
+  // Do NOT start both at boot — that left videos playing off-screen behind the
+  // race the whole time. Each cycler only runs while its screen is visible; the
+  // screen transitions call setAdSlotActive() to show/hide the right one.
+  syncAdSlots();
+  // Save resources while the tab is backgrounded; resume the visible one on return.
   document.addEventListener('visibilitychange', ()=>{
-    _adCyclers.forEach(c => document.hidden ? c._pause() : c._resume());
+    if(document.hidden) _adCyclers.forEach(c => c._pause());
+    else syncAdSlots();
   });
+}
+
+/* Show the cycler whose screen is currently visible; hide the other. Driven off
+   the actual display state of #prerace-ui / #postrace-ui so it stays correct no
+   matter which code path changed screens. */
+function syncAdSlots(){
+  const preVisible  = _screenVisible('prerace-ui');
+  const postVisible = _screenVisible('postrace-ui');
+  const pre  = _adCyclerBySlot['ad-slot-prerace'];
+  const post = _adCyclerBySlot['ad-slot-postrace'];
+  if(pre){  preVisible  ? pre.show()  : pre.hide();  }
+  if(post){ postVisible ? post.show() : post.hide(); }
+}
+function _screenVisible(id){
+  const el = document.getElementById(id);
+  if(!el) return false;
+  const cs = getComputedStyle(el);
+  return cs.display !== 'none' && cs.visibility !== 'hidden';
 }
 initAdSlots();
 

@@ -2,7 +2,7 @@
   "_comment": "Playlist for the cycling ad/media slot in the top-left tile of the pre-race and post-race screens. Put this file at data/ads.json (served alongside horses.json/courses.json). 'basePath' is prepended to every item 'src'; point it at wherever your media lives (e.g. assets/ads/ in the repo, or a CDN URL). Each item: type ('image' or 'video' — inferred from the extension if omitted), src (path under basePath), ms (how long an IMAGE holds in milliseconds; ignored for video, whose own length drives the advance), fit ('contain' = never crops, good for logos/ads with text; 'cover' = fills the tile, may crop, good for full-bleed footage), alt (label for images). Videos must be SILENT (no audio track) so they autoplay everywhere; use H.264 .mp4 (optionally .webm too). A missing/empty file falls back to just the logo; a single file that 404s or won't play is skipped automatically.",
   "basePath": "assets/ads/",
   "items": [
-    { "type": "image", "src": "../jalf_logo.png", "ms": 7000, "fit": "contain", "alt": "JustaLittleFun Racing" },
+    { "type": "logo", "src": "../jalf_logo.png", "ms": 7000, "fit": "contain", "alt": "JustaLittleFun Racing" },
     { "type": "video", "src": "damp.mp4", "fit": "cover" },
     { "type": "video", "src": "glenfumble.mp4", "fit": "cover" },
     { "type": "video", "src": "henriettas.mp4", "fit": "cover" },
