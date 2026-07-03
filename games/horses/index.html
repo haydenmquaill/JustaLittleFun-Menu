@@ -185,29 +185,18 @@ body {
 .cfg-disclose[aria-expanded="true"] { border-color:var(--blue); }
 .cfg-disclose[aria-expanded="true"] .cfg-disclose-caret { transform:rotate(180deg); }
 
-/* The picker now lives inside the settings card, revealed under the rows. */
-.course-picker { padding:14px 20px 16px; display:flex; gap:24px; border-top:1px solid #e2e2e2; }
-.course-picker[hidden] { display:none; }
-.course-picker .cp-group { flex:1; min-width:0; }
-.course-picker .cp-head {
-  display:flex; align-items:baseline; justify-content:space-between;
-  font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:1.15rem;
-  letter-spacing:1px; text-transform:uppercase; color:var(--mid);
-  margin-bottom:7px; border-bottom:1px solid #e2e2e2; padding-bottom:4px;
-}
-.course-picker .cp-head .cp-all {
-  font-family:'Oswald',sans-serif; font-size:0.85rem; letter-spacing:.5px;
-  color:var(--blue); cursor:pointer; background:none; border:none; text-transform:uppercase;
-}
-.course-picker .cp-chips { display:flex; flex-wrap:wrap; gap:5px; }
-.course-picker .cp-chip {
+/* Two inline segmented selectors (Country, Distance) replace the old course grid.
+   Each row shows a label on the left and a group of mutually-exclusive buttons. */
+.seg-row { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.seg-group { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.seg-btn {
   font-family:'Oswald',sans-serif; font-weight:600; font-size:0.95rem;
-  padding:4px 9px; border-radius:5px; cursor:pointer; user-select:none;
+  padding:6px 14px; border-radius:6px; cursor:pointer; user-select:none;
   border:1.5px solid #c3ccdd; background:#eef1f7; color:var(--mid);
-  transition:background .12s, border-color .12s, color .12s;
+  transition:background .12s, border-color .12s, color .12s; white-space:nowrap;
 }
-.course-picker .cp-chip.on { background:var(--blue); border-color:var(--blue); color:#fff; }
-.course-picker .cp-empty { color:var(--mid); font-size:1rem; padding:6px 2px; }
+.seg-btn.on { background:var(--blue); border-color:var(--blue); color:#fff; }
+.seg-btn .seg-sub { display:block; font-size:0.7rem; opacity:0.75; letter-spacing:.3px; margin-top:1px; }
 .settings-summary .ss-item .ss-val.wrap { white-space:normal; }
 
 /* Room code — navy board, not the black one, so it reads as part of the frame */
@@ -1017,16 +1006,21 @@ body {
               <button data-dir="1">+</button>
             </div>
           </div>
-          <div class="lobby-row">
-            <span class="lab">Courses<small>Which tracks can come up this session</small></span>
-            <button class="cfg-disclose" id="courses-toggle" aria-expanded="false">
-              <span class="cfg-disclose-val" id="courses-count">All</span>
-              <span class="cfg-disclose-caret">▾</span>
-            </button>
+          <div class="lobby-row seg-row">
+            <span class="lab">Country<small>Which country's tracks &amp; horses run this session</small></span>
+            <div class="seg-group" id="country-seg">
+              <button class="seg-btn" data-country="AU">Australia</button>
+              <button class="seg-btn" data-country="JP">Japan</button>
+            </div>
           </div>
-        </div>
-        <div class="course-picker" id="course-picker" hidden>
-          <div class="cp-empty">Loading courses…</div>
+          <div class="lobby-row seg-row">
+            <span class="lab">Distance<small>Every race this session runs at this trip</small></span>
+            <div class="seg-group" id="distance-seg">
+              <button class="seg-btn" data-band="sprint">Sprint<span class="seg-sub">≤1300m</span></button>
+              <button class="seg-btn" data-band="mile">Mile<span class="seg-sub">1300–2000m</span></button>
+              <button class="seg-btn" data-band="staying">Staying<span class="seg-sub">2000m+</span></button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="lobby-actions">
@@ -1065,7 +1059,7 @@ body {
         <div class="ss-item"><span class="ss-lab">Races</span><span class="ss-val" id="ss-races">6</span></div>
         <div class="ss-item"><span class="ss-lab">Betting</span><span class="ss-val" id="ss-betting">60s</span></div>
         <div class="ss-item"><span class="ss-lab">Balance</span><span class="ss-val" id="ss-balance">$200</span></div>
-        <div class="ss-item"><span class="ss-lab">Courses</span><span class="ss-val wrap" id="ss-courses">All</span></div>
+        <div class="ss-item"><span class="ss-lab">Race</span><span class="ss-val wrap" id="ss-courses">All</span></div>
       </div>
 
       <div class="lobby-actions">
@@ -1542,19 +1536,33 @@ function rollWeather() {
 }
 
 function setupRace() {
-  // Pick a random course from the session's included set (falls back to all if the
-  // config is missing/empty, so a race is never left without a course).
-  const inc = (lobby && lobby.cfg && lobby.cfg.includedCourses) || null;
-  let pool = COURSES_DATA;
-  if(inc && inc.length){
-    const set = new Set(inc);
-    const filtered = COURSES_DATA.filter(c=>set.has(c.id));
-    if(filtered.length) pool = filtered;
-  }
+  // Session config fixes the COUNTRY and the DISTANCE BAND (sprint/mile/staying)
+  // for every race. Pick a random course in that country that offers a distance
+  // in the band, then pick a random in-band distance from it. Fallbacks keep a
+  // race from ever being left without a course if the config is missing or a
+  // country/band combo has no match (validated in the config UI, but be safe).
+  const cfg = (lobby && lobby.cfg) || {};
+  const wantCountry = cfg.country || 'AU';
+  const wantBand = cfg.distanceBand || null;
+
+  const inCountry = COURSES_DATA.filter(c => (c.country||'AU') === wantCountry);
+  const countryPool = inCountry.length ? inCountry : COURSES_DATA;
+
+  // Courses in the country that actually have an in-band distance.
+  const bandCourses = wantBand
+    ? countryPool.filter(c => (c.distances||[]).some(d => distanceBand(d) === wantBand))
+    : countryPool;
+  const pool = bandCourses.length ? bandCourses : countryPool;
+
   RACECOURSE = pool[Math.floor(Math.random()*pool.length)];
-  // Pick terrain and distance
   RACE_TERRAIN = RACECOURSE.terrains[Math.floor(Math.random()*RACECOURSE.terrains.length)];
-  RACE_DISTANCE = RACECOURSE.distances[Math.floor(Math.random()*RACECOURSE.distances.length)];
+
+  // Restrict this course's distances to the chosen band, then pick one at random.
+  const inBand = wantBand
+    ? RACECOURSE.distances.filter(d => distanceBand(d) === wantBand)
+    : RACECOURSE.distances;
+  const distChoices = inBand.length ? inBand : RACECOURSE.distances;
+  RACE_DISTANCE = distChoices[Math.floor(Math.random()*distChoices.length)];
   // Roll weather
   RACE_WEATHER = rollWeather();
   // Set race length from distance. This is the VISUAL track length in world px only —
@@ -4085,7 +4093,7 @@ const PLAYER_JOIN_URL = 'https://haydenmquaill.github.io/JustaLittleFun';
 const sb = _createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const lobby = {
-  cfg: { numRaces:6, bettingSeconds:90, startingBalance:200, payoutCeiling:5000, includedCourses:null, includedCountries:null },
+  cfg: { numRaces:6, bettingSeconds:90, startingBalance:200, payoutCeiling:5000, country:'AU', distanceBand:'sprint', includedCountries:['AU'] },
   session: null,
   channel: null,
   players: [],
@@ -4098,7 +4106,7 @@ const lq = sel => document.querySelector(sel);
 function showStack(id){
   document.querySelectorAll('.lobby-stack').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  if(id==='lobby-config') renderCoursePicker();
+  if(id==='lobby-config') renderRaceConfig();
   if(id==='lobby-room')   renderSettingsSummary();
 }
 
@@ -4147,127 +4155,72 @@ function renderSettingsSummary(){
   if(bal) bal.textContent = '$' + lobby.cfg.startingBalance;
   const c=lq('#ss-courses');
   if(c){
-    const total = (COURSES_DATA||[]).length;
-    const inc = lobby.cfg.includedCourses;
-    c.textContent = (!inc || inc.length===0 || inc.length===total)
-      ? `All ${total||''}`.trim()
-      : `${inc.length} of ${total}`;
+    const country = COUNTRY_LABEL[lobby.cfg.country] || lobby.cfg.country || 'AU';
+    const band = BAND_LABEL[lobby.cfg.distanceBand] || lobby.cfg.distanceBand || '';
+    c.textContent = band ? `${country} · ${band}` : country;
   }
 }
 
-/* Normalise includedCourses to a concrete array of ids. null/empty means "all",
-   materialised against the loaded course list. */
-function effectiveIncludedCourses(){
-  const all = (COURSES_DATA||[]).map(c=>c.id);
-  const inc = lobby.cfg.includedCourses;
-  if(!inc || !inc.length) return all;
-  const set = new Set(all);
-  const filtered = inc.filter(id=>set.has(id));
-  return filtered.length ? filtered : all;   // never empty
-}
-
-/* Derive the set of countries covered by the included courses and store it on
-   the config as `includedCountries`. This is what the PLAYER reads to scope its
-   horse viewer — the player never needs courses.json because the host resolves
-   ids → countries here and writes the answer into the synced config. */
+/* The player scopes its horse viewer by `includedCountries`. With a single-country
+   session that's just the one chosen country, written here so the player needs no
+   courses.json. */
 function syncIncludedCountries(){
-  const ids = new Set(effectiveIncludedCourses());
-  const seen = [];
-  for(const c of (COURSES_DATA||[])){
-    if(ids.has(c.id)){ const k=c.country||'AU'; if(!seen.includes(k)) seen.push(k); }
-  }
-  lobby.cfg.includedCountries = seen.length ? seen : null;
+  lobby.cfg.includedCountries = [lobby.cfg.country || 'AU'];
 }
 
-/* Render the course picker in the config card, grouped by country. Ensures the
-   game data (course list) is loaded first, since it's fetched async. */
-async function renderCoursePicker(){
-  const host = lq('#course-picker'); if(!host) return;
-  try { await loadGameData(); } catch(e){ /* fall through to empty state */ }
-  const courses = COURSES_DATA || [];
-  if(!courses.length){ host.innerHTML = '<div class="cp-empty">Couldn’t load courses.</div>'; return; }
+const COUNTRY_LABEL = { AU:'Australia', JP:'Japan' };
+const BAND_LABEL    = { sprint:'Sprint', mile:'Mile', staying:'Staying' };
 
-  if(lobby.cfg.includedCourses == null){
-    lobby.cfg.includedCourses = courses.map(c=>c.id);
-  }
+/* Render the two segmented selectors (Country, Distance) and wire their clicks.
+   Loads game data first so we can warn if a country/band combo has no track. */
+async function renderRaceConfig(){
+  try { await loadGameData(); } catch(e){ /* fall through; validation just won't fire */ }
+  if(!lobby.cfg.country) lobby.cfg.country = 'AU';
+  if(!lobby.cfg.distanceBand) lobby.cfg.distanceBand = 'sprint';
   syncIncludedCountries();
-  const sel = new Set(lobby.cfg.includedCourses);
 
-  const LABEL = { AU:'Australian', JP:'Japanese' };
-  const groups = [];
-  const byCountry = {};
-  for(const c of courses){
-    const k = c.country || 'AU';
-    if(!byCountry[k]){ byCountry[k] = []; groups.push(k); }
-    byCountry[k].push(c);
-  }
-  host.innerHTML = groups.map(k=>{
-    const chips = byCountry[k].map(c=>
-      `<span class="cp-chip ${sel.has(c.id)?'on':''}" data-cid="${c.id}">${escapeHtml(c.name)}</span>`
-    ).join('');
-    return `<div class="cp-group">
-      <div class="cp-head"><span>${LABEL[k]||k}</span>
-        <button class="cp-all" data-country="${k}">Toggle all</button></div>
-      <div class="cp-chips">${chips}</div>
-    </div>`;
-  }).join('');
-
-  host.querySelectorAll('.cp-chip').forEach(chip=>{
-    chip.addEventListener('click', ()=>{
-      const id = chip.dataset.cid;
-      const s = new Set(lobby.cfg.includedCourses);
-      if(s.has(id)) s.delete(id); else s.add(id);
-      lobby.cfg.includedCourses = [...s];
-      chip.classList.toggle('on', s.has(id));
+  const cSeg = lq('#country-seg'), dSeg = lq('#distance-seg');
+  if(cSeg) cSeg.querySelectorAll('.seg-btn').forEach(b=>{
+    b.classList.toggle('on', b.dataset.country === lobby.cfg.country);
+    b.onclick = ()=>{
+      lobby.cfg.country = b.dataset.country;
+      cSeg.querySelectorAll('.seg-btn').forEach(x=>x.classList.toggle('on', x===b));
       syncIncludedCountries();
-      updateCoursePickerMsg();
-    });
+      updateRaceConfigMsg();
+    };
   });
-  host.querySelectorAll('.cp-all').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const k = btn.dataset.country;
-      const ids = byCountry[k].map(c=>c.id);
-      const s = new Set(lobby.cfg.includedCourses);
-      const allOn = ids.every(id=>s.has(id));
-      ids.forEach(id=> allOn ? s.delete(id) : s.add(id));
-      lobby.cfg.includedCourses = [...s];
-      renderCoursePicker();
-    });
+  if(dSeg) dSeg.querySelectorAll('.seg-btn').forEach(b=>{
+    b.classList.toggle('on', b.dataset.band === lobby.cfg.distanceBand);
+    b.onclick = ()=>{
+      lobby.cfg.distanceBand = b.dataset.band;
+      dSeg.querySelectorAll('.seg-btn').forEach(x=>x.classList.toggle('on', x===b));
+      updateRaceConfigMsg();
+    };
   });
-  updateCoursePickerMsg();
+  updateRaceConfigMsg();
 }
 
-/* Warn (and block Confirm) if the host has deselected every course. */
-function updateCoursePickerMsg(){
+/* True when at least one course in the chosen country offers a distance in the
+   chosen band — i.e. the session can actually stage a race. */
+function raceConfigHasMatch(){
+  const country = lobby.cfg.country || 'AU';
+  const band = lobby.cfg.distanceBand || 'sprint';
+  return (COURSES_DATA||[]).some(c =>
+    (c.country||'AU') === country &&
+    (c.distances||[]).some(d => distanceBand(d) === band)
+  );
+}
+
+/* Warn (and block Confirm) if the chosen country has no track at the chosen trip. */
+function updateRaceConfigMsg(){
   const msg = lq('#lobby-config-msg'), btn = lq('#lobby-create');
-  const none = !lobby.cfg.includedCourses || lobby.cfg.includedCourses.length===0;
-  if(msg && none){ msg.textContent = 'Pick at least one course to run.'; }
-  else if(msg && msg.textContent==='Pick at least one course to run.'){ msg.textContent=''; }
-  if(btn) btn.disabled = none;
-  updateCoursesCount();
+  const ok = !(COURSES_DATA||[]).length || raceConfigHasMatch();
+  if(msg){
+    if(!ok){ msg.textContent = `No ${BAND_LABEL[lobby.cfg.distanceBand]||''} track in ${COUNTRY_LABEL[lobby.cfg.country]||lobby.cfg.country}. Pick another trip.`; }
+    else if(msg.textContent.startsWith('No ')){ msg.textContent=''; }
+  }
+  if(btn) btn.disabled = !ok;
 }
-
-/* Reflect the current selection as a short count on the disclosure row, e.g.
-   "All 24" or "8 of 24", so the host sees the state without opening the grid. */
-function updateCoursesCount(){
-  const el = lq('#courses-count'); if(!el) return;
-  const total = (COURSES_DATA||[]).length;
-  const inc = lobby.cfg.includedCourses;
-  el.textContent = (!inc || inc.length===0 || inc.length===total)
-    ? `All ${total||''}`.trim()
-    : `${inc.length} of ${total}`;
-}
-
-/* Disclosure row toggles the picker open/closed. */
-(function wireCoursesToggle(){
-  const btn = lq('#courses-toggle'), picker = lq('#course-picker');
-  if(!btn || !picker) return;
-  btn.addEventListener('click', ()=>{
-    const open = picker.hasAttribute('hidden');
-    if(open){ picker.removeAttribute('hidden'); btn.setAttribute('aria-expanded','true'); }
-    else    { picker.setAttribute('hidden',''); btn.setAttribute('aria-expanded','false'); }
-  });
-})();
 
 /* Start session → create the session immediately with the default config and go
    straight to the room screen. Config is edited from there (Edit settings). */
@@ -4336,10 +4289,11 @@ lq('#lobby-create').addEventListener('click', confirmConfig);
 
 async function confirmConfig(){
   if(!lobby.session){ showStack('lobby-room'); return; }
-  if(lobby.cfg.includedCourses && lobby.cfg.includedCourses.length===0){
-    lq('#lobby-config-msg').textContent = 'Pick at least one course to run.';
+  if((COURSES_DATA||[]).length && !raceConfigHasMatch()){
+    lq('#lobby-config-msg').textContent = `No ${BAND_LABEL[lobby.cfg.distanceBand]||''} track in ${COUNTRY_LABEL[lobby.cfg.country]||lobby.cfg.country}.`;
     return;
   }
+  syncIncludedCountries();
   const btn = lq('#lobby-create'); btn.disabled = true;
   const oldLabel = btn.textContent; btn.textContent = 'Saving…';
   const { error } = await sb.rpc('apply_config', {
