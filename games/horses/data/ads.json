@@ -3,6 +3,15 @@
   "basePath": "assets/ads/",
   "items": [
     { "type": "image", "src": "../jalf_logo.png", "ms": 7000, "fit": "contain", "alt": "JustaLittleFun Racing" },
+    { "type": "video", "src": "damp.mp4", "fit": "cover" },
+    { "type": "video", "src": "glenfumble.mp4", "fit": "cover" },
+    { "type": "video", "src": "henriettas.mp4", "fit": "cover" },
+    { "type": "video", "src": "hollenmacht_scooters.mp4", "fit": "cover" },
+    { "type": "video", "src": "meridian_financial.mp4", "fit": "cover" },
+    { "type": "video", "src": "murphys_insurance.mp4", "fit": "cover" },
+    { "type": "video", "src": "national_direct_airlines.mp4", "fit": "cover" },
+    { "type": "video", "src": "nun_+_gun.mp4", "fit": "cover" },
+    { "type": "video", "src": "riverside_realty.mp4", "fit": "cover" },
     { "type": "video", "src": "sterling_blades.mp4", "fit": "cover" }
   ]
 }
