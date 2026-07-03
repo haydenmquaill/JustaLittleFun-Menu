@@ -2274,15 +2274,10 @@ function updateFinishBoard() {
     }
   });
 
-  // First past the post: fire once, the instant row 0 (the winner) is settled.
-  // Row 0 is settled as soon as 2nd has crossed, at which point the photo-finish
-  // detection above has already decided whether row 0 is a PHOTO FINISH. If it is,
-  // the winner is under review — stay silent (the podium recap names them later).
-  // If it isn't, 1st is a clear winner — announce it now, at the line.
-  if(!_firstPastPostCalled && finishOrder.length >= 2 && finishOrder[0]){
-    _firstPastPostCalled = true;
-    if(!isPhotoFinishPosition(0)) playRaceCall('firstPastPost', finishOrder[0].def.id);
-  }
+  // First past the post is no longer decided here. It fires live, the instant the
+  // winner crosses the line, from the crossing handler in the race loop — gated on
+  // whether the winner is part of an active close-finish cluster. See there.
+
 }
 
 // Fills board rows from the bottom up with DNF entries as horses die.
@@ -3286,6 +3281,18 @@ function raceTick(ts) {
       updateFinishBoard();
       if(horse.finishRank===0){
         flashScreen('rgba(200,151,26,0.4)'); shakeViewport();
+        // First past the post — called the instant the winner crosses. The cluster
+        // recorder already knows, at this moment, whether a close finish is brewing:
+        // if the winner is a member of the active photo cluster, 1st is contested, so
+        // stay silent (only the close-finish call fires). Otherwise 1st is a clear
+        // winner — announce now, regardless of how far back the rest of the field is.
+        // (A runaway 1st with a 2nd/3rd battle behind it is NOT a cluster member, so
+        // this fires AND the close-finish call fires later — both in the same race.)
+        const winnerInCluster = isRecording && activeSlot && activeSlot.members.has(horse);
+        if(!_firstPastPostCalled && !winnerInCluster){
+          _firstPastPostCalled = true;
+          playRaceCall('firstPastPost', horse.def.id);
+        }
       }
     }
 
