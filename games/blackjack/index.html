@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JustaLittleFun — Blackjack (Host)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- JALF card renderer (cardmeister + themed wrapper). Loaded before the module
+     so window.JALFCards is ready when the game script runs. -->
+<script src="data/cardmeister.full.js"></script>
+<script src="data/jalf-cards.js"></script>
+<style>
+/* ── JALF broadcast chrome (from skeleton) ───────────────────────────── */
+* { margin:0; padding:0; box-sizing:border-box; }
+:root{
+  --blue:#1a2e5a; --blue-lt:#243d7a; --blue-deep:#0d1c3a; --red:#c8102e;
+  --white:#fff; --offwhite:#f4f4f4; --silver:#e0e0e0;
+  --mid:#666; --dark:#111; --green:#1e7d3a; --gold:#c8971a; --felt:#0d1f12;
+}
+body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-serif; color:#fff; }
+.felt{
+  background:
+    radial-gradient(ellipse at 50% 38%, rgba(30,125,58,0.22) 0%, transparent 62%),
+    radial-gradient(ellipse at 80% 90%, rgba(26,46,90,0.28) 0%, transparent 60%),
+    #0d1f12;
+}
+
+/* lobby (unchanged from skeleton, trimmed to what blackjack uses) */
+#lobby-overlay{ position:absolute; inset:0; z-index:5000; display:flex; align-items:center; justify-content:center; }
+.lobby-stack{ display:none; width:100%; max-width:1280px; padding:36px; }
+.lobby-stack.active{ display:flex; flex-direction:column; align-items:stretch; }
+.lobby-banner{ background:var(--blue); box-shadow:0 2px 12px rgba(0,0,0,0.4); transform:skewX(-8deg); padding:18px 56px; margin:0 8px; display:flex; align-items:center; justify-content:space-between; }
+.lobby-banner > *{ transform:skewX(8deg); }
+.lobby-banner .b-title{ font-weight:800; font-size:3.4rem; letter-spacing:2px; text-transform:uppercase; line-height:1; }
+.lobby-banner .b-title em{ font-style:normal; color:rgba(255,255,255,0.55); }
+.lobby-banner .b-side{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.3rem; letter-spacing:8px; text-transform:uppercase; color:rgba(255,255,255,0.6); }
+.lobby-body{ background:var(--white); color:var(--dark); box-shadow:0 2px 12px rgba(0,0,0,0.4); margin-top:20px; padding:48px 56px; display:flex; flex-direction:column; align-items:center; flex:1; min-height:560px; justify-content:center; }
+#lobby-config .lobby-body{ justify-content:flex-start; padding:28px 56px; gap:16px; min-height:0; overflow-y:auto; }
+.lobby-eyebrow{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.4rem; letter-spacing:10px; text-transform:uppercase; color:var(--blue); display:flex; align-items:center; gap:18px; }
+.lobby-eyebrow::before,.lobby-eyebrow::after{ content:""; width:60px; height:2px; background:linear-gradient(90deg,transparent,var(--blue)); }
+.lobby-eyebrow::after{ transform:scaleX(-1); }
+.lobby-title{ font-weight:800; font-size:7rem; line-height:0.92; letter-spacing:2px; text-transform:uppercase; margin:14px 0 6px; color:var(--blue); }
+.lobby-title em{ font-style:normal; color:var(--blue); opacity:0.55; }
+.lobby-tagline{ font-size:1.6rem; letter-spacing:3px; text-transform:uppercase; color:var(--mid); font-weight:600; text-align:center; }
+.lobby-btn{ font-weight:800; font-size:2.2rem; letter-spacing:4px; text-transform:uppercase; color:var(--white); background:var(--blue); border:none; cursor:pointer; padding:18px 60px; box-shadow:0 4px 0 var(--blue-deep), 0 6px 18px rgba(0,0,0,0.4); transition:transform .07s, box-shadow .07s; margin-top:48px; }
+.lobby-btn:active{ transform:translateY(3px); box-shadow:0 1px 0 var(--blue-deep); }
+.lobby-btn:disabled{ opacity:.4; cursor:default; }
+.lobby-btn.ghost{ background:transparent; color:var(--mid); box-shadow:inset 0 0 0 2px rgba(0,0,0,0.2); font-size:1.5rem; padding:12px 36px; margin-top:0; }
+.lobby-card{ background:var(--white); color:var(--dark); box-shadow:inset 0 0 0 2px #e2e2e2; width:100%; max-width:820px; }
+.lobby-card-head{ background:var(--blue); color:var(--white); font-family:'Oswald',sans-serif; font-weight:700; font-size:1.8rem; letter-spacing:4px; text-transform:uppercase; padding:14px 28px; }
+.lobby-rows{ padding:14px 28px 26px; }
+.lobby-row{ display:flex; align-items:center; justify-content:space-between; padding:18px 0; border-bottom:1px solid #ddd; }
+.lobby-row:last-child{ border-bottom:none; }
+.lobby-row .lab{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.5rem; letter-spacing:1px; text-transform:uppercase; color:var(--dark); }
+.lobby-row .lab small{ display:block; font-weight:600; font-size:0.95rem; letter-spacing:1px; color:var(--mid); text-transform:none; }
+.stepper{ display:flex; align-items:center; gap:6px; }
+.stepper button{ width:50px; height:50px; border:none; cursor:pointer; font-weight:800; font-size:2rem; background:var(--blue); color:var(--white); line-height:1; }
+.stepper button:disabled{ background:#c7cdd8; color:#eef1f7; }
+.stepper .val{ font-family:'Oswald',sans-serif; font-weight:700; font-size:2.2rem; min-width:140px; text-align:center; color:var(--dark); }
+.stepper .val .unit{ font-size:1.1rem; color:var(--mid); margin:0 4px; }
+.seg-group{ display:flex; gap:6px; }
+.seg-btn{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.1rem; padding:10px 20px; cursor:pointer; border:2px solid #c3ccdd; background:#eef1f7; color:var(--mid); text-transform:uppercase; letter-spacing:1px; }
+.seg-btn.on{ background:var(--blue); border-color:var(--blue); color:#fff; }
+.theme-select{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.1rem; padding:10px 16px; border:2px solid #c3ccdd; background:#eef1f7; color:var(--dark); text-transform:uppercase; letter-spacing:1px; cursor:pointer; min-width:240px; }
+.code-board{ background:var(--blue); border:4px solid #33508a; padding:22px 72px; box-shadow:0 2px 12px rgba(0,0,0,0.4); text-align:center; }
+.code-board .clab{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.3rem; letter-spacing:8px; text-transform:uppercase; color:rgba(255,255,255,0.6); }
+.code-board .code{ font-weight:800; font-size:9rem; line-height:0.9; letter-spacing:1.5rem; color:var(--white); text-indent:1.5rem; margin-top:4px; }
+.join-hint{ margin-top:16px; font-size:1.5rem; letter-spacing:2px; color:var(--mid); text-transform:uppercase; font-weight:600; }
+.join-hint b{ color:var(--blue); text-transform:none; letter-spacing:0; }
+.player-board{ width:100%; max-width:960px; margin-top:34px; }
+.player-board-head{ display:flex; align-items:center; justify-content:space-between; font-family:'Oswald',sans-serif; font-weight:700; font-size:1.5rem; letter-spacing:4px; text-transform:uppercase; color:var(--blue); border-bottom:2px solid var(--blue); padding-bottom:8px; margin-bottom:14px; }
+.player-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.player-chip{ background:var(--blue); color:var(--white); font-family:'Oswald',sans-serif; font-weight:600; font-size:1.7rem; padding:14px 18px; display:flex; align-items:center; gap:12px; box-shadow:0 2px 12px rgba(0,0,0,0.4); }
+.player-chip .pn{ width:34px; height:34px; background:var(--dark); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.3rem; }
+.player-empty{ color:var(--mid); font-size:1.5rem; grid-column:1/-1; text-align:center; padding:30px 0; opacity:.6; }
+.lobby-actions{ display:flex; gap:20px; align-items:center; margin-top:40px; }
+.lobby-msg{ margin-top:18px; font-size:1.3rem; min-height:1.3rem; color:var(--blue); font-weight:600; text-transform:uppercase; }
+#confirm-overlay{ position:absolute; inset:0; z-index:6000; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); }
+#confirm-overlay.show{ display:flex; }
+#confirm-box{ background:var(--white); color:var(--dark); max-width:560px; padding:36px 40px; box-shadow:0 10px 40px rgba(0,0,0,0.5); text-align:center; }
+.cf-title{ font-weight:800; font-size:2.4rem; text-transform:uppercase; color:var(--blue); }
+.cf-sub{ font-weight:600; font-size:1.2rem; color:var(--mid); margin-top:10px; }
+#confirm-actions{ display:flex; gap:16px; justify-content:center; margin-top:28px; }
+.cf-btn{ font-weight:800; font-size:1.4rem; letter-spacing:2px; text-transform:uppercase; border:none; cursor:pointer; padding:14px 32px; color:#fff; }
+.cf-cancel{ background:var(--mid); } .cf-confirm{ background:var(--red); }
+
+/* ══ BLACKJACK TABLE (the game stage) ════════════════════════════════ */
+#table{ position:absolute; inset:0; z-index:10; display:none; flex-direction:column; }
+#table.on{ display:flex; }
+
+/* top status ribbon */
+.tbar{ display:flex; align-items:center; justify-content:space-between; padding:14px 34px; background:rgba(0,0,0,0.28); }
+.tbar .phase{ font-family:'Oswald',sans-serif; font-weight:700; font-size:1.5rem; letter-spacing:6px; text-transform:uppercase; color:var(--gold); }
+.tbar .rnd{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.2rem; letter-spacing:3px; text-transform:uppercase; color:rgba(255,255,255,0.55); }
+.tbar .clock{ font-weight:800; font-size:2.6rem; font-variant-numeric:tabular-nums; min-width:120px; text-align:right; }
+.tbar .clock.urgent{ color:#ff3b30; }
+
+/* dealer zone */
+.dealer-zone{ display:flex; flex-direction:column; align-items:center; padding-top:26px; }
+.zone-label{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.1rem; letter-spacing:5px; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:12px; }
+.hand-cards{ display:flex; gap:10px; }
+.badge{ font-family:'Oswald',sans-serif; font-weight:700; font-size:1.1rem; padding:3px 12px; border-radius:20px; margin-top:10px; letter-spacing:1px; text-transform:uppercase; }
+.badge.total{ background:rgba(255,255,255,0.12); color:#fff; }
+.badge.blackjack{ background:var(--gold); color:#000; }
+.badge.bust{ background:var(--red); color:#fff; }
+.badge.won{ background:var(--green); color:#fff; }
+.badge.lost{ background:rgba(0,0,0,0.3); color:rgba(255,255,255,0.6); }
+.badge.push{ background:#555; color:#fff; }
+
+/* center stage — active player's enlarged hand */
+.center-stage{ flex:1; display:flex; align-items:center; justify-content:center; gap:40px; }
+.active-hand{ display:flex; flex-direction:column; align-items:center; animation:pop .3s cubic-bezier(.2,.8,.2,1); }
+.active-hand .who{ font-weight:800; font-size:2.4rem; text-transform:uppercase; letter-spacing:2px; margin-bottom:14px; }
+@keyframes pop{ from{ transform:scale(.85); opacity:0; } to{ transform:scale(1); opacity:1; } }
+
+/* players row along the bottom */
+.players-row{ display:flex; justify-content:center; gap:18px; padding:22px 34px 34px; flex-wrap:wrap; }
+.seat{ display:flex; flex-direction:column; align-items:center; gap:8px; padding:14px 16px; border-radius:12px; min-width:130px; transition:background .2s, transform .2s; }
+.seat.active{ background:rgba(200,151,26,0.15); box-shadow:inset 0 0 0 2px var(--gold); transform:translateY(-6px); }
+.seat.done{ opacity:.6; }
+.seat .seat-name{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.3rem; letter-spacing:1px; }
+.seat .seat-sub{ font-size:1rem; color:rgba(255,255,255,0.5); font-family:'Oswald',sans-serif; letter-spacing:1px; }
+
+/* playing cards */
+.card{ width:74px; height:104px; border-radius:8px; background:#fff; color:#111; box-shadow:0 3px 10px rgba(0,0,0,0.5); display:flex; flex-direction:column; justify-content:space-between; padding:7px 9px; font-weight:800; position:relative; }
+.card.sm{ width:50px; height:70px; padding:5px 6px; border-radius:6px; }
+.card.big{ width:96px; height:135px; padding:10px 12px; }
+.card .r{ font-size:1.5rem; line-height:1; }
+.card.sm .r{ font-size:1rem; } .card.big .r{ font-size:2rem; }
+.card .s{ font-size:1.6rem; align-self:flex-end; line-height:1; }
+.card.sm .s{ font-size:1.05rem; } .card.big .s{ font-size:2.1rem; }
+.card.red{ color:#c8102e; }
+.card.back{ background:repeating-linear-gradient(45deg,#1a2e5a 0 8px,#243d7a 8px 16px); }
+.card.hole{ background:repeating-linear-gradient(45deg,#1a2e5a 0 8px,#243d7a 8px 16px); }
+
+/* recap overlay */
+#recap{ position:absolute; inset:0; z-index:40; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.55); }
+#recap.on{ display:flex; }
+.recap-box{ background:var(--white); color:var(--dark); min-width:620px; max-width:80vw; box-shadow:0 12px 40px rgba(0,0,0,0.5); }
+.recap-head{ background:var(--blue); color:#fff; font-family:'Oswald',sans-serif; font-weight:700; font-size:2rem; letter-spacing:4px; text-transform:uppercase; padding:18px 30px; display:flex; justify-content:space-between; }
+.recap-rows{ padding:16px 30px 26px; }
+.recap-row{ display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid #e2e2e2; font-family:'Oswald',sans-serif; }
+.recap-row:last-child{ border-bottom:none; }
+.recap-row .rn{ font-weight:600; font-size:1.5rem; }
+.recap-row .rr{ font-weight:700; font-size:1.4rem; text-transform:uppercase; }
+.recap-row .rr.pos{ color:var(--green); } .recap-row .rr.neg{ color:var(--red); } .recap-row .rr.zero{ color:var(--mid); }
+</style>
+</head>
+
+<body class="felt">
+
+<!-- ══ TABLE (game stage) ══ -->
+<div id="table" class="felt">
+  <div class="tbar">
+    <span class="rnd" id="t-round">Round 1</span>
+    <span class="phase" id="t-phase">Place your bets</span>
+    <span class="clock" id="t-clock">0:30</span>
+  </div>
+
+  <div class="dealer-zone">
+    <div class="zone-label">Dealer</div>
+    <div class="hand-cards" id="dealer-cards"></div>
+    <div id="dealer-badge"></div>
+  </div>
+
+  <div class="center-stage" id="center-stage"></div>
+
+  <div class="players-row" id="players-row"></div>
+</div>
+
+<!-- recap -->
+<div id="recap">
+  <div class="recap-box">
+    <div class="recap-head"><span>Round recap</span><span id="recap-next">Next round in 30s</span></div>
+    <div class="recap-rows" id="recap-rows"></div>
+  </div>
+</div>
+
+<!-- ══ LOBBY (from skeleton, blackjack copy + config) ══ -->
+<div id="lobby-overlay" class="felt">
+  <div class="lobby-stack active" id="lobby-menu">
+    <div class="lobby-banner"><span class="b-title">Black <em>jack</em></span><span class="b-side">JustaLittleFun</span></div>
+    <div class="lobby-body">
+      <span class="lobby-eyebrow">Hit or stand</span>
+      <div class="lobby-title">Black <em>jack</em></div>
+      <div class="lobby-tagline">Beat the dealer — everyone plays their own hand from their phone</div>
+      <button class="lobby-btn" id="lobby-start-session">Start session</button>
+      <button class="lobby-btn ghost" id="lobby-back-to-menu" style="margin-top:16px;">Back to game selection</button>
+    </div>
+  </div>
+
+  <div class="lobby-stack" id="lobby-config">
+    <div class="lobby-banner"><span class="b-title">Session <em>setup</em></span><span class="b-side">Settings</span></div>
+    <div class="lobby-body">
+      <div class="lobby-card">
+        <div class="lobby-card-head">Table settings</div>
+        <div class="lobby-rows">
+          <div class="lobby-row">
+            <span class="lab">Number of rounds<small>Hands before the final leaderboard</small></span>
+            <div class="stepper" data-cfg="numRounds" data-min="1" data-max="20" data-step="1">
+              <button data-dir="-1">–</button><span class="val"><span class="num">5</span></span><button data-dir="1">+</button>
+            </div>
+          </div>
+          <div class="lobby-row">
+            <span class="lab">Starting balance<small>Play money each player begins with</small></span>
+            <div class="stepper" data-cfg="startingBalance" data-min="100" data-max="1000" data-step="50">
+              <button data-dir="-1">–</button><span class="val"><span class="unit">$</span><span class="num">200</span></span><button data-dir="1">+</button>
+            </div>
+          </div>
+          <div class="lobby-row">
+            <span class="lab">Number of decks<small>Cards in the shoe</small></span>
+            <div class="stepper" data-cfg="numDecks" data-min="1" data-max="8" data-step="1">
+              <button data-dir="-1">–</button><span class="val"><span class="num">6</span></span><button data-dir="1">+</button>
+            </div>
+          </div>
+          <div class="lobby-row">
+            <span class="lab">Shoe<small>Fresh reshuffles every hand; persistent lets counts carry</small></span>
+            <div class="seg-group" data-cfg="shoeMode">
+              <div class="seg-btn on" data-val="fresh">Fresh</div>
+              <div class="seg-btn" data-val="persistent">Persistent</div>
+            </div>
+          </div>
+          <div class="lobby-row">
+            <span class="lab">Card theme<small>Deck design; Random picks a new one each round</small></span>
+            <select class="theme-select" id="cfg-theme">
+              <option value="random">Random each round</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="lobby-actions">
+        <button class="lobby-btn ghost" id="lobby-config-back">Cancel</button>
+        <button class="lobby-btn" id="lobby-create" style="margin-top:0;">Confirm</button>
+      </div>
+      <div class="lobby-msg" id="lobby-config-msg"></div>
+    </div>
+  </div>
+
+  <div class="lobby-stack" id="lobby-room">
+    <div class="lobby-banner"><span class="b-title">Waiting for <em>players</em></span><span class="b-side">Lobby open</span></div>
+    <div class="lobby-body">
+      <div class="code-board"><div class="clab">Room code</div><div class="code" id="lobby-code">----</div></div>
+      <div class="join-hint">Join at <b id="lobby-join-url">your-player-url</b></div>
+      <div class="player-board">
+        <div class="player-board-head"><span>At the table</span><span id="lobby-count">0 joined</span></div>
+        <div class="player-grid" id="lobby-players"><div class="player-empty">No players yet — share the code</div></div>
+      </div>
+      <div class="lobby-actions"><button class="lobby-btn" id="lobby-start-game" disabled>Deal them in</button></div>
+      <button class="lobby-btn ghost" id="lobby-edit-settings" style="margin-top:16px;">Edit settings</button>
+      <button class="lobby-btn ghost" id="lobby-close-session" style="margin-top:16px;">Close session</button>
+      <div class="lobby-msg" id="lobby-room-msg"></div>
+    </div>
+  </div>
+</div>
+
+<div id="confirm-overlay"><div id="confirm-box">
+  <div class="cf-title">Close session?</div>
+  <div class="cf-sub">This ends the game for everyone. Players will be disconnected.</div>
+  <div id="confirm-actions"><button class="cf-btn cf-cancel" id="confirm-cancel">Cancel</button><button class="cf-btn cf-confirm" id="confirm-yes">Close session</button></div>
+</div></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+/* ── config ── */
+const GAME_MODE = 'blackjack';
+const DEFAULT_CONFIG = { numRounds:5, startingBalance:200, numDecks:6, shoeMode:'fresh', cardTheme:'random' };
+const PLAYER_JOIN_URL = 'https://haydenmquaill.github.io/JustaLittleFun';
+const BET_SECONDS = 30, READY_SECONDS = 5, ACTION_SECONDS = 10, RECAP_SECONDS = 30;
+const SUITS = { S:['♠','black'], H:['♥','red'], D:['♦','red'], C:['♣','black'] };
+
+const SUPABASE_URL = 'https://lhzxsjjgsvlnlixygjif.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxoenhzampnc3ZsbmxpeHlnamlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2MjI4MjIsImV4cCI6MjA5ODE5ODgyMn0.-AyZ1kr3iNwk7iAyPhGlqmHXvASBYWBtPSiROP6pSsQ';
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const G = { cfg:structuredClone(DEFAULT_CONFIG), session:null, channel:null, players:[], rosterPoll:null, round:1, names:{} };
+
+/* ════════ card + hand rendering (JALFCards renderer) ════════ */
+const ALL_THEMES = JALFCards.themeNames();     // e.g. Classic, Casino Green, …
+/* Apply a theme by name; 'random' picks one at random. Returns the name used. */
+function applyTheme(name){
+  let chosen = name;
+  if(name === 'random' || !ALL_THEMES.includes(name)){
+    chosen = ALL_THEMES[Math.floor(Math.random() * ALL_THEMES.length)];
+  }
+  JALFCards.setTheme(chosen);
+  return chosen;
+}
+applyTheme(DEFAULT_CONFIG.cardTheme);          // sensible default until the game starts
+const CARD_W = { sm:50, '':74, big:96 };   // widths per size class
+function cardEl(code, size='', faceDown=false){
+  const wrap = document.createElement('div');
+  wrap.style.width = CARD_W[size] + 'px';
+  wrap.style.display = 'inline-block';
+  const el = faceDown
+    ? JALFCards.renderBack()
+    : JALFCards.renderCard(code[0], code[1]);   // rank, suit — 'T' handled by cardmeister
+  el.style.width = '100%';
+  wrap.appendChild(el);
+  return wrap;
+}
+function handTotal(cards){
+  let t=0,a=0; for(const c of cards){ const r=c[0];
+    if(r==='A'){t+=11;a++;} else if('TJQK'.includes(r)) t+=10; else t+=parseInt(r,10); }
+  while(t>21&&a>0){t-=10;a--;} return t;
+}
+function renderCards(container, cards, size='', hideSecond=false){
+  container.innerHTML='';
+  cards.forEach((c,i)=> container.appendChild(cardEl(c, size, hideSecond && i===1)));
+}
+
+/* ════════ TV table paint from a snapshot of hands ════════ */
+async function readHands(){
+  const { data } = await sb.from('hands').select('*')
+    .eq('session_id', G.session.id).eq('round_number', G.round);
+  return data || [];
+}
+function badge(kind, text){ return `<span class="badge ${kind}">${text}</span>`; }
+
+function paintTable(hands, { hideHole=true, activeSeat=null } = {}){
+  const dealer = hands.find(h => h.is_dealer);
+  const players = hands.filter(h => !h.is_dealer).sort((a,b)=> a.seat_index-b.seat_index || a.hand_index-b.hand_index);
+
+  // dealer
+  if(dealer){
+    renderCards($('dealer-cards'), dealer.cards, '', hideHole && dealer.status==='playing');
+    const showTotal = !(hideHole && dealer.status==='playing');
+    let db='';
+    if(showTotal){
+      const t = handTotal(dealer.cards);
+      if(dealer.status==='bust') db = badge('bust','Bust');
+      else db = badge('total', t);
+    } else db = badge('total','?');
+    $('dealer-badge').innerHTML = db;
+  }
+
+  // bottom seats — one tile per player (splits shown as stacked mini-hands)
+  const bySeat = {};
+  players.forEach(h => { (bySeat[h.seat_index] ??= []).push(h); });
+  const row = $('players-row'); row.innerHTML='';
+  Object.keys(bySeat).map(Number).sort((a,b)=>a-b).forEach(seat => {
+    const hs = bySeat[seat];
+    const name = G.names[hs[0].player_id] || 'Player';
+    const tile = document.createElement('div');
+    tile.className = 'seat' + (seat===activeSeat?' active':'') + (hs.every(h=>h.status!=='playing')?' done':'');
+    const cardsWrap = document.createElement('div'); cardsWrap.style.display='flex'; cardsWrap.style.gap='8px';
+    hs.forEach(h => {
+      const mini = document.createElement('div'); mini.style.display='flex'; mini.style.gap='4px';
+      h.cards.forEach(c => mini.appendChild(cardEl(c,'sm')));
+      cardsWrap.appendChild(mini);
+    });
+    const sub = hs.length>1 ? `${hs.length} hands` :
+      (hs[0].status==='playing' ? `${handTotal(hs[0].cards)}` :
+       hs[0].status[0].toUpperCase()+hs[0].status.slice(1));
+    tile.innerHTML = `<div class="seat-name">${esc(name)}</div>`;
+    tile.appendChild(cardsWrap);
+    tile.insertAdjacentHTML('beforeend', `<div class="seat-sub">$${hs[0].stake} · ${sub}</div>`);
+    row.appendChild(tile);
+  });
+}
+
+/* enlarge the active seat's hand(s) in the center */
+function paintCenter(hands, seat){
+  const hs = hands.filter(h => !h.is_dealer && h.seat_index===seat).sort((a,b)=>a.hand_index-b.hand_index);
+  const stage = $('center-stage'); stage.innerHTML='';
+  if(!hs.length) return;
+  const name = G.names[hs[0].player_id] || 'Player';
+  hs.forEach(h => {
+    const wrap = document.createElement('div'); wrap.className='active-hand';
+    wrap.innerHTML = `<div class="who">${esc(name)}${hs.length>1?` · hand ${h.hand_index+1}`:''}</div>`;
+    const cc = document.createElement('div'); cc.className='hand-cards';
+    h.cards.forEach(c => cc.appendChild(cardEl(c,'big')));
+    wrap.appendChild(cc);
+    const t = handTotal(h.cards);
+    let b = h.status==='bust'?badge('bust','Bust'):h.status==='blackjack'?badge('blackjack','Blackjack'):badge('total',t);
+    wrap.insertAdjacentHTML('beforeend', b);
+    stage.appendChild(wrap);
+  });
+}
+
+/* ════════ clock ════════ */
+let clockTimer=null;
+function runClock(deadlineMs){
+  stopClock(); const el=$('t-clock');
+  const tick=()=>{ let s=Math.round((deadlineMs-Date.now())/1000); if(s<0)s=0;
+    el.textContent = `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+    el.classList.toggle('urgent', s<=10); };
+  tick(); clockTimer=setInterval(tick,250);
+}
+function stopClock(){ if(clockTimer){clearInterval(clockTimer); clockTimer=null;} }
+
+/* ════════ THE ROUND LOOP (host is the engine) ════════ */
+async function playSession(){
+  $('lobby-overlay').style.display='none';
+  $('table').classList.add('on');
+  // cache names
+  G.players.forEach(p => G.names[p.id]=p.display_name);
+
+  for(let r=1; r<=G.cfg.numRounds; r++){
+    G.round = r;
+    $('t-round').textContent = `Round ${r} of ${G.cfg.numRounds}`;
+    await playRound();
+  }
+  // finished
+  await sb.rpc('finish_game', { p_session_id:G.session.id });
+  $('t-phase').textContent = 'Game over';
+  stopClock();
+}
+
+async function playRound(){
+  // 0. THEME — resolve this round's theme. If the config is a fixed theme, this
+  //    is the same every round; if 'random', pick one now and broadcast it via
+  //    config.activeTheme so every phone shows the SAME deck this round.
+  const themeUsed = applyTheme(G.cfg.cardTheme);
+  if(G.cfg.cardTheme === 'random'){
+    G.cfg.activeTheme = themeUsed;
+    try { await sb.rpc('apply_config', { p_session_id:G.session.id, p_config:G.cfg }); } catch(e){}
+  }
+
+  // 1. BETTING
+  $('t-phase').textContent = 'Place your bets';
+  await sb.rpc('bj_open_betting', { p_session_id:G.session.id, p_seconds:BET_SECONDS });
+  runClock(Date.now()+BET_SECONDS*1000);
+  await waitForBetsOrTimeout(BET_SECONDS*1000);
+  stopClock();
+
+  // 2. DEAL
+  const seats = await activeSeats();
+  if(seats.length===0){ $('t-phase').textContent='No bets — skipping'; await sleep(1500); return; }
+  await sb.rpc('deal_blackjack_round', { p_session_id:G.session.id });
+  let hands = await readHands();
+  paintTable(hands, { hideHole:true });
+  await sleep(1200);
+
+  // 3. TURN LOOP
+  for(const seat of seats){
+    // skip seats already resolved by a natural
+    if(await seatDone(seat)) { continue; }
+    $('t-phase').textContent = 'Up next';
+    await sb.rpc('bj_begin_seat', { p_session_id:G.session.id, p_seat:seat, p_seconds:READY_SECONDS });
+    hands = await readHands(); paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
+    runClock(Date.now()+READY_SECONDS*1000);
+    await sleep(READY_SECONDS*1000);
+
+    // open action window, then poll until seat done or clock expires (with resets)
+    $('t-phase').textContent = 'Player acting';
+    await sb.rpc('bj_open_action', { p_session_id:G.session.id, p_seconds:ACTION_SECONDS });
+    await runSeatActions(seat);
+    stopClock();
+    hands = await readHands(); paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
+    await sleep(700);
+  }
+
+  // 4. DEALER
+  $('center-stage').innerHTML='';
+  $('t-phase').textContent = 'Dealer plays';
+  await sb.rpc('bj_begin_seat', { p_session_id:G.session.id, p_seat:-1, p_seconds:READY_SECONDS });
+  await sleep(800);
+  await sb.rpc('run_blackjack_dealer', { p_session_id:G.session.id });
+  hands = await readHands(); paintTable(hands,{hideHole:false});
+  await sleep(1600);
+
+  // 5. SETTLE
+  $('t-phase').textContent = 'Settling';
+  await sb.rpc('settle_blackjack_round', { p_session_id:G.session.id });
+  hands = await readHands(); paintTable(hands,{hideHole:false});
+  await sleep(800);
+
+  // 6. RECAP
+  await showRecap(hands);
+  await sb.rpc('bj_start_recap', { p_session_id:G.session.id, p_seconds:RECAP_SECONDS });
+  runClock(Date.now()+RECAP_SECONDS*1000);
+  $('recap').classList.add('on');
+  await sleep(RECAP_SECONDS*1000);
+  $('recap').classList.remove('on');
+  stopClock();
+
+  // advance round counter (unless it's the last — loop handles finish)
+  if(G.round < G.cfg.numRounds) await sb.rpc('bj_next_round', { p_session_id:G.session.id });
+}
+
+/* wait until every seated player has confirmed a bet, or timeout */
+async function waitForBetsOrTimeout(ms){
+  const end = Date.now()+ms;
+  while(Date.now() < end){
+    const { data:players } = await sb.from('players').select('id').eq('session_id',G.session.id);
+    const { data:hands } = await sb.from('hands').select('player_id')
+      .eq('session_id',G.session.id).eq('round_number',G.round);
+    const betCount = new Set((hands||[]).map(h=>h.player_id)).size;
+    if(players && players.length>0 && betCount>=players.length) return; // all in
+    await sleep(600);
+  }
+}
+async function activeSeats(){
+  const { data } = await sb.rpc('bj_active_seats', { p_session_id:G.session.id });
+  return (data||[]).map(r => typeof r==='object' ? r.bj_active_seats : r);
+}
+async function seatDone(seat){
+  const { data } = await sb.rpc('bj_seat_done', { p_session_id:G.session.id, p_seat:seat });
+  return data===true;
+}
+
+/* poll a seat's action window: players act via their phones; on timeout, force-stand */
+async function runSeatActions(seat){
+  let deadline = Date.now()+ACTION_SECONDS*1000;
+  let lastCards = '';
+  while(true){
+    if(await seatDone(seat)) return;
+    if(Date.now() > deadline){
+      await sb.rpc('bj_force_stand_seat', { p_session_id:G.session.id, p_seat:seat });
+      return;
+    }
+    // detect an action (card count / hand count changed) → reset the 10s clock + repaint
+    const hands = await readHands();
+    const sig = JSON.stringify(hands.filter(h=>h.seat_index===seat).map(h=>[h.hand_index,h.cards.length,h.status]));
+    if(sig !== lastCards){
+      lastCards = sig;
+      paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
+      // read the server's (reset) deadline so host + server agree
+      const { data:s } = await sb.from('sessions').select('deadline').eq('id',G.session.id).single();
+      if(s && s.deadline){ deadline = new Date(s.deadline).getTime(); runClock(deadline); }
+    }
+    await sleep(500);
+  }
+}
+
+async function showRecap(hands){
+  const rows = {};
+  hands.filter(h=>!h.is_dealer).forEach(h=>{
+    const net = (Number(h.payout)||0) - Number(h.stake); // payout is gross; net vs this hand's stake
+    rows[h.player_id] = (rows[h.player_id]||0) + net;
+  });
+  $('recap-next').textContent = `Next round in ${RECAP_SECONDS}s`;
+  $('recap-rows').innerHTML = Object.entries(rows).map(([pid,net])=>{
+    const cls = net>0?'pos':net<0?'neg':'zero';
+    const txt = net>0?`+$${net}`:net<0?`-$${Math.abs(net)}`:'Push';
+    return `<div class="recap-row"><span class="rn">${esc(G.names[pid]||'Player')}</span><span class="rr ${cls}">${txt}</span></div>`;
+  }).join('') || '<div class="recap-row"><span class="rn">No hands this round</span></div>';
+}
+
+/* ════════ LOBBY (from skeleton) ════════ */
+function showStack(id){ document.querySelectorAll('.lobby-stack').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); }
+document.querySelectorAll('.stepper').forEach(st=>{
+  const key=st.dataset.cfg,min=+st.dataset.min,max=+st.dataset.max,step=+st.dataset.step,numEl=st.querySelector('.num');
+  if(G.cfg[key]!=null) numEl.textContent=G.cfg[key];
+  const bound=()=>{ st.querySelector('button[data-dir="-1"]').disabled=G.cfg[key]<=min; st.querySelector('button[data-dir="1"]').disabled=G.cfg[key]>=max; };
+  st.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ G.cfg[key]=Math.max(min,Math.min(max,(G.cfg[key]||0)+(+b.dataset.dir)*step)); numEl.textContent=G.cfg[key]; bound(); }));
+  bound();
+});
+document.querySelectorAll('.seg-group').forEach(g=>{
+  const key=g.dataset.cfg;
+  g.querySelectorAll('.seg-btn').forEach(b=>b.addEventListener('click',()=>{
+    g.querySelectorAll('.seg-btn').forEach(x=>x.classList.remove('on')); b.classList.add('on'); G.cfg[key]=b.dataset.val;
+  }));
+});
+/* theme dropdown: 'Random each round' is already the first <option>; append the
+   real themes from the library so the list always matches what's installed. */
+(function(){
+  const sel = $('cfg-theme');
+  ALL_THEMES.forEach(name => {
+    const o = document.createElement('option'); o.value = name; o.textContent = name; sel.appendChild(o);
+  });
+  sel.value = G.cfg.cardTheme || 'random';
+  sel.addEventListener('change', () => { G.cfg.cardTheme = sel.value; applyTheme(sel.value); });
+})();
+const LOBBY_CAP=12;
+function renderPlayers(){
+  const grid=$('lobby-players'),n=G.players.length;
+  $('lobby-count').textContent=n+' joined'; $('lobby-start-game').disabled=n===0;
+  if(!n){ grid.innerHTML='<div class="player-empty">No players yet — share the code</div>'; return; }
+  grid.innerHTML=''; G.players.slice(0,LOBBY_CAP).forEach((p,i)=>{
+    const c=document.createElement('div'); c.className='player-chip';
+    c.innerHTML=`<span class="pn">${i+1}</span><span>${esc(p.display_name)}</span>`; grid.appendChild(c);
+  });
+}
+function subscribeRoster(){
+  const sid=G.session.id;
+  G.channel=sb.channel('lobby-'+sid)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'players',filter:'session_id=eq.'+sid},p=>{if(p.new){G.players.push(p.new);renderPlayers();}})
+    .on('postgres_changes',{event:'DELETE',schema:'public',table:'players',filter:'session_id=eq.'+sid},p=>{G.players=G.players.filter(x=>x.id!==p.old.id);renderPlayers();})
+    .subscribe();
+  const refresh=async()=>{ const {data}=await sb.from('players').select('*').eq('session_id',sid).order('joined_at'); if(data){G.players=data;renderPlayers();} };
+  refresh(); if(G.rosterPoll)clearInterval(G.rosterPoll); G.rosterPoll=setInterval(refresh,3000);
+}
+$('lobby-start-session').addEventListener('click',async()=>{
+  const btn=$('lobby-start-session');btn.disabled=true;const lbl=btn.textContent;btn.textContent='Creating room…';
+  const {data,error}=await sb.rpc('create_session',{p_game_mode:GAME_MODE,p_config:G.cfg});
+  btn.disabled=false;btn.textContent=lbl;
+  if(error){alert('Could not create room: '+(error.message||'unknown'));return;}
+  G.session=data; $('lobby-code').textContent=data.room_code; $('lobby-join-url').textContent=PLAYER_JOIN_URL;
+  subscribeRoster(); showStack('lobby-room');
+});
+$('lobby-back-to-menu').addEventListener('click',()=>{window.location.href='../../index.html';});
+$('lobby-edit-settings').addEventListener('click',()=>{$('lobby-config-msg').textContent='';showStack('lobby-config');});
+$('lobby-config-back').addEventListener('click',()=>showStack('lobby-room'));
+$('lobby-create').addEventListener('click',async()=>{
+  if(!G.session){showStack('lobby-room');return;}
+  const btn=$('lobby-create');btn.disabled=true;const lbl=btn.textContent;btn.textContent='Saving…';
+  const {error}=await sb.rpc('apply_config',{p_session_id:G.session.id,p_config:G.cfg});
+  btn.disabled=false;btn.textContent=lbl;
+  if(error){$('lobby-config-msg').textContent=error.message||'Could not apply';return;}
+  showStack('lobby-room');
+});
+$('lobby-close-session').addEventListener('click',()=>$('confirm-overlay').classList.add('show'));
+$('confirm-cancel').addEventListener('click',()=>$('confirm-overlay').classList.remove('show'));
+$('confirm-yes').addEventListener('click',async()=>{
+  if(G.session){try{await sb.rpc('close_session',{p_session_id:G.session.id});}catch(e){}}
+  window.location.href='../../index.html';
+});
+$('lobby-start-game').addEventListener('click',()=>{ playSession().catch(e=>{ console.error(e); alert('Game error: '+(e.message||e)); }); });
+</script>
+</body>
+</html>
