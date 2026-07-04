@@ -1,0 +1,44 @@
+{
+  "Classic": {
+    "card": "#ffffff",
+    "border": "#1a2e5a",
+    "suit": "#1b2430,#c62828,#c62828,#1b2430",
+    "court": "#DB3,#c62828,#1b2430,#1b2430,#000,4"
+  },
+  "JALF Green": {
+    "card": "#f4f7fb",
+    "border": "#22a63f",
+    "suit": "#1a2e5a,#22a63f,#22a63f,#1a2e5a",
+    "court": "#22a63f,#22a63f,#1a2e5a,#1a2e5a,#1a2e5a,4"
+  },
+  "Rose Gold": {
+    "card": "#fff5f2",
+    "border": "#c98a6d",
+    "suit": "#6b4a3a,#c25b4e,#c25b4e,#6b4a3a",
+    "court": "#c98a6d,#c25b4e,#6b4a3a,#6b4a3a,#6b4a3a,4"
+  },
+  "Casino Green": {
+    "card": "#0e4429",
+    "border": "#d9b34a",
+    "suit": "#f4ecd6,#d9b34a,#d9b34a,#f4ecd6",
+    "court": "#d9b34a,#d9b34a,#0a3320,#0a3320,#0a3320,4"
+  },
+  "Slate & Amber": {
+    "card": "#e7e9ec",
+    "border": "#3a3f47",
+    "suit": "#2b2f36,#e0902a,#e0902a,#2b2f36",
+    "court": "#e0902a,#e0902a,#2b2f36,#2b2f36,#2b2f36,4"
+  },
+  "Ivory & Burgundy": {
+    "card": "#f5efe2",
+    "border": "#7a1f2b",
+    "suit": "#2e2620,#8e2433,#8e2433,#2e2620",
+    "court": "#b08d3c,#8e2433,#2e2620,#2e2620,#2e2620,4"
+  },
+  "Monochrome": {
+    "card": "#f7f7f5",
+    "border": "#2a2a2a",
+    "suit": "#2a2a2a,#7a7a7a,#7a7a7a,#2a2a2a",
+    "court": "#9a9a9a,#7a7a7a,#2a2a2a,#2a2a2a,#2a2a2a,4"
+  }
+}
