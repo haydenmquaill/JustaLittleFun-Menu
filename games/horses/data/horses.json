@@ -26,7 +26,7 @@
     "id": "a02",
     "name": "One and Three",
     "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "filter": "saturate(1.35) brightness(1.08) hue-rotate(-12deg)",
     "scale": 1,
     "silk": {
       "background": "#FFFFFF",
@@ -71,8 +71,8 @@
   {
     "id": "a04",
     "name": "Spitboy",
-    "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "sheet": "assets/horse_white.png",
+    "filter": "saturate(0.35) brightness(0.95) contrast(1.05)",
     "scale": 1,
     "silk": {
       "background": "#FFFFFF",
@@ -95,7 +95,7 @@
     "id": "a05",
     "name": "High",
     "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "filter": "saturate(1.0) brightness(0.72)",
     "scale": 1,
     "silk": {
       "background": "#0B1F4D",
@@ -117,8 +117,8 @@
   {
     "id": "a06",
     "name": "Genuwine",
-    "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "sheet": "assets/horse_black.png",
+    "filter": "saturate(1.0) brightness(1.0)",
     "scale": 1,
     "silk": {
       "background": "#3B1053",
@@ -140,8 +140,8 @@
   {
     "id": "a07",
     "name": "Mr Hands",
-    "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "sheet": "assets/horse_white.png",
+    "filter": "saturate(0.35) brightness(0.95) contrast(1.05)",
     "scale": 1,
     "silk": {
       "background": "#0033A0",
@@ -164,7 +164,7 @@
     "id": "a08",
     "name": "One Trick",
     "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "filter": "saturate(1.35) brightness(1.08) hue-rotate(-12deg)",
     "scale": 1,
     "silk": {
       "background": "#FF7A00",
@@ -187,7 +187,7 @@
     "id": "a09",
     "name": "Horse With No Name",
     "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "filter": "saturate(1.25) brightness(1.35) hue-rotate(8deg)",
     "scale": 1,
     "silk": {
       "background": "#D8C9A3",
@@ -210,7 +210,7 @@
     "id": "a10",
     "name": "One She Rode In On",
     "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "filter": "saturate(1.25) brightness(1.35) hue-rotate(8deg)",
     "scale": 1,
     "silk": {
       "background": "#F3E9D2",
@@ -233,7 +233,7 @@
     "id": "a11",
     "name": "Horsey McHorseface",
     "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "filter": "saturate(1.35) brightness(1.08) hue-rotate(-12deg)",
     "scale": 1,
     "silk": {
       "background": "#FFD400",
@@ -363,7 +363,7 @@
     "id": "a16",
     "name": "No Refunds",
     "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "filter": "saturate(1.0) brightness(0.72)",
     "scale": 1,
     "silk": {
       "background": "#C41E1E",
@@ -386,7 +386,7 @@
     "id": "a17",
     "name": "Committee Designed Camel",
     "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "filter": "saturate(1.25) brightness(1.35) hue-rotate(8deg)",
     "scale": 1,
     "silk": {
       "background": "#E6D5A8",
@@ -409,7 +409,7 @@
     "id": "a18",
     "name": "Save Horse Ride Cowboy",
     "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "filter": "saturate(1.3) brightness(0.88) hue-rotate(-8deg)",
     "scale": 1,
     "silk": {
       "background": "#7A4E2D",
@@ -431,8 +431,8 @@
   {
     "id": "a19",
     "name": "Horse 2 Electric Boogaloo",
-    "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "sheet": "assets/horse_black.png",
+    "filter": "saturate(1.0) brightness(1.0)",
     "scale": 1,
     "silk": {
       "background": "#0B2A6B",
@@ -455,7 +455,7 @@
     "id": "a20",
     "name": "Horse From Temu",
     "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "filter": "saturate(1.35) brightness(1.08) hue-rotate(-12deg)",
     "scale": 1,
     "silk": {
       "background": "#FF7A00",
@@ -500,8 +500,8 @@
   {
     "id": "a22",
     "name": "Harry Trotter",
-    "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "sheet": "assets/horse_white.png",
+    "filter": "saturate(0.35) brightness(0.95) contrast(1.05)",
     "scale": 1,
     "silk": {
       "background": "#FFFFFF",
@@ -524,7 +524,7 @@
     "id": "a23",
     "name": "Lord of the Reins",
     "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "filter": "saturate(1.0) brightness(0.72)",
     "scale": 1,
     "silk": {
       "background": "#124D2B",
@@ -546,8 +546,8 @@
   {
     "id": "a24",
     "name": "Thorse",
-    "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "sheet": "assets/horse_white.png",
+    "filter": "saturate(0.35) brightness(0.95) contrast(1.05)",
     "scale": 1,
     "silk": {
       "background": "#8A8F94",
@@ -572,7 +572,7 @@
     "id": "a25",
     "name": "Captain Ameri-canter",
     "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "filter": "saturate(1.0) brightness(0.72)",
     "scale": 1,
     "silk": {
       "background": "#0A2472",
@@ -594,8 +594,8 @@
   {
     "id": "a26",
     "name": "Guardians of the Gallopsy",
-    "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "sheet": "assets/horse_black.png",
+    "filter": "saturate(1.0) brightness(1.0)",
     "scale": 1,
     "silk": {
       "background": "#5B2A83",
@@ -618,7 +618,7 @@
     "id": "a27",
     "name": "Glue Factory",
     "sheet": "assets/horse_brown.png",
-    "filter": "saturate(1.1) brightness(1.0)",
+    "filter": "saturate(1.3) brightness(0.88) hue-rotate(-8deg)",
     "scale": 1,
     "silk": {
       "background": "#FFD400",

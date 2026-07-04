@@ -544,6 +544,7 @@ body {
   width:64px; height:64px;
   display:flex; align-items:center; justify-content:center;
   font-size:1.6rem; font-weight:800; color:#fff;
+  text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;
   transition:left 0.1s linear; z-index:2;
   font-family:'Oswald',sans-serif;
 }
@@ -592,7 +593,7 @@ body {
 #postrace-marquee {
   flex-shrink:0; margin:18px -36px 0; padding:0;
   background:var(--blue); box-shadow:0 -2px 12px rgba(0,0,0,0.4);
-  overflow:hidden; position:relative; height:188px;
+  overflow:hidden; position:relative; height:220px;
   animation:bm-fade .4s ease-out;
 }
 @keyframes bm-fade { from{opacity:0;} to{opacity:1;} }
@@ -2263,7 +2264,15 @@ function updateFinishBoard() {
       if(!_closeCallPlayed){
         _closeCallPlayed = true;
         const isNose = finishGapLengths(i) <= 0.1;
-        playVoice(isNose ? 'photoNose' : 'photoClose');
+        const closeKey = isNose ? 'photoNose' : 'photoClose';
+        // Queue behind the clear-winner call: if a "first past the post" is (or is
+        // about to be) speaking, wait for it to finish so the close-finish call
+        // lands cleanly after it rather than over the top. The gate resolves
+        // immediately when there's no clear-winner call to wait for. Bounded by a
+        // timeout so a missing/slow call can never strand the close call.
+        Promise.race([ _firstPastPostDone, _wait(6000) ]).then(()=>{
+          playVoice(closeKey);
+        });
       }
     } else {
       numEl.style.cssText = 'position:relative;width:24px;height:20px;flex-shrink:0;border-radius:2px;overflow:hidden;';
@@ -2441,6 +2450,12 @@ let replayFrames=[];   // unused legacy
 let replaySlot=null;   // {frames, gap} if a close finish was recorded
 let _firstPastPostCalled=false;   // firstPastPost fires once per race, when row 0 settles as a clear (non-photo) winner
 let _closeCallPlayed=false;       // close-finish photoNose/photoClose call fires once per race, when the first PHOTO FINISH row appears
+// Resolves when the first-past-post call has finished speaking (or immediately if
+// none will play this race). The close-finish call awaits this so a 2nd/3rd photo
+// finish can never talk over a clear winner's "first past the post" — the close
+// call queues behind it. Primed fresh each race in beginRace().
+let _firstPastPostDone = Promise.resolve();
+let _resolveFirstPastPost = null;
 let activeSlot=null;   // currently recording
 let isRecording=false;
 let secondaryCloseGap=null;  // gap of any subsequent close cluster not recorded for replay
@@ -3331,7 +3346,16 @@ function raceTick(ts) {
         );
         if(!_firstPastPostCalled && !contested){
           _firstPastPostCalled = true;
-          playRaceCall('firstPastPost', horse.def.id);
+          // Play the clear-winner call, and resolve the gate when it finishes so a
+          // trailing close-finish call (2nd/3rd photo) queues cleanly behind it.
+          playRaceCall('firstPastPost', horse.def.id).finally(()=>{
+            if(_resolveFirstPastPost){ _resolveFirstPastPost(); _resolveFirstPastPost = null; }
+          });
+        } else if(!_firstPastPostCalled){
+          // Contested winner → no clear-winner call this race. Open the gate now so
+          // the close-finish call (which owns a contested finish) isn't held up.
+          _firstPastPostCalled = true;
+          if(_resolveFirstPastPost){ _resolveFirstPastPost(); _resolveFirstPastPost = null; }
         }
       }
     }
@@ -3498,6 +3522,10 @@ function raceTick(ts) {
 // ══════════════════════════════
 function triggerFinishSequence() {
   stopReplayRecording();
+  // Safety net for the close-finish gate: if no clear-winner call ever resolved it
+  // (e.g. an all-photo blanket, or a race with no rank-0 crossing), open it now so
+  // the queued photoNose/photoClose call isn't left waiting.
+  if(_resolveFirstPastPost){ _resolveFirstPastPost(); _resolveFirstPastPost = null; }
   // Runners are home: cut the hooves bed and let the crowd roar.
   stopLoop('hooves', 0.3);
 
@@ -3867,6 +3895,10 @@ function beginRace() {
     : 300;
   slowmoActive=false; replayFrames=[]; replaySlot=null; activeSlot=null; isRecording=false; secondaryCloseGap=null; photoFinishPositions=new Set();
   _firstPastPostCalled=false; _closeCallPlayed=false;
+  // Fresh gate for this race: the close-finish call awaits this promise, which we
+  // resolve when firstPastPost finishes (see the crossing block) or leave to be
+  // resolved immediately if this race has no clear-winner call.
+  _firstPastPostDone = new Promise(res => { _resolveFirstPastPost = res; });
 
   buildGates();
   buildProgressMap();
@@ -5906,6 +5938,48 @@ function _priorityVoiceUrls(){
   return urls;
 }
 
+/* The language the CURRENT course wants — used to restore the live globals after
+   loadVoiceManifest transiently makes a freshly-loaded pack active during warming. */
+function _activeCourseLang(){
+  try{ return courseLang(); }catch(e){ return _voiceLang; }
+}
+
+/* Same priority set as _priorityVoiceUrls(), but computed straight from a parsed
+   pack DATA object (as cached in _voiceDataByLang) instead of the live VOICE_*
+   globals. This lets the background warmer decode another language's opening clips
+   without ever swapping the active pack — closing the window in which a finish
+   call could read the wrong pack's data. Mirrors the key list above exactly. */
+function _priorityVoiceUrlsFor(d){
+  const urls = new Set();
+  if(!d) return urls;
+  const lines = d.lines || {};
+  [
+    'preraceIntro','bettingClosed','handover','intro','theyreOff',
+    'threeQ','lastCorner',
+    'down','photoClose','photoNose',
+    'placeFirst','placeSecond','placeThird',
+    'placeFirstPhoto','placeSecondPhoto','placeThirdPhoto',
+    'bigWin','bigLoss','winner','closing',
+  ].forEach(k=> (lines[k]||[]).forEach(u=>urls.add(u)));
+  const horseLines = d.horseLines || {};
+  ['placeFirst','placeSecond','placeThird',
+   'placeFirstPhoto','placeSecondPhoto','placeThirdPhoto'].forEach(k=>{
+    const byHorse = horseLines[k] || {};
+    Object.values(byHorse).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  });
+  Object.values(d.raceFrames||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  Object.values(d.raceName||{}).forEach(n=>{ if(n){ if(n.neutral)urls.add(n.neutral); if(n.emphatic)urls.add(n.emphatic); } });
+  Object.values(d.courseLines||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  const cond = d.conditionLines || {};
+  ['weather','distance','field'].forEach(grp=>
+    Object.values(cond[grp]||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u))));
+  const rc = d.rollCall || {};
+  Object.values(rc.position||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  (rc.favourite||[]).forEach(u=>urls.add(u));
+  Object.values(rc.horseName||{}).forEach(a=> (a||[]).forEach(u=>urls.add(u)));
+  return urls;
+}
+
 /* Two-phase preload: await the priority clips (so the caller can start the race
    as soon as the opening lines are ready), then decode everything else in the
    background without blocking. Returns once the priority set is decoded. */
@@ -5957,7 +6031,7 @@ async function initAudio(){
   // can satisfy them now that these two buffers exist — without waiting on voice).
   if(!Audio_.muted){
     if(!Audio_.loops.crowd)     _startLoopNow('crowd',     { volume:1.0, fade:1.5 });
-    if(!Audio_.loops.menuMusic) _startLoopNow('menuMusic', { volume:1.0, fade:1.5 });
+    if(_menuMusicWanted && !Audio_.loops.menuMusic) _startLoopNow('menuMusic', { volume:1.0, fade:1.5 });
     // The crowd bus starts at gain 0 and is normally ramped up by setCrowd(), which
     // the lobby queued behind onAudioReady — i.e. behind the full priority decode.
     // Nudge it to the idle murmur now so the crowd loop we just started is actually
@@ -5988,13 +6062,20 @@ async function initAudio(){
     for(const l of others){
       try{
         await loadVoiceManifest(l);          // caches the pack (no-op if present)
+        // NOTE: loadVoiceManifest calls _applyVoiceData internally, which makes the
+        // freshly-loaded pack the active one. If this is the first time we've loaded
+        // `l`, the live globals are now pointing at `l` — restore the pack that
+        // matches the current course before doing anything async, so an in-flight
+        // race call never reads the wrong pack's frames/names.
+        if(_voiceLang !== _activeCourseLang()){ _applyVoiceData(_activeCourseLang()); }
         if(_voiceDataByLang[l]){
-          // decode that pack's clips without making it the active language
-          const save = _voiceLang;
-          _applyVoiceData(l);
-          const warm = _priorityVoiceUrls();
-          _applyVoiceData(save);             // restore active pack immediately
-          await _decodeUrls(warm);           // decode JP openers in the background
+          // Decode that pack's priority clips WITHOUT touching the live globals.
+          // Previously this swapped VOICE_* to `l` and back, which left a window
+          // where a finish call (notably Japanese first-past-post on race 1) read
+          // another language's data — its horse-name set was absent, so the call
+          // dropped silently. Computing the URLs straight from the pack's data
+          // object removes that window entirely.
+          await _decodeUrls(_priorityVoiceUrlsFor(_voiceDataByLang[l]));
         }
       }catch(e){ /* warming is best-effort */ }
     }
@@ -6160,16 +6241,27 @@ function updateWeatherAudio(weatherId){
 function stopWeatherAudio(){ WEATHER_BEDS.forEach(n=>stopLoop(n, 0.8)); }
 
 /* ── Menu / lobby music ── */
+/* Tracks whether the menu music is *wanted* right now, independent of whether it
+   has actually started yet. On a fast first load the audio buffers may still be
+   decoding when the host taps through the lobby: startMenuMusic() queues its real
+   start behind onAudioReady, and if stopMenuMusic() runs before that fires (e.g.
+   the lobby→prerace transition), the queued start would otherwise kick the music
+   back in AFTER we've left the lobby. Gating the deferred start on this flag means
+   a stop that happened in the meantime wins, so the menu music never restarts over
+   the pre-race. */
+let _menuMusicWanted = false;
 function startMenuMusic(){
+  _menuMusicWanted = true;
   // Wait for audio to be genuinely ready (survives a slow first load), then start
-  // — unless the player muted or it's already playing in the meantime.
+  // — unless it was stopped in the meantime, the player muted, or it's already
+  // playing.
   onAudioReady(()=>{
-    if(!Audio_.muted && !Audio_.loops.menuMusic){
+    if(_menuMusicWanted && !Audio_.muted && !Audio_.loops.menuMusic){
       startLoop('menuMusic', { volume:1.0, fade:1.5 });
     }
   });
 }
-function stopMenuMusic(fade=1.0){ stopLoop('menuMusic', fade); }
+function stopMenuMusic(fade=1.0){ _menuMusicWanted = false; stopLoop('menuMusic', fade); }
 
 /* Duck the crowd/hooves/weather/music beds while the announcer speaks, then
    restore. Reference-counted so overlapping VO stays ducked. On release the
@@ -6225,9 +6317,24 @@ function _voiceCandidates(key, horseId){
 const RACECALL_TONE = { quarter:'neutral', half:'neutral', finalStraight:'emphatic', firstPastPost:'emphatic', down:'emphatic' };
 async function playRaceCall(event, horseId){
   if(!Audio_.ready || Audio_.muted) return;
-  const frames = VOICE_RACE_FRAMES[event];
-  const nameSet = horseId && VOICE_RACE_NAME[horseId];
-  if(!frames || !frames.length || !nameSet) return;
+  // Re-read the pack on each attempt: the background language-warm briefly swaps
+  // VOICE_RACE_FRAMES/NAME to another pack and restores it, so a call that fires
+  // in that microtask window would otherwise see an empty set and drop silently.
+  // This was the cause of the Japanese first-past-post going missing on race 1
+  // (and only race 1 — from race 2 the warm has finished, so the set was stable).
+  // Poll a few times for the data to (re)appear before giving up.
+  let frames = VOICE_RACE_FRAMES[event];
+  let nameSet = horseId && VOICE_RACE_NAME[horseId];
+  for(let tries=0; (!frames || !frames.length || !nameSet) && tries<12; tries++){
+    await _wait(120);
+    if(Audio_.muted) return;
+    frames  = VOICE_RACE_FRAMES[event];
+    nameSet = horseId && VOICE_RACE_NAME[horseId];
+  }
+  if(!frames || !frames.length || !nameSet){
+    console.warn('[racecall] dropped', event, '- no frames/name for pack', _voiceLang, 'horse', horseId);
+    return;
+  }
   const tone = RACECALL_TONE[event] || 'neutral';
   const frameUrl = frames[(Math.random()*frames.length)|0];
   const nameUrl  = nameSet[tone] || nameSet.neutral || nameSet.emphatic;
@@ -6286,6 +6393,28 @@ function _playVoiceUrl(url, { volume=1 } = {}){
     setTimeout(fin, (buffer.duration*1000) + 250);   // safety
     src.start(0);
   });
+}
+
+/* Play a single explicit URL on the voice bus WITH a duck for its duration, and
+   return a source (or null if it couldn't play). Used by the pre-race sequence
+   steps (intro / course / condition remarks) so each one ducks the crowd + beds
+   the same way playVoice() does — previously the course and condition remarks used
+   the un-ducked _playVoiceUrl, so the crowd murmur sat on top of them. Mirrors the
+   duck/release bookkeeping of playVoice(). */
+function _playVoiceDucked(url, { volume=1 } = {}){
+  if(!Audio_.ready || Audio_.muted) return null;
+  const buffer = _buf(url); if(!buffer) return null;
+  const src = Audio_.ctx.createBufferSource();
+  src.buffer = buffer;
+  const g = Audio_.ctx.createGain(); g.gain.value = volume;
+  src.connect(g).connect(Audio_.buses.voice);
+  _duck(true);
+  let released = false;
+  const release = ()=>{ if(!released){ released = true; _duck(false); } };
+  src.onended = release;
+  setTimeout(release, (buffer.duration*1000) + 400);   // safety release
+  src.start(0);
+  return src;
 }
 
 let _rollCallToken = 0;   // bump to cancel an in-flight roll call
@@ -6519,11 +6648,22 @@ async function playPreRaceSequence(){
     if(typeof phase !== 'undefined' && phase !== 'prerace') return false;
     const arr = VOICE_MANIFEST[key];
     if(arr && arr.length){
+      // Pick the take we're actually going to play, then GUARANTEE it's decoded
+      // before calling playVoice. Previously playVoice() silently no-opped when the
+      // clip wasn't buffered yet — and because playVoice owns the duck, a cold clip
+      // meant the crowd bus never ducked either, so on a cold pack (notably the
+      // Japanese pre-race intro on race 1) you heard the crowd stay up and no voice
+      // at all. Decoding on demand here fixes both the missing voice and the missing
+      // duck. Guarded so a genuinely absent file still just passes through.
+      const url = arr[(Math.random()*arr.length)|0];
+      if(!_buf(url)){ try{ await _decodeUrls(new Set([url])); }catch(e){} }
+      if(typeof phase !== 'undefined' && phase !== 'prerace') return false;
       await new Promise(res=>{
-        const s = playVoice(key);
+        // Play the SPECIFIC decoded take (not a fresh random pick) so timing matches
+        // the clip that actually sounds, and the duck is tied to a real buffer.
+        const s = _buf(url) ? _playVoiceDucked(url) : null;
         if(!s){ res(); return; }
-        // playVoice manages its own duck; wait roughly its length before the next.
-        const b = _buf(Array.isArray(arr)?arr[0]:arr);
+        const b = _buf(url);
         setTimeout(res, b ? (b.duration*1000)+200 : 400);
       });
       await _wait(150);
@@ -6541,9 +6681,12 @@ async function playPreRaceSequence(){
                 ? VOICE_COURSE_LINES[cid]
                 : null;
     if(arr && arr.length){
+      const url = arr[(Math.random()*arr.length)|0];
+      if(!_buf(url)){ try{ await _decodeUrls(new Set([url])); }catch(e){} }
+      if(typeof phase !== 'undefined' && phase !== 'prerace') return false;
       await new Promise(res=>{
-        const url = arr[(Math.random()*arr.length)|0];
-        const s = _playVoiceUrl(url);   // returns a promise; but keep uniform timing below
+        const s = _buf(url) ? _playVoiceDucked(url) : null;   // ducked, so the crowd dims under it
+        if(!s){ res(); return; }
         const b = _buf(url);
         setTimeout(res, b ? (b.duration*1000)+200 : 400);
       });
@@ -6558,9 +6701,12 @@ async function playPreRaceSequence(){
   const stepUrls = async (arr)=>{
     if(typeof phase !== 'undefined' && phase !== 'prerace') return false;
     if(arr && arr.length){
+      const url = arr[(Math.random()*arr.length)|0];
+      if(!_buf(url)){ try{ await _decodeUrls(new Set([url])); }catch(e){} }
+      if(typeof phase !== 'undefined' && phase !== 'prerace') return false;
       await new Promise(res=>{
-        const url = arr[(Math.random()*arr.length)|0];
-        _playVoiceUrl(url);
+        const s = _buf(url) ? _playVoiceDucked(url) : null;   // ducked, so the crowd dims under it
+        if(!s){ res(); return; }
         const b = _buf(url);
         setTimeout(res, b ? (b.duration*1000)+200 : 400);
       });
