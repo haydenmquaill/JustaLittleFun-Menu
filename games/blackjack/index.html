@@ -17,7 +17,7 @@
 :root{
   --blue:#1a2e5a; --blue-lt:#243d7a; --blue-deep:#0d1c3a; --red:#c8102e;
   --white:#fff; --offwhite:#f4f4f4; --silver:#e0e0e0;
-  --mid:#666; --dark:#111; --green:#1e7d3a; --gold:#c8971a; --felt:#0d1f12;
+  --mid:#666; --dark:#111; --green:#1e7d3a; --felt:#0d1f12;
 }
 body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-serif; color:#fff; }
 .felt{
@@ -90,12 +90,23 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 #table{ position:absolute; inset:0; z-index:10; display:none; flex-direction:column; }
 #table.on{ display:flex; }
 
-/* top status ribbon */
-.tbar{ display:flex; align-items:center; justify-content:space-between; padding:14px 34px; background:rgba(0,0,0,0.28); }
-.tbar .phase{ font-family:'Oswald',sans-serif; font-weight:700; font-size:1.5rem; letter-spacing:6px; text-transform:uppercase; color:var(--gold); }
-.tbar .rnd{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.2rem; letter-spacing:3px; text-transform:uppercase; color:rgba(255,255,255,0.55); }
-.tbar .clock{ font-weight:800; font-size:2.6rem; font-variant-numeric:tabular-nums; min-width:120px; text-align:right; }
-.tbar .clock.urgent{ color:#ff3b30; }
+/* top status ribbon — skewed navy parallelogram banner (matches horse HOST),
+   with the countdown in its own white parallelogram pushed to the right. */
+.tbar{ display:flex; align-items:center; justify-content:space-between;
+  background:var(--blue); color:var(--white);
+  padding:6px 4px 6px 48px; margin:0 8px;
+  box-shadow:0 2px 12px rgba(0,0,0,0.4); flex-shrink:0;
+  transform:skewX(-8deg); position:relative; z-index:101; }
+.tbar > *{ transform:skewX(8deg); }
+.tbar .rnd{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.6rem; letter-spacing:3px; text-transform:uppercase; color:rgba(255,255,255,0.6); }
+.tbar .phase{ font-family:'Oswald',sans-serif; font-weight:700; font-size:2.2rem; letter-spacing:4px; text-transform:uppercase; color:var(--white); margin-left:18px; }
+.tbar .tbar-info{ display:flex; align-items:baseline; }
+.tbar .clock-wrap{ display:flex; align-items:center; justify-content:center;
+  background:var(--white); padding:4px 28px; margin:0 6px 0 auto; align-self:stretch;
+  transform:none; }
+.tbar .clock{ font-weight:800; font-size:3rem; line-height:1; font-variant-numeric:tabular-nums;
+  letter-spacing:2px; color:var(--blue); display:block; transform:skewX(8deg); }
+.tbar .clock.urgent{ color:var(--red); }
 
 /* dealer zone */
 .dealer-zone{ display:flex; flex-direction:column; align-items:center; padding-top:26px; }
@@ -103,7 +114,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 .hand-cards{ display:flex; gap:10px; }
 .badge{ font-family:'Oswald',sans-serif; font-weight:700; font-size:1.1rem; padding:3px 12px; border-radius:20px; margin-top:10px; letter-spacing:1px; text-transform:uppercase; }
 .badge.total{ background:rgba(255,255,255,0.12); color:#fff; }
-.badge.blackjack{ background:var(--gold); color:#000; }
+.badge.blackjack{ background:var(--white); color:var(--blue); }
 .badge.bust{ background:var(--red); color:#fff; }
 .badge.won{ background:var(--green); color:#fff; }
 .badge.lost{ background:rgba(0,0,0,0.3); color:rgba(255,255,255,0.6); }
@@ -118,7 +129,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 /* players row along the bottom */
 .players-row{ display:flex; justify-content:center; gap:18px; padding:22px 34px 34px; flex-wrap:wrap; }
 .seat{ display:flex; flex-direction:column; align-items:center; gap:8px; padding:14px 16px; border-radius:12px; min-width:130px; transition:background .2s, transform .2s; }
-.seat.active{ background:rgba(200,151,26,0.15); box-shadow:inset 0 0 0 2px var(--gold); transform:translateY(-6px); }
+.seat.active{ background:rgba(255,255,255,0.12); box-shadow:inset 0 0 0 2px var(--white); transform:translateY(-6px); }
 .seat.done{ opacity:.6; }
 .seat .seat-name{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.3rem; letter-spacing:1px; }
 .seat .seat-sub{ font-size:1rem; color:rgba(255,255,255,0.5); font-family:'Oswald',sans-serif; letter-spacing:1px; }
@@ -160,6 +171,171 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 .recap-row .rn{ font-weight:600; font-size:1.5rem; }
 .recap-row .rr{ font-weight:700; font-size:1.4rem; text-transform:uppercase; }
 .recap-row .rr.pos{ color:var(--green); } .recap-row .rr.neg{ color:var(--red); } .recap-row .rr.zero{ color:var(--mid); }
+
+/* ══════════ WIPE TRANSITION (ported from horse HOST) ══════════ */
+#wipe-overlay{ position:fixed; top:0; left:-101%; width:101%; height:100%;
+  background:#fff; z-index:9999; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:32px;
+  transition:left 0.7s cubic-bezier(0.4,0,0.2,1); }
+#wipe-overlay.in{ left:0; }
+#wipe-overlay.out{ left:101%; transition:left 0.7s cubic-bezier(0.4,0,0.2,1); }
+#wipe-overlay.boot{ transition:none; }
+#wipe-overlay.boot.in{ left:0; }
+#wipe-overlay.boot.out{ transition:left 0.5s cubic-bezier(0.4,0,0.2,1); left:101%; }
+#wipe-overlay.no-phrase #wipe-phrase{ display:none; }
+#wipe-logo{ width:40%; max-width:600px; object-fit:contain; }
+#wipe-phrase{ font-family:'Barlow Condensed',sans-serif; font-size:3.5rem; font-weight:700;
+  color:var(--blue); letter-spacing:3px; text-transform:uppercase; text-align:center; }
+
+/* ══════════ BETTING STATUS MARQUEE (persistent across the session) ══════════ */
+/* A skewed navy strip under the tbar that reads ACCEPTING BETS while betting is
+   open and BETS CLOSED once the window ends or all bets are in. */
+.bet-status{ flex-shrink:0; margin:6px 8px 0; background:var(--blue-deep); color:#fff;
+  transform:skewX(-8deg); box-shadow:0 2px 12px rgba(0,0,0,0.4); overflow:hidden; position:relative; }
+.bet-status .bs-inner{ transform:skewX(8deg); display:flex; align-items:center; justify-content:center;
+  padding:8px 24px; font-family:'Oswald',sans-serif; font-weight:700; font-size:1.5rem;
+  letter-spacing:8px; text-transform:uppercase; }
+.bet-status.open .bs-inner{ color:var(--green); }
+.bet-status.open .bs-inner::before{ content:""; width:12px; height:12px; border-radius:50%;
+  background:var(--green); margin-right:16px; animation:bspulse 1.1s ease-in-out infinite; }
+.bet-status.closed{ background:var(--red); }
+.bet-status.closed .bs-inner{ color:#fff; }
+@keyframes bspulse{ 0%,100%{ opacity:1; } 50%{ opacity:.25; } }
+@media (prefers-reduced-motion:reduce){ .bet-status.open .bs-inner::before{ animation:none; } }
+
+/* ══════════ END-OF-ROUND SCREEN (marquee of big wins/losses) ══════════ */
+#round-end{ position:absolute; inset:0; z-index:60; display:none; flex-direction:column;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(30,125,58,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 60%, rgba(26,46,90,0.28) 0%, transparent 60%),
+    #0d1f12;
+  padding:30px 36px 0; overflow:hidden; }
+#round-end.on{ display:flex; }
+#round-end .re-header{ background:var(--blue); box-shadow:0 2px 12px rgba(0,0,0,0.4);
+  transform:skewX(-8deg); padding:16px 56px; margin:0 8px 26px;
+  display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+#round-end .re-header > *{ transform:skewX(8deg); }
+#round-end .re-title{ font-family:'Barlow Condensed',sans-serif; font-weight:800;
+  font-size:4rem; letter-spacing:2px; text-transform:uppercase; line-height:1; color:#fff; }
+#round-end .re-title em{ font-style:normal; color:rgba(255,255,255,0.55); }
+#round-end .re-side{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.4rem;
+  letter-spacing:8px; text-transform:uppercase; color:rgba(255,255,255,0.6); }
+/* net-standings grid, centre */
+#round-end .re-body{ flex:1; min-height:0; display:flex; flex-direction:column;
+  align-items:stretch; justify-content:center; gap:12px; padding:0 8px; overflow:hidden; }
+.re-row{ display:flex; align-items:center; gap:22px; background:var(--white); color:var(--dark);
+  padding:14px 28px; box-shadow:0 2px 12px rgba(0,0,0,0.35); }
+.re-row .re-name{ flex:1; min-width:0; font-family:'Barlow Condensed',sans-serif; font-weight:800;
+  font-size:2.4rem; line-height:1; letter-spacing:1px; text-transform:uppercase;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.re-row .re-bal{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:2.2rem;
+  color:var(--blue); font-variant-numeric:tabular-nums; }
+.re-row .re-bal .re-c{ font-size:1.3rem; color:var(--mid); vertical-align:super; margin-right:2px; }
+.re-row .re-delta{ flex:0 0 150px; text-align:right; font-family:'Oswald',sans-serif; font-weight:700;
+  font-size:1.6rem; letter-spacing:1px; font-variant-numeric:tabular-nums; }
+.re-row .re-delta.up{ color:var(--green); } .re-row .re-delta.down{ color:var(--red); }
+.re-row .re-delta.flat{ color:var(--mid); }
+/* big-moments marquee along the bottom */
+#round-end-marquee{ flex-shrink:0; margin:24px -36px 0; background:var(--blue);
+  box-shadow:0 -2px 12px rgba(0,0,0,0.4); overflow:hidden; position:relative; height:170px; }
+#round-end-marquee::before{ content:"Big moments"; position:absolute; top:0; left:0; z-index:3;
+  font-family:'Oswald',sans-serif; font-weight:700; font-size:1rem; letter-spacing:6px;
+  text-transform:uppercase; color:rgba(255,255,255,0.85); background:var(--dark); padding:8px 22px; }
+/* bottom banner: NEXT ROUND IN 30 / FINAL RESULTS IN 30 */
+#round-end-banner{ flex-shrink:0; margin:0 -36px; background:var(--blue-deep); color:#fff;
+  text-align:center; padding:14px; font-family:'Oswald',sans-serif; font-weight:700;
+  font-size:1.6rem; letter-spacing:6px; text-transform:uppercase; }
+
+/* marquee track + tiles (shared by round-end and final) */
+.mq-track{ display:flex; align-items:center; gap:18px; height:100%; padding:0 18px;
+  will-change:transform; white-space:nowrap; }
+.mq-tile{ flex:0 0 auto; background:var(--white); color:var(--dark); padding:14px 26px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.35); display:flex; align-items:center; gap:28px;
+  min-width:360px; max-width:560px; border-left:7px solid var(--green); }
+.mq-tile.loss{ border-left-color:var(--red); }
+.mq-tile .mq-body{ display:flex; flex-direction:column; gap:6px; min-width:0; flex:1; }
+.mq-tile .mq-who{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.9rem;
+  line-height:1; text-transform:uppercase; color:var(--dark); letter-spacing:.5px; }
+.mq-tile .mq-detail{ font-family:'Oswald',sans-serif; font-weight:500; font-size:1.05rem;
+  color:var(--mid); letter-spacing:.5px; text-transform:uppercase; }
+.mq-tile .mq-amount{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:2.9rem;
+  line-height:1; color:var(--green); letter-spacing:1px; flex-shrink:0; margin-left:auto; }
+.mq-tile.loss .mq-amount{ color:var(--red); }
+
+/* ══════════ FINAL RESULTS SCREEN (ported from horse HOST) ══════════ */
+#final-overlay{ position:absolute; inset:0; z-index:70; display:none;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(30,125,58,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 60%, rgba(26,46,90,0.28) 0%, transparent 60%),
+    #0d1f12;
+  flex-direction:column; padding:30px 36px 0; overflow:hidden; }
+#final-overlay.active{ display:flex; }
+#final-header{ background:var(--blue); box-shadow:0 2px 12px rgba(0,0,0,0.4);
+  transform:skewX(-8deg); padding:16px 56px; margin:0 8px 26px;
+  display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+#final-header > *{ transform:skewX(8deg); }
+#final-header .fh-title{ font-family:'Barlow Condensed',sans-serif; font-weight:800;
+  font-size:4rem; letter-spacing:2px; text-transform:uppercase; line-height:1; color:#fff; }
+#final-header .fh-title em{ font-style:normal; color:rgba(255,255,255,0.55); }
+#final-actions{ display:flex; gap:14px; align-items:stretch; }
+.fh-btn{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:2.1rem;
+  letter-spacing:2px; text-transform:uppercase; border:none; cursor:pointer; padding:8px 30px;
+  background:var(--white); color:var(--blue); box-shadow:0 4px 0 var(--blue-deep), 0 6px 18px rgba(0,0,0,0.4);
+  transition:transform .08s, box-shadow .08s, opacity .15s; }
+.fh-btn:hover{ opacity:0.85; }
+.fh-btn:active{ transform:translateY(3px); box-shadow:0 1px 0 var(--blue-deep), 0 4px 12px rgba(0,0,0,0.4); }
+.fh-btn.ghost{ background:transparent; color:#fff; box-shadow:inset 0 0 0 2px rgba(255,255,255,0.55); }
+.fh-btn.ghost:active{ transform:translateY(2px); box-shadow:inset 0 0 0 2px rgba(255,255,255,0.55); }
+#final-body{ display:flex; gap:36px; flex:1; min-height:0; }
+#champion-card{ flex:0 0 620px; background:var(--white); color:var(--dark);
+  box-shadow:0 2px 12px rgba(0,0,0,0.4); display:flex; flex-direction:column; align-items:center;
+  padding:40px 40px 36px; position:relative; overflow:hidden; }
+#champion-card .champ-eyebrow{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.5rem;
+  letter-spacing:10px; text-transform:uppercase; color:var(--blue);
+  display:flex; align-items:center; gap:18px; }
+#champion-card .champ-eyebrow::before, #champion-card .champ-eyebrow::after{ content:"";
+  width:54px; height:2px; background:linear-gradient(90deg,transparent,var(--blue)); }
+#champion-card .champ-eyebrow::after{ transform:scaleX(-1); }
+#champ-trophy{ font-size:8rem; line-height:1; margin:14px 0 6px; filter:drop-shadow(0 6px 10px rgba(0,0,0,.3)); }
+#champ-name{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:6rem; line-height:0.92;
+  letter-spacing:1px; text-transform:uppercase; color:var(--blue); text-align:center; margin:6px 0 2px;
+  word-break:break-word; max-width:100%; }
+#champ-sub{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.5rem; letter-spacing:3px;
+  text-transform:uppercase; color:var(--mid); margin-bottom:24px; }
+#champ-balance{ background:var(--blue); color:#fff; padding:18px 56px; text-align:center;
+  box-shadow:0 2px 12px rgba(0,0,0,0.4); border:4px solid #33508a; }
+#champ-balance .cb-lab{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.1rem;
+  letter-spacing:6px; text-transform:uppercase; color:rgba(255,255,255,0.6); }
+#champ-balance .cb-val{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:5rem;
+  line-height:0.95; letter-spacing:2px; color:#fff; }
+#champ-profit{ margin-top:18px; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.9rem;
+  letter-spacing:2px; text-transform:uppercase; color:var(--green); }
+#champ-profit.down{ color:var(--red); }
+#standings-wrap{ flex:1; display:flex; flex-direction:column; min-height:0; }
+#standings-head{ display:flex; align-items:center; justify-content:space-between;
+  font-family:'Oswald',sans-serif; font-weight:700; font-size:1.6rem; letter-spacing:4px;
+  text-transform:uppercase; color:#fff; border-bottom:2px solid var(--blue-lt);
+  padding-bottom:10px; margin-bottom:14px; flex-shrink:0; }
+#standings-list{ display:flex; flex-direction:column; gap:8px; overflow:hidden; flex:1; min-height:0; }
+.fl-row{ display:flex; align-items:center; gap:18px; background:var(--white); color:var(--dark);
+  padding:12px 22px; box-shadow:0 2px 10px rgba(0,0,0,0.35); }
+.fl-row.top1{ box-shadow:0 0 0 3px var(--blue),0 2px 12px rgba(0,0,0,.4); }
+.fl-rank{ flex:0 0 64px; text-align:center; font-family:'Barlow Condensed',sans-serif; font-weight:800;
+  font-size:3rem; line-height:1; color:var(--blue); }
+.fl-name{ flex:1; min-width:0; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:2.6rem;
+  line-height:1; letter-spacing:1px; text-transform:uppercase; color:var(--dark);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fl-bal{ flex:0 0 auto; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:2.8rem;
+  line-height:1; letter-spacing:1px; color:var(--blue); font-variant-numeric:tabular-nums; }
+.fl-bal .fl-c{ font-size:1.6rem; color:var(--mid); vertical-align:super; margin-right:2px; }
+.fl-delta{ flex:0 0 132px; text-align:right; font-family:'Oswald',sans-serif; font-weight:700;
+  font-size:1.5rem; letter-spacing:1px; font-variant-numeric:tabular-nums; }
+.fl-delta.up{ color:var(--green); } .fl-delta.down{ color:var(--red); } .fl-delta.flat{ color:var(--mid); }
+#final-marquee{ flex-shrink:0; margin:24px -36px 0; background:var(--blue);
+  box-shadow:0 -2px 12px rgba(0,0,0,0.4); overflow:hidden; position:relative; height:200px; }
+#final-marquee::before{ content:"Big moments"; position:absolute; top:0; left:0; z-index:3;
+  font-family:'Oswald',sans-serif; font-weight:700; font-size:1rem; letter-spacing:6px;
+  text-transform:uppercase; color:rgba(255,255,255,0.85); background:var(--dark); padding:8px 22px; }
 </style>
 </head>
 
@@ -168,10 +344,14 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 <!-- ══ TABLE (game stage) ══ -->
 <div id="table" class="felt">
   <div class="tbar">
-    <span class="rnd" id="t-round">Round 1</span>
-    <span class="phase" id="t-phase">Place your bets</span>
-    <span class="clock" id="t-clock">0:30</span>
+    <div class="tbar-info">
+      <span class="rnd" id="t-round">Round 1</span>
+      <span class="phase" id="t-phase">Place your bets</span>
+    </div>
+    <div class="clock-wrap"><span class="clock" id="t-clock">0:30</span></div>
   </div>
+
+  <div class="bet-status" id="bet-status"><div class="bs-inner" id="bet-status-txt">Accepting bets</div></div>
 
   <div class="dealer-zone">
     <div class="zone-label">Dealer</div>
@@ -184,12 +364,51 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
   <div class="players-row" id="players-row"></div>
 </div>
 
-<!-- recap -->
-<div id="recap">
-  <div class="recap-box">
-    <div class="recap-head"><span>Round recap</span><span id="recap-next">Next round in 30s</span></div>
-    <div class="recap-rows" id="recap-rows"></div>
+<!-- end-of-round screen (net standings + big-moments marquee + bottom banner) -->
+<div id="round-end">
+  <div class="re-header">
+    <span class="re-title">Round <em id="re-round-n">1</em></span>
+    <span class="re-side">Results</span>
   </div>
+  <div class="re-body" id="re-body"></div>
+  <div id="round-end-marquee"><div class="mq-track" id="re-marquee-track"></div></div>
+  <div id="round-end-banner">Next round in 30</div>
+</div>
+
+<!-- final results screen -->
+<div id="final-overlay">
+  <div id="final-header">
+    <span class="fh-title">Final <em>Results</em></span>
+    <div id="final-actions">
+      <button class="fh-btn" id="btn-again">Again</button>
+      <button class="fh-btn ghost" id="btn-mainmenu">Main Menu</button>
+    </div>
+  </div>
+  <div id="final-body">
+    <div id="champion-card">
+      <span class="champ-eyebrow">Champion</span>
+      <div id="champ-trophy">🏆</div>
+      <div id="champ-name">—</div>
+      <div id="champ-sub">Top of the table</div>
+      <div id="champ-balance">
+        <div class="cb-lab">Final balance</div>
+        <div class="cb-val" id="champ-balance-val">$0</div>
+      </div>
+      <div id="champ-profit"></div>
+    </div>
+    <div id="standings-wrap">
+      <div id="standings-head"><span>Final standings</span><span id="standings-count"></span></div>
+      <div id="standings-list"></div>
+    </div>
+  </div>
+  <div id="final-marquee"><div class="mq-track" id="final-marquee-track"></div></div>
+</div>
+
+<!-- wipe transition overlay -->
+<div id="wipe-overlay" class="in no-phrase boot">
+  <img src="assets/jalf_logo.png" alt="JALF" id="wipe-logo"
+       onerror="this.style.display='none'">
+  <div id="wipe-phrase"></div>
 </div>
 
 <!-- ══ LOBBY (from skeleton, blackjack copy + config) ══ -->
@@ -283,6 +502,7 @@ const GAME_MODE = 'blackjack';
 const DEFAULT_CONFIG = { numRounds:5, startingBalance:200, numDecks:6, shoeMode:'fresh', cardTheme:'random' };
 const PLAYER_JOIN_URL = 'https://haydenmquaill.github.io/JustaLittleFun';
 const BET_SECONDS = 30, READY_SECONDS = 5, ACTION_SECONDS = 15, RECAP_SECONDS = 30;
+const BETS_CLOSED_WAIT_MS = 12000;   // breather after betting closes before the deal (BETS CLOSED holds)
 const SUITS = { S:['♠','black'], H:['♥','red'], D:['♦','red'], C:['♣','black'] };
 
 const SUPABASE_URL = 'https://lhzxsjjgsvlnlixygjif.supabase.co';
@@ -293,6 +513,12 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 const G = { cfg:structuredClone(DEFAULT_CONFIG), session:null, channel:null, players:[], rosterPoll:null, round:1, names:{} };
+
+/* Audio stubs — the full sfx/vo mixer lands in the next pass. Until then these
+   are silent no-ops so playSound/playVoice calls throughout the game are safe. */
+if(typeof window.playSound !== 'function'){ window.playSound = ()=>null; }
+if(typeof window.playVoice !== 'function'){ window.playVoice = ()=>null; }
+const playSound = window.playSound, playVoice = window.playVoice;
 
 /* ════════ card + hand rendering (JALFCards renderer) ════════ */
 const ALL_THEMES = JALFCards.themeNames();     // e.g. Classic, Casino Green, …
@@ -311,8 +537,9 @@ function cardEl(code, size='', faceDown=false, animate=false){
   const wrap = document.createElement('div');
   wrap.style.width = CARD_W[size] + 'px';
   wrap.style.display = 'inline-block';
-  wrap.dataset.slot = faceDown ? 'HOLE' : code;   // identity for incremental paint
-  const el = faceDown
+  const valid = typeof code === 'string' && code.length >= 2;
+  wrap.dataset.slot = faceDown ? 'HOLE' : (valid ? code : '??');
+  const el = (faceDown || !valid)
     ? JALFCards.renderBack()
     : JALFCards.renderCard(code[0], code[1]);   // rank, suit — 'T' handled by cardmeister
   el.style.width = '100%';
@@ -340,6 +567,15 @@ function renderCards(container, cards, size='', hideSecond=false){
     const faceDown = hideSecond && i===1;
     container.appendChild(cardEl(cards[i], size, faceDown, true));
   }
+}
+
+/* wipe every card zone so each round starts on a clean table */
+function clearTable(){
+  $('dealer-cards').innerHTML='';
+  $('dealer-badge').innerHTML='';
+  $('center-stage').innerHTML='';
+  $('center-stage').removeAttribute('data-key');
+  $('players-row').innerHTML='';
 }
 
 /* ════════ TV table paint from a snapshot of hands ════════ */
@@ -397,6 +633,11 @@ function paintTable(hands, { hideHole=true, activeSeat=null } = {}){
    dealer's completed hand (from run_blackjack_dealer). */
 async function revealDealer(finalCards, status){
   const stage = $('center-stage'); stage.innerHTML='';
+  const cards = Array.isArray(finalCards) ? finalCards.filter(Boolean) : [];
+  if(cards.length < 2){
+    // nothing sensible to reveal (deal failed or hand incomplete) — bail safely
+    return;
+  }
   const wrap = document.createElement('div'); wrap.className='active-hand';
   wrap.innerHTML = `<div class="who">Dealer</div>`;
   const cc = document.createElement('div'); cc.className='hand-cards';
@@ -408,29 +649,29 @@ async function revealDealer(finalCards, status){
   const setBadge = (txt,kind='total')=>{ badgeHost.innerHTML = badge(kind,txt); };
 
   // 1. up-card face up, hole face down
-  cc.appendChild(cardEl(finalCards[0],'big',false,true));
-  const hole = cardEl(finalCards[1],'big',true,true);   // face-down initially
+  cc.appendChild(cardEl(cards[0],'big',false,true));
+  const hole = cardEl(cards[1],'big',true,true);   // face-down initially
   cc.appendChild(hole);
   setBadge('?');
   await sleep(700);
 
   // 2. flip the hole card to its real face
-  const realHole = cardEl(finalCards[1],'big',false,false);
+  const realHole = cardEl(cards[1],'big',false,false);
   realHole.classList.add('card-flip');
   cc.replaceChild(realHole, hole);
-  setBadge(handTotal(finalCards.slice(0,2)));
+  setBadge(handTotal(cards.slice(0,2)));
   await sleep(700);
 
   // 3. slide in each subsequent draw one at a time
-  for(let i=2;i<finalCards.length;i++){
-    cc.appendChild(cardEl(finalCards[i],'big',false,true));
-    setBadge(handTotal(finalCards.slice(0,i+1)));
+  for(let i=2;i<cards.length;i++){
+    cc.appendChild(cardEl(cards[i],'big',false,true));
+    setBadge(handTotal(cards.slice(0,i+1)));
     await sleep(850);
   }
 
   // 4. final status badge
   if(status==='bust') setBadge('Bust','bust');
-  else setBadge(handTotal(finalCards));
+  else setBadge(handTotal(cards));
 }
 
 /* enlarge the active seat's hand(s) in the center. Incremental: if the same
@@ -496,6 +737,9 @@ async function playSession(){
   await sb.rpc('finish_game', { p_session_id:G.session.id });
   $('t-phase').textContent = 'Game over';
   stopClock();
+  await refreshPlayers();
+  hideRoundEnd();
+  doWipe(()=>{ showFinal(); });
 }
 
 async function playRound(){
@@ -509,11 +753,19 @@ async function playRound(){
   }
 
   // 1. BETTING
+  clearTable();                       // clean slate: clear last round's cards
+  hideRoundEnd();                     // ensure last round's end screen is gone
   $('t-phase').textContent = 'Place your bets';
+  setBetStatus(true);                 // marquee: ACCEPTING BETS
   await sb.rpc('bj_open_betting', { p_session_id:G.session.id, p_seconds:BET_SECONDS });
   runClock(Date.now()+BET_SECONDS*1000);
   await waitForBetsOrTimeout(BET_SECONDS*1000);
   stopClock();
+  // betting window is over (timer ran out or everyone's in) → lock bets, then a
+  // short breather before the deal so players see BETS CLOSED land.
+  setBetStatus(false);                // marquee: BETS CLOSED
+  $('t-phase').textContent = 'Bets closed';
+  await sleep(BETS_CLOSED_WAIT_MS);
 
   // 2. DEAL
   const seats = await activeSeats();
@@ -562,13 +814,14 @@ async function playRound(){
   hands = await readHands(); paintTable(hands,{hideHole:false});
   await sleep(800);
 
-  // 6. RECAP
-  await showRecap(hands);
+  // 6. END-OF-ROUND SCREEN
+  await refreshPlayers();             // pull settled balances for the screen
+  const isFinalRound = G.round >= G.cfg.numRounds;
+  buildRoundEnd(hands, isFinalRound);
   await sb.rpc('bj_start_recap', { p_session_id:G.session.id, p_seconds:RECAP_SECONDS });
   runClock(Date.now()+RECAP_SECONDS*1000);
-  $('recap').classList.add('on');
   await sleep(RECAP_SECONDS*1000);
-  $('recap').classList.remove('on');
+  hideRoundEnd();
   stopClock();
 
   // advance round counter (unless it's the last — loop handles finish)
@@ -620,18 +873,150 @@ async function runSeatActions(seat){
   }
 }
 
-async function showRecap(hands){
-  const rows = {};
+/* ════════ WIPE TRANSITION (ported from horse HOST) ════════ */
+let _wipeCleanupId = null;
+const WIPE_SLIDE_MS = 700;
+const WIPE_PHRASES = ['Just a little fun!','Place your bets','Hit or stand?','Dealer\u2019s choice','Lady luck awaits'];
+function doWipe(callback, holdMs=0){
+  const w = $('wipe-overlay'), p = $('wipe-phrase');
+  p.textContent = WIPE_PHRASES[(Math.random()*WIPE_PHRASES.length)|0];
+  if(_wipeCleanupId){ clearTimeout(_wipeCleanupId); _wipeCleanupId=null; }
+  w.classList.remove('boot','no-phrase');
+  w.style.transition='none'; w.classList.remove('out','in'); void w.offsetWidth;
+  w.style.transition=''; w.classList.add('in');
+  playSound('uiWhoosh', { volume:0.6 });
+  setTimeout(()=>{
+    let result; try{ result = callback && callback(); }catch(e){ result=undefined; }
+    const slideOut = ()=>{
+      w.classList.remove('in'); w.classList.add('out');
+      _wipeCleanupId = setTimeout(()=>{
+        w.style.transition='none'; w.classList.remove('out'); void w.offsetWidth;
+        w.style.transition=''; _wipeCleanupId=null;
+      }, 800);
+    };
+    if(result && typeof result.then === 'function'){ result.then(slideOut, slideOut); }
+    else { slideOut(); }
+  }, WIPE_SLIDE_MS + holdMs);
+}
+/* clear the boot cover once the page is up */
+(function(){ const w=$('wipe-overlay'); if(!w) return;
+  setTimeout(()=>{ w.classList.add('out'); setTimeout(()=>{ w.style.transition='none'; w.classList.remove('out','boot','in'); void w.offsetWidth; w.style.transition=''; }, 600); }, 300);
+})();
+
+/* ════════ BETTING STATUS MARQUEE ════════ */
+function setBetStatus(open){
+  const el = $('bet-status'), txt = $('bet-status-txt');
+  if(!el) return;
+  el.classList.toggle('open', open);
+  el.classList.toggle('closed', !open);
+  txt.textContent = open ? 'Accepting bets' : 'Bets closed';
+}
+
+/* ════════ END-OF-ROUND SCREEN ════════ */
+/* Build net-per-player rows + a big-moments marquee, then show the screen with
+   the correct bottom banner. isFinalRound switches the banner copy. */
+function buildRoundEnd(hands, isFinalRound){
+  const net = {};
   hands.filter(h=>!h.is_dealer).forEach(h=>{
-    const net = (Number(h.payout)||0) - Number(h.stake); // payout is gross; net vs this hand's stake
-    rows[h.player_id] = (rows[h.player_id]||0) + net;
+    net[h.player_id] = (net[h.player_id]||0) + ((Number(h.payout)||0) - Number(h.stake));
   });
-  $('recap-next').textContent = `Next round in ${RECAP_SECONDS}s`;
-  $('recap-rows').innerHTML = Object.entries(rows).map(([pid,net])=>{
-    const cls = net>0?'pos':net<0?'neg':'zero';
-    const txt = net>0?`+$${net}`:net<0?`-$${Math.abs(net)}`:'Push';
-    return `<div class="recap-row"><span class="rn">${esc(G.names[pid]||'Player')}</span><span class="rr ${cls}">${txt}</span></div>`;
-  }).join('') || '<div class="recap-row"><span class="rn">No hands this round</span></div>';
+  // net standings rows (sorted best → worst by this round's net), showing live balance
+  const balById = {}; G.players.forEach(p=>balById[p.id]=p.balance);
+  const rows = Object.entries(net).sort((a,b)=>b[1]-a[1]);
+  $('re-round-n').textContent = G.round;
+  $('re-body').innerHTML = rows.map(([pid,d])=>{
+    const dCls = d>0?'up':d<0?'down':'flat';
+    const dTxt = d>0?`+$${d}`:d<0?`-$${Math.abs(d)}`:'Push';
+    const bal = Math.round(Number(balById[pid])||0).toLocaleString();
+    return `<div class="re-row"><span class="re-name">${esc(G.names[pid]||'Player')}</span>`+
+           `<span class="re-bal"><span class="re-c">$</span>${bal}</span>`+
+           `<span class="re-delta ${dCls}">${dTxt}</span></div>`;
+  }).join('') || `<div class="re-row"><span class="re-name">No hands this round</span></div>`;
+  // big-moments marquee: standout wins/losses this round
+  renderMomentsMarquee($('re-marquee-track'), net);
+  $('round-end-banner').textContent = isFinalRound
+    ? `Final results in ${RECAP_SECONDS}` : `Next round in ${RECAP_SECONDS}`;
+  $('round-end').classList.add('on');
+}
+function hideRoundEnd(){ $('round-end').classList.remove('on'); }
+
+/* Shared: fill a marquee track with tiles for the biggest swings, duplicated so
+   the CSS scroll reads continuously. Positive = win tile, negative = loss. */
+function renderMomentsMarquee(track, netById){
+  if(!track) return;
+  const moments = Object.entries(netById)
+    .filter(([,d])=>d!==0)
+    .sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]))
+    .slice(0,8);
+  const tile = ([pid,d])=>{
+    const loss = d<0;
+    const amt = (d>0?'+':'-')+'$'+Math.abs(d);
+    return `<div class="mq-tile ${loss?'loss':''}"><div class="mq-body">`+
+      `<div class="mq-who">${esc(G.names[pid]||'Player')}</div>`+
+      `<div class="mq-detail">${loss?'Lost this round':'Won this round'}</div>`+
+      `</div><div class="mq-amount">${amt}</div></div>`;
+  };
+  if(!moments.length){ track.innerHTML=''; track.style.animation='none'; return; }
+  const html = moments.map(tile).join('');
+  track.innerHTML = html + html;   // duplicate for a seamless loop
+  startMarquee(track);
+}
+
+/* Simple JS marquee scroll (rAF) so it works without keyframe width guesses. */
+const _marquees = new WeakMap();
+function startMarquee(track){
+  if(_marquees.get(track)) cancelAnimationFrame(_marquees.get(track));
+  let x = 0;
+  const half = ()=> track.scrollWidth/2;
+  const step = ()=>{
+    x -= 0.6;
+    if(half() && -x >= half()) x = 0;
+    track.style.transform = `translateX(${x}px)`;
+    _marquees.set(track, requestAnimationFrame(step));
+  };
+  _marquees.set(track, requestAnimationFrame(step));
+}
+
+/* ════════ FINAL RESULTS SCREEN ════════ */
+function showFinal(){
+  const start = Number(G.cfg.startingBalance)||0;
+  const standings = [...G.players].sort((a,b)=>(Number(b.balance)||0)-(Number(a.balance)||0));
+  const champ = standings[0];
+  if(champ){
+    $('champ-name').textContent = champ.display_name || 'Player';
+    $('champ-balance-val').textContent = '$'+Math.round(Number(champ.balance)||0).toLocaleString();
+    const profit = (Number(champ.balance)||0) - start;
+    const pEl = $('champ-profit');
+    pEl.textContent = profit>=0 ? `+$${profit} on the night` : `-$${Math.abs(profit)} on the night`;
+    pEl.classList.toggle('down', profit<0);
+  }
+  $('standings-count').textContent = `${standings.length} player${standings.length===1?'':'s'}`;
+  $('standings-list').innerHTML = standings.map((p,i)=>{
+    const d = (Number(p.balance)||0) - start;
+    const dCls = d>0?'up':d<0?'down':'flat';
+    const dTxt = d>0?`+$${d}`:d<0?`-$${Math.abs(d)}`:'Even';
+    const bal = Math.round(Number(p.balance)||0).toLocaleString();
+    return `<div class="fl-row ${i===0?'top1':''}"><span class="fl-rank">${i+1}</span>`+
+      `<span class="fl-name">${esc(p.display_name||'Player')}</span>`+
+      `<span class="fl-bal"><span class="fl-c">$</span>${bal}</span>`+
+      `<span class="fl-delta ${dCls}">${dTxt}</span></div>`;
+  }).join('');
+  // final marquee: overall profit/loss vs starting balance
+  const netAll = {}; G.players.forEach(p=>{ netAll[p.id] = (Number(p.balance)||0) - start; });
+  renderMomentsMarquee($('final-marquee-track'), netAll);
+  $('final-overlay').classList.add('active');
+  playSound('fanfare', { volume:0.9 });
+}
+$('btn-again') && $('btn-again').addEventListener('click', ()=>{ location.reload(); });
+$('btn-mainmenu') && $('btn-mainmenu').addEventListener('click', async ()=>{
+  try{ await sb.rpc('close_session',{p_session_id:G.session.id}); }catch(e){}
+  location.href='../../index.html';
+});
+
+/* refresh cached player balances (for the end-of-round + final screens) */
+async function refreshPlayers(){
+  const { data } = await sb.from('players').select('*').eq('session_id',G.session.id).order('joined_at');
+  if(data){ G.players = data; G.players.forEach(p=>G.names[p.id]=p.display_name); }
 }
 
 /* ════════ LOBBY (from skeleton) ════════ */
