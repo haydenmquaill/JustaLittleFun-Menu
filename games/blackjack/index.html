@@ -135,6 +135,20 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 .card.back{ background:repeating-linear-gradient(45deg,#1a2e5a 0 8px,#243d7a 8px 16px); }
 .card.hole{ background:repeating-linear-gradient(45deg,#1a2e5a 0 8px,#243d7a 8px 16px); }
 
+/* card entrance: newly dealt cards slide in from the shoe (top-right) */
+@keyframes cardSlideIn{
+  from{ transform:translate(40px,-56px) rotate(9deg); opacity:0; }
+  to{ transform:translate(0,0) rotate(0); opacity:1; }
+}
+.card-in{ animation:cardSlideIn .34s cubic-bezier(.2,.8,.25,1) both; }
+/* hole-card flip reveal */
+@keyframes cardFlip{
+  0%{ transform:rotateY(90deg); opacity:.2; }
+  100%{ transform:rotateY(0); opacity:1; }
+}
+.card-flip{ animation:cardFlip .3s ease-out both; }
+@media (prefers-reduced-motion:reduce){ .card-in,.card-flip{ animation:none; } }
+
 /* recap overlay */
 #recap{ position:absolute; inset:0; z-index:40; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.55); }
 #recap.on{ display:flex; }
@@ -268,7 +282,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const GAME_MODE = 'blackjack';
 const DEFAULT_CONFIG = { numRounds:5, startingBalance:200, numDecks:6, shoeMode:'fresh', cardTheme:'random' };
 const PLAYER_JOIN_URL = 'https://haydenmquaill.github.io/JustaLittleFun';
-const BET_SECONDS = 30, READY_SECONDS = 5, ACTION_SECONDS = 10, RECAP_SECONDS = 30;
+const BET_SECONDS = 30, READY_SECONDS = 5, ACTION_SECONDS = 15, RECAP_SECONDS = 30;
 const SUITS = { S:['♠','black'], H:['♥','red'], D:['♦','red'], C:['♣','black'] };
 
 const SUPABASE_URL = 'https://lhzxsjjgsvlnlixygjif.supabase.co';
@@ -293,15 +307,17 @@ function applyTheme(name){
 }
 applyTheme(DEFAULT_CONFIG.cardTheme);          // sensible default until the game starts
 const CARD_W = { sm:50, '':74, big:96 };   // widths per size class
-function cardEl(code, size='', faceDown=false){
+function cardEl(code, size='', faceDown=false, animate=false){
   const wrap = document.createElement('div');
   wrap.style.width = CARD_W[size] + 'px';
   wrap.style.display = 'inline-block';
+  wrap.dataset.slot = faceDown ? 'HOLE' : code;   // identity for incremental paint
   const el = faceDown
     ? JALFCards.renderBack()
     : JALFCards.renderCard(code[0], code[1]);   // rank, suit — 'T' handled by cardmeister
   el.style.width = '100%';
   wrap.appendChild(el);
+  if(animate) wrap.classList.add('card-in');
   return wrap;
 }
 function handTotal(cards){
@@ -309,9 +325,21 @@ function handTotal(cards){
     if(r==='A'){t+=11;a++;} else if('TJQK'.includes(r)) t+=10; else t+=parseInt(r,10); }
   while(t>21&&a>0){t-=10;a--;} return t;
 }
+/* Incremental paint: keep already-shown cards in place and slide in only the
+   new ones, so hits and deals animate instead of the whole hand popping.
+   `hideSecond` renders card index 1 face-down (dealer hole). */
 function renderCards(container, cards, size='', hideSecond=false){
-  container.innerHTML='';
-  cards.forEach((c,i)=> container.appendChild(cardEl(c, size, hideSecond && i===1)));
+  const want = cards.map((c,i)=> (hideSecond && i===1) ? 'HOLE' : c);
+  const have = Array.from(container.children).map(ch=>ch.dataset.slot);
+  // if the existing run no longer prefixes what we want (e.g. hole flipped,
+  // or a fresh hand), rebuild from scratch; otherwise append the new tail.
+  let reuse = have.length <= want.length && have.every((s,i)=> s===want[i]);
+  if(!reuse){ container.innerHTML=''; }
+  const start = reuse ? have.length : 0;
+  for(let i=start;i<cards.length;i++){
+    const faceDown = hideSecond && i===1;
+    container.appendChild(cardEl(cards[i], size, faceDown, true));
+  }
 }
 
 /* ════════ TV table paint from a snapshot of hands ════════ */
@@ -364,22 +392,80 @@ function paintTable(hands, { hideHole=true, activeSeat=null } = {}){
   });
 }
 
-/* enlarge the active seat's hand(s) in the center */
+/* Dealer reveal in the center stage: show up-card + face-down hole, flip the
+   hole, then slide in each drawn card one at a time. `finalCards` is the
+   dealer's completed hand (from run_blackjack_dealer). */
+async function revealDealer(finalCards, status){
+  const stage = $('center-stage'); stage.innerHTML='';
+  const wrap = document.createElement('div'); wrap.className='active-hand';
+  wrap.innerHTML = `<div class="who">Dealer</div>`;
+  const cc = document.createElement('div'); cc.className='hand-cards';
+  wrap.appendChild(cc);
+  const badgeHost = document.createElement('div');
+  wrap.appendChild(badgeHost);
+  stage.appendChild(wrap);
+
+  const setBadge = (txt,kind='total')=>{ badgeHost.innerHTML = badge(kind,txt); };
+
+  // 1. up-card face up, hole face down
+  cc.appendChild(cardEl(finalCards[0],'big',false,true));
+  const hole = cardEl(finalCards[1],'big',true,true);   // face-down initially
+  cc.appendChild(hole);
+  setBadge('?');
+  await sleep(700);
+
+  // 2. flip the hole card to its real face
+  const realHole = cardEl(finalCards[1],'big',false,false);
+  realHole.classList.add('card-flip');
+  cc.replaceChild(realHole, hole);
+  setBadge(handTotal(finalCards.slice(0,2)));
+  await sleep(700);
+
+  // 3. slide in each subsequent draw one at a time
+  for(let i=2;i<finalCards.length;i++){
+    cc.appendChild(cardEl(finalCards[i],'big',false,true));
+    setBadge(handTotal(finalCards.slice(0,i+1)));
+    await sleep(850);
+  }
+
+  // 4. final status badge
+  if(status==='bust') setBadge('Bust','bust');
+  else setBadge(handTotal(finalCards));
+}
+
+/* enlarge the active seat's hand(s) in the center. Incremental: if the same
+   seat/hands are already shown, slide in only newly drawn cards; otherwise
+   rebuild (new seat, or first paint). */
 function paintCenter(hands, seat){
   const hs = hands.filter(h => !h.is_dealer && h.seat_index===seat).sort((a,b)=>a.hand_index-b.hand_index);
-  const stage = $('center-stage'); stage.innerHTML='';
-  if(!hs.length) return;
+  const stage = $('center-stage');
+  if(!hs.length){ stage.innerHTML=''; return; }
   const name = G.names[hs[0].player_id] || 'Player';
-  hs.forEach(h => {
-    const wrap = document.createElement('div'); wrap.className='active-hand';
-    wrap.innerHTML = `<div class="who">${esc(name)}${hs.length>1?` · hand ${h.hand_index+1}`:''}</div>`;
-    const cc = document.createElement('div'); cc.className='hand-cards';
-    h.cards.forEach(c => cc.appendChild(cardEl(c,'big')));
-    wrap.appendChild(cc);
+  const key = seat + ':' + hs.map(h=>h.hand_index).join(',');
+  const sameLayout = stage.dataset.key === key && stage.children.length === hs.length;
+  if(!sameLayout){ stage.innerHTML=''; stage.dataset.key = key; }
+
+  hs.forEach((h,idx) => {
+    let wrap = sameLayout ? stage.children[idx] : null;
+    let cc, badgeHost;
+    if(!wrap){
+      wrap = document.createElement('div'); wrap.className='active-hand';
+      wrap.innerHTML = `<div class="who">${esc(name)}${hs.length>1?` · hand ${h.hand_index+1}`:''}</div>`;
+      cc = document.createElement('div'); cc.className='hand-cards';
+      wrap.appendChild(cc);
+      badgeHost = document.createElement('div'); wrap.appendChild(badgeHost);
+      stage.appendChild(wrap);
+    } else {
+      cc = wrap.querySelector('.hand-cards');
+      badgeHost = cc.nextElementSibling;
+    }
+    // append only new cards, with slide-in
+    for(let i=cc.children.length; i<h.cards.length; i++){
+      cc.appendChild(cardEl(h.cards[i],'big',false,true));
+    }
     const t = handTotal(h.cards);
-    let b = h.status==='bust'?badge('bust','Bust'):h.status==='blackjack'?badge('blackjack','Blackjack'):badge('total',t);
-    wrap.insertAdjacentHTML('beforeend', b);
-    stage.appendChild(wrap);
+    badgeHost.innerHTML = h.status==='bust'?badge('bust','Bust')
+      : h.status==='blackjack'?badge('blackjack','Blackjack'):badge('total',t);
   });
 }
 
@@ -461,9 +547,14 @@ async function playRound(){
   $('t-phase').textContent = 'Dealer plays';
   await sb.rpc('bj_begin_seat', { p_session_id:G.session.id, p_seat:-1, p_seconds:READY_SECONDS });
   await sleep(800);
-  await sb.rpc('run_blackjack_dealer', { p_session_id:G.session.id });
+  const { data:dealerRow } = await sb.rpc('run_blackjack_dealer', { p_session_id:G.session.id });
+  // reveal in the center stage: flip hole, then draw cards one at a time
+  const dc = (dealerRow && dealerRow.cards) ? dealerRow.cards
+             : ((await readHands()).find(h=>h.is_dealer)?.cards || []);
+  const dStatus = (dealerRow && dealerRow.status) || 'stood';
+  await revealDealer(dc, dStatus);
   hands = await readHands(); paintTable(hands,{hideHole:false});
-  await sleep(1600);
+  await sleep(1200);
 
   // 5. SETTLE
   $('t-phase').textContent = 'Settling';
