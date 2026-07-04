@@ -1931,6 +1931,7 @@ function applyTrackTheme() {
 let _weatherRaf = null;
 let _rainDrops  = [];
 let _lightningTimer = null;
+let _weatherStopped = false;   // true once weather is torn down; blocks an already-queued thunderclap from firing on the leaderboard
 
 function initWeatherParticles() {
   stopWeatherParticles();
@@ -1939,6 +1940,7 @@ function initWeatherParticles() {
   if(!canvas || !RACE_WEATHER) return;
 
   const vis = RACE_WEATHER.visual;
+  _weatherStopped = false;   // weather is live again for this race; allow thunder
   const pType = vis.particleType || (vis.rainIntensity > 0 ? 'rain' : null);
   // Rain uses rainIntensity; the softer particle types carry particleIntensity.
   const intensity = pType === 'rain' ? (vis.rainIntensity || 0) : (vis.particleIntensity || 0);
@@ -2086,13 +2088,16 @@ function scheduleLightning(intervalMs) {
     flashScreen('rgba(220,230,255,0.85)');
     // Double flash
     setTimeout(() => flashScreen('rgba(220,230,255,0.6)'), 80);
-    // Thunder trails the flash by a short, slightly random beat.
-    setTimeout(() => playSound('thunder', { volume:0.9, rate:0.95 + Math.random()*0.1 }), 250 + Math.random()*500);
+    // Thunder trails the flash by a short, slightly random beat. Skip it if weather
+    // was torn down in the meantime (e.g. we moved to the final leaderboard between
+    // the flash being scheduled and the clap firing) — no thunder over the podium.
+    setTimeout(() => { if(!_weatherStopped) playSound('thunder', { volume:0.9, rate:0.95 + Math.random()*0.1 }); }, 250 + Math.random()*500);
     scheduleLightning(intervalMs);
   }, delay);
 }
 
 function stopWeatherParticles() {
+  _weatherStopped = true;
   if(_weatherRaf) { cancelAnimationFrame(_weatherRaf); _weatherRaf = null; }
   if(_lightningTimer) { clearTimeout(_lightningTimer); _lightningTimer = null; }
   _rainDrops = [];
@@ -5216,7 +5221,7 @@ async function showFinalLeaderboard(){
     if(champCard) champCard.classList.remove('pending');
     if(marquee) marquee.style.visibility = '';
     launchConfetti();
-    stopLoop('hooves', 0.4); stopWeatherAudio(); stopMenuMusic(0.5);
+    stopLoop('hooves', 0.4); stopWeatherAudio(); stopWeatherParticles(); stopMenuMusic(0.5);
     setCrowd('podium', 0.4);                  // champion revealed — the crowd erupts
     playSound('cheer', { volume:1.0 });
     playSound('fanfare', { volume:0.9 });
@@ -5528,6 +5533,9 @@ const Audio_ = {
   ctx: null, master: null,
   buses: {},            // music / crowd / weather / sfx / voice → GainNode
   buffers: {},          // decoded AudioBuffers by url
+  _decoding: {},        // url -> in-flight decode Promise (dedup: stops two overlapping
+                        // decodes of the same url, which detaches the ArrayBuffer and can
+                        // make one of them silently fail — the race-1 first-past-post drop)
   loops: {},            // active looping sources by name
   muted: false, ready: false, _ducked: 0,
   crowdLevel: 0,        // current target crowd loudness (0..1), see CROWD_LEVELS
@@ -5827,14 +5835,28 @@ function _allVoiceUrls(){
    voice preloads. */
 async function _decodeUrls(urls){
   if(!Audio_.ctx) return;
-  await Promise.all([...urls].map(async url=>{
+  await Promise.all([...urls].map(url=>{
     if(Audio_.buffers[url]) return;                 // already decoded
-    try{
-      const res = await fetch(url);
-      if(!res.ok) throw new Error(res.status);
-      const buf = await res.arrayBuffer();
-      Audio_.buffers[url] = await Audio_.ctx.decodeAudioData(buf);
-    }catch(e){ /* a missing file just stays silent — never blocks the game */ }
+    // If this url is already being decoded (e.g. the fire-and-forget background
+    // pass started it), await THAT same promise instead of kicking off a second
+    // fetch+decodeAudioData. Two overlapping decodes of one url is what caused the
+    // intermittent first-race drop: decodeAudioData detaches the ArrayBuffer, so
+    // when the background decode and an on-demand call (playRaceCall's own decode)
+    // hit the same clip at once, one of them decodes a detached buffer, throws, and
+    // leaves Audio_.buffers[url] unset — the call then plays nothing. From race 2 on,
+    // the background pass has finished, so there was never a collision and it worked.
+    if(Audio_._decoding[url]) return Audio_._decoding[url];
+    const p = (async ()=>{
+      try{
+        const res = await fetch(url);
+        if(!res.ok) throw new Error(res.status);
+        const buf = await res.arrayBuffer();
+        Audio_.buffers[url] = await Audio_.ctx.decodeAudioData(buf);
+      }catch(e){ /* a missing file just stays silent — never blocks the game */ }
+      finally { delete Audio_._decoding[url]; }
+    })();
+    Audio_._decoding[url] = p;
+    return p;
   }));
 }
 
@@ -6161,7 +6183,10 @@ function _duck(on){
     const g = Audio_.buses[bus]; if(!g) return;
     g.gain.cancelScheduledValues(now);
     g.gain.setValueAtTime(g.gain.value, now);
-    g.gain.linearRampToValueAtTime(ducked ? full*0.35 : full, now + 0.25);
+    // Duck the non-voice beds hard (to 20%) while VO plays, so the announcer is
+    // clearly audible over crowd + weather. A gentle duck (was 0.35) left the
+    // pre-race announcer buried under the crowd murmur and thunder.
+    g.gain.linearRampToValueAtTime(ducked ? full*0.20 : full, now + 0.25);
   };
   ramp('sfx',     BUS_BASE.sfx);
   ramp('weather', BUS_BASE.weather);
@@ -6172,7 +6197,7 @@ function _duck(on){
     const lvl = Audio_.crowdLevel * BUS_BASE.crowd;
     gc.gain.cancelScheduledValues(now);
     gc.gain.setValueAtTime(gc.gain.value, now);
-    gc.gain.linearRampToValueAtTime(ducked ? lvl*0.4 : lvl, now + 0.25);
+    gc.gain.linearRampToValueAtTime(ducked ? lvl*0.28 : lvl, now + 0.25);
   }
 }
 
@@ -6208,8 +6233,18 @@ async function playRaceCall(event, horseId){
   const nameUrl  = nameSet[tone] || nameSet.neutral || nameSet.emphatic;
   if(!frameUrl || !nameUrl) return;
   // Ensure both are decoded (on-demand safety — they're in the priority preload,
-  // but a cold clip should still play rather than silently drop the call).
+  // but a cold clip should still play rather than silently drop the call). The
+  // _decodeUrls dedup means this now shares the background pass's in-flight decode
+  // instead of racing it. Verify the buffers actually landed; if not, try once more
+  // before giving up, and surface a reason rather than dropping silently.
   try{ await _decodeUrls(new Set([frameUrl, nameUrl])); }catch(e){}
+  if(!_buf(frameUrl) || !_buf(nameUrl)){
+    try{ await _decodeUrls(new Set([frameUrl, nameUrl])); }catch(e){}
+  }
+  if(!_buf(frameUrl) || !_buf(nameUrl)){
+    console.warn('[racecall] dropped', event, '- frame:', !!_buf(frameUrl), 'name:', !!_buf(nameUrl), frameUrl, nameUrl);
+    return;
+  }
   _duck(true);
   try{
     await _playVoiceUrl(frameUrl);
