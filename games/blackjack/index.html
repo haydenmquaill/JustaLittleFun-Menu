@@ -125,6 +125,12 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 .badge.won{ background:var(--green); color:#fff; }
 .badge.lost{ background:rgba(0,0,0,0.3); color:rgba(255,255,255,0.6); }
 .badge.push{ background:#555; color:#fff; }
+/* dealer BUST — new animated text format (replaces the old red pill badge),
+   mirroring the focused-hand .hand-action a-bust pop. */
+.dealer-bust-text{ margin-top:10px; font-family:'Barlow Condensed',sans-serif; font-weight:800;
+  font-size:2rem; line-height:1; letter-spacing:2px; text-transform:uppercase; color:#ff5a5a; }
+.dealer-bust-text.show{ animation:actionPop .5s cubic-bezier(.2,.8,.2,1); }
+@media (prefers-reduced-motion:reduce){ .dealer-bust-text.show{ animation:none; } }
 
 /* center stage — active player's enlarged hand */
 .center-stage{ flex:1; display:flex; align-items:center; justify-content:center; gap:40px; }
@@ -174,6 +180,9 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
    Reserves height so tiles don't jump when it appears. */
 .hand-outcome{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.7rem; line-height:1;
   letter-spacing:2px; text-transform:uppercase; min-height:1.7rem; opacity:0; }
+/* .shown = visible, no animation (used when re-applying persisted state on a
+   repaint). .show = the animated entrance, played only when the text first sets. */
+.hand-outcome.shown{ opacity:1; }
 .hand-outcome.show{ opacity:1; animation:outcomePop .55s cubic-bezier(.2,.8,.2,1); }
 @keyframes outcomePop{ 0%{ opacity:0; transform:translateY(10px) scale(.8); }
   55%{ opacity:1; transform:translateY(0) scale(1.16); }
@@ -287,8 +296,11 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
     #0d1f12;
   padding:30px 36px 0; overflow:hidden; }
 #round-end.on{ display:flex; }
+/* header must span the SAME width as the betting banner (.tbar). The table has
+   no side padding, but #round-end has 36px side padding — so cancel it with a
+   negative margin and restore the 8px inset the .tbar uses. */
 #round-end .re-header{ background:var(--blue); box-shadow:0 2px 12px rgba(0,0,0,0.4);
-  transform:skewX(-8deg); padding:6px 48px; margin:0 8px 26px; min-height:76px; box-sizing:border-box;
+  transform:skewX(-8deg); padding:6px 4px 6px 48px; margin:0 -28px 26px; min-height:76px; box-sizing:border-box;
   display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
 #round-end .re-header > *{ transform:skewX(8deg); }
 #round-end .re-title{ font-family:'Barlow Condensed',sans-serif; font-weight:800;
@@ -344,8 +356,10 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
     #0d1f12;
   flex-direction:column; padding:30px 36px 0; overflow:hidden; }
 #final-overlay.active{ display:flex; }
+/* match the betting banner (.tbar) width: cancel the overlay's 36px side
+   padding with a negative margin, restoring the .tbar 8px inset. */
 #final-header{ background:var(--blue); box-shadow:0 2px 12px rgba(0,0,0,0.4);
-  transform:skewX(-8deg); padding:6px 48px; margin:0 8px 26px; min-height:76px; box-sizing:border-box;
+  transform:skewX(-8deg); padding:6px 4px 6px 48px; margin:0 -28px 26px; min-height:76px; box-sizing:border-box;
   display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
 #final-header > *{ transform:skewX(8deg); }
 #final-header .fh-title{ font-family:'Barlow Condensed',sans-serif; font-weight:800;
@@ -761,14 +775,15 @@ async function initAudio(){
   // from the candidate list (when another pack is available).
   let recent = [];
   try{ recent = JSON.parse(localStorage.getItem('bjDealerHistory')||'[]'); }catch(e){ recent = []; }
-  let candidates = [...DEALER_PACKS];
-  if(recent.length>=2 && recent[recent.length-1]===recent[recent.length-2]){
-    const blocked = recent[recent.length-1];
-    const filtered = candidates.filter(p=>p!==blocked);
-    if(filtered.length) candidates = filtered;   // only block if an alternative exists
-  }
-  const order = [...candidates];
-  for(let i=order.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [order[i],order[j]]=[order[j],order[i]]; }
+  // Prefer a pack that ISN'T the one we just used, so the dealer voice rotates
+  // and never repeats back-to-back (which also guarantees never 3-in-a-row).
+  // Build a preferred list (everything except last pick) and a fallback list
+  // (the last pick) — try preferred first, only fall back if nothing else loads.
+  const last = recent.length ? recent[recent.length-1] : null;
+  const shuffle = a => { for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [a[i],a[j]]=[a[j],a[i]]; } return a; };
+  const preferred = shuffle(DEALER_PACKS.filter(p=>p!==last));
+  const fallback  = DEALER_PACKS.filter(p=>p===last);   // the just-used pack, tried last
+  const order = [...preferred, ...fallback];
   let picked = false;
   await loadSoundManifest();
   for(const pack of order){ if(await loadVoicePack(pack)){ picked = true; break; } }
@@ -1092,7 +1107,10 @@ function applyHandActionState(cell, chip, oc, seat, handIndex){
   if(s.tileClass) cell.classList.add(s.tileClass);
   if(s.betText!=null && chip) chip.innerHTML = `<span class="bc-c">$</span>${s.betText}`;
   if(s.chipRaised && chip) chip.classList.add('chip-raised');
-  if(s.text && oc){ oc.textContent = s.text; oc.classList.add('o-'+s.textKind, 'show'); }
+  // Re-apply persisted text WITHOUT the entrance animation — it's a rebuild, not a
+  // fresh action. Using .shown (static visible) instead of .show prevents every
+  // hand from re-popping on each repaint after another hand's turn ends.
+  if(s.text && oc){ oc.textContent = s.text; oc.classList.add('o-'+s.textKind, 'shown'); }
 }
 
 /* Mark a live action on a hand DURING play: updates stored state + animates the
@@ -1165,13 +1183,19 @@ function paintTable(hands, { hideHole=true, activeSeat=null } = {}){
     const dcards = dealer.cards.slice(0, dcap);
     renderCards($('dealer-cards'), dcards, '', hideHole && dealer.status==='playing');
     const showTotal = !(hideHole && dealer.status==='playing') && dcap>=dealer.cards.length;
-    let db='';
-    if(showTotal){
-      const t = handTotal(dealer.cards);
-      if(dealer.status==='bust') db = badge('bust','Bust');
-      else db = badge('total', t);
-    } else db = badge('total', dcap>0?'?':'');
-    $('dealer-badge').innerHTML = db;
+    const host = $('dealer-badge');
+    if(showTotal && dealer.status==='bust'){
+      // new animated BUST text format; only (re)play the pop when it first appears
+      if(!host.querySelector('.dealer-bust-text')){
+        host.innerHTML = '<div class="dealer-bust-text">Bust</div>';
+        const el = host.firstChild; void el.offsetWidth; el.classList.add('show');
+      }
+    } else {
+      let db='';
+      if(showTotal){ db = badge('total', handTotal(dealer.cards)); }
+      else db = badge('total', dcap>0?'?':'');
+      host.innerHTML = db;
+    }
   }
 
   // bottom seats — one GROUP per player (shared name header), one hand-cell per
@@ -1196,13 +1220,20 @@ function paintTable(hands, { hideHole=true, activeSeat=null } = {}){
 
     const handRow = document.createElement('div'); handRow.className='hand-row';
     hs.forEach(h => {
+      // during the paced deal a reveal cap holds some cards back — don't reveal an
+      // outcome (e.g. gold blackjack tile) until every card for this hand is
+      // actually on the table, or the system "knows" before it's visually dealt.
+      const cap = (G.revealCap && G.revealCap[seat+':'+h.hand_index]);
+      const fullyRevealed = (cap==null) || cap>=h.cards.length;
       // recolour only on a genuine final outcome. 'stood' is not an outcome — the
       // hand is waiting on the dealer — so it stays neutral (grey), never red.
       let outClass = '';
-      if(h.status==='blackjack')      outClass=' out-blackjack';
-      else if(h.status==='won')       outClass=' out-win';
-      else if(h.status==='push')      outClass=' out-push';
-      else if(h.status==='lost' || h.status==='bust') outClass=' out-loss';
+      if(fullyRevealed){
+        if(h.status==='blackjack')      outClass=' out-blackjack';
+        else if(h.status==='won')       outClass=' out-win';
+        else if(h.status==='push')      outClass=' out-push';
+        else if(h.status==='lost' || h.status==='bust') outClass=' out-loss';
+      }
       const activeCell = isTurn && h.hand_index===activeHandIdx;
       const cell = document.createElement('div');
       cell.className = 'hand-cell' + (activeCell?' active':'') + outClass;
@@ -1256,7 +1287,13 @@ async function revealDealer(finalCards, status){
   wrap.appendChild(badgeHost);
   stage.appendChild(wrap);
 
-  const setBadge = (txt,kind='total')=>{ badgeHost.innerHTML = badge(kind,txt); };
+  const setBadge = (txt,kind='total')=>{
+    if(kind==='bust'){
+      // new animated BUST text format (not the old red pill badge)
+      badgeHost.innerHTML = '<div class="dealer-bust-text">Bust</div>';
+      const el = badgeHost.firstChild; void el.offsetWidth; el.classList.add('show');
+    } else { badgeHost.innerHTML = badge(kind,txt); }
+  };
 
   // 1. up-card face up, hole face down
   cc.appendChild(cardEl(cards[0],'big',false,true));
@@ -1352,8 +1389,9 @@ function paintCenter(hands, seat){
     }
     const shownCards = h.cards.slice(0, limit);
     const t = handTotal(shownCards);
-    badgeHost.innerHTML = (h.status==='bust' && limit>=h.cards.length)?badge('bust','Bust')
-      : (h.status==='blackjack')?badge('blackjack','Blackjack'):badge('total',t);
+    const revealed = limit>=h.cards.length;   // don't announce an outcome before its card is shown
+    badgeHost.innerHTML = (h.status==='bust' && revealed)?badge('bust','Bust')
+      : (h.status==='blackjack' && revealed)?badge('blackjack','Blackjack'):badge('total',t);
   });
 }
 
@@ -1467,7 +1505,15 @@ async function playRound(){
   // before anyone acts. Announce each with a 1.5s beat so it lands clearly.
   const naturals = hands.filter(h=>!h.is_dealer && h.status==='blackjack');
   for(const bj of naturals){
-    showHandOutcome(bj.seat_index, bj.hand_index, 'blackjack');   // flash above the hand
+    // persist so the word survives repaints during later seats' turns, and so
+    // settle leaves it as "Blackjack" rather than overwriting with "Win".
+    G.actionState ??= {};
+    const key = _asKey(bj.seat_index, bj.hand_index);
+    const st = (G.actionState[key] ??= {});
+    st.text='Blackjack'; st.textKind='blackjack';
+    st.tileClass='out-blackjack';
+    st.keepOutcome=true;   // settle shouldn't overwrite the word, but DO pay the chip
+    showHandOutcome(bj.seat_index, bj.hand_index, 'blackjack');   // animated flash above the hand
     playVoice('playerBlackjack');
     await sleep(1500);
   }
@@ -1541,6 +1587,7 @@ async function playRound(){
   hands.filter(h=>!h.is_dealer).forEach(h=>{
     const s = G.actionState && G.actionState[_asKey(h.seat_index,h.hand_index)];
     if(s && s.final) return;                 // busted-in-play → leave as BUST
+    if(s && s.keepOutcome) return;           // natural blackjack → keep "Blackjack"
     const kind = h.status==='blackjack' ? 'blackjack'
                : h.status==='won' ? 'win'
                : h.status==='push' ? 'push'
@@ -1603,23 +1650,30 @@ async function seatDone(seat){
 async function runSeatActions(seat){
   let deadline = Date.now()+ACTION_SECONDS*1000;
   let lastSig = '';
-  const announcedCount = {};   // hand_index -> cards already voiced
+  const announcedCount = {};   // hand_index -> cards already voiced (idempotent guard)
   const opened = new Set();    // hand indices whose start-total we've announced
-  let prevHandCount = 1, doubledSeen = false;
+  let prevHandCount = 1;
   const prevCards = {};        // hand_index -> last seen card count (for action text)
   const prevStatus = {};       // hand_index -> last seen status
   const prevDoubled = {};      // hand_index -> last seen doubled flag
   const shownSplit = new Set();// hand indices we've already flashed "Split" on
+  const doubleHandled = new Set(); // hand indices whose double choreography has run
+  const bustShown = new Set(); // hand indices we've already flashed "Bust" on
+  const standShown = new Set();// hand indices we've already flashed "Stand" on
 
   const activeIndex = mine => {
     const playing = mine.filter(h=>h.status==='playing').map(h=>h.hand_index);
     return playing.length ? Math.min(...playing) : null;
   };
-  // announce a hand's total up to its current cards, marking cards as voiced
+  // Announce a hand's total ONCE per new-card state. Idempotent: if these cards
+  // were already voiced, do nothing. This is the single choke-point for voice so
+  // a total can never be spoken twice for the same cards.
   const voiceHand = h => {
+    const n = h.cards.length;
+    if((announcedCount[h.hand_index] ?? 0) >= n) return;   // already voiced these cards
+    announcedCount[h.hand_index] = n;                       // reserve immediately (before the timer)
     const cardsNow = h.cards.slice();
     setTimeout(()=> callHandTotal(cardsNow), CARD_ANIM_MS);
-    announcedCount[h.hand_index] = h.cards.length;
   };
 
   // seed: announce the opening hand (lowest index) once, seed the rest silently
@@ -1636,34 +1690,25 @@ async function runSeatActions(seat){
   }
 
   while(true){
-    if(await seatDone(seat)) return;
-    if(Date.now() > deadline){
+    const done = await seatDone(seat);
+    const timedOut = Date.now() > deadline;
+    if(timedOut && !done){
       await sb.rpc('bj_force_stand_seat', { p_session_id:G.session.id, p_seat:seat });
-      return;
     }
+
     const hands = await readHands();
     const mine = hands.filter(h=>h.seat_index===seat && !h.is_dealer);
-    const sig = JSON.stringify(mine.map(h=>[h.hand_index,h.cards.length,h.status]));
+    const sig = JSON.stringify(mine.map(h=>[h.hand_index,h.cards.length,h.status,!!h.doubled]));
     if(sig !== lastSig){
       lastSig = sig;
-
-      // detect per-hand transitions BEFORE painting, so we can choreograph the
-      // ones that need staged beats (double, split) rather than showing at once.
       const ai = activeIndex(mine);
 
-      // flush a just-finished hand's final voiced total (bust tips over in the
-      // same update that flips status)
-      mine.forEach(h=>{
-        if(opened.has(h.hand_index) && h.status!=='playing' && h.cards.length > (announcedCount[h.hand_index] ?? 0)){
-          voiceHand(h);
-        }
-      });
-
-      // Is this change a SPLIT (a new hand appeared) or a DOUBLE (a hand just
-      // flagged doubled)? Those get staged choreography; everything else paints
-      // normally.
+      // A SPLIT adds a hand; a DOUBLE flags a hand `doubled` that we haven't
+      // choreographed yet. Detect the double by the flag + our own handled-set so
+      // it fires exactly once whether the card and status land together or across
+      // two polls (prevDoubled alone missed the second case).
       const isSplit = mine.length > prevHandCount;
-      const doubledHand = mine.find(h=> h.doubled && !(prevDoubled[h.hand_index]));
+      const doubledHand = mine.find(h=> h.doubled && !doubleHandled.has(h.hand_index));
 
       if(isSplit){
         // Beat 1: separate into two hands + SPLIT text together, holding each
@@ -1680,35 +1725,55 @@ async function runSeatActions(seat){
         if(ai!=null){ const a=mine.find(h=>h.hand_index===ai); if(a){ opened.add(ai); announcedCount[ai]=0; voiceHand(a); } }
       } else if(doubledHand){
         const hi = doubledHand.hand_index;
+        doubleHandled.add(hi);          // mark first so it never re-enters this branch
+        opened.add(hi);
         // Beat 1: DOUBLE text + bet raise together, holding the new card back.
-        G.revealCap[seat+':'+hi] = doubledHand.cards.length - 1;
+        // (cards.length may be 2 if the draw hasn't posted yet, or 3 if it has —
+        // either way hold at the pre-double count so the card lands on beat 2.)
+        const preDoubleCount = Math.max(2, doubledHand.cards.length - 1);
+        G.revealCap[seat+':'+hi] = preDoubleCount;
         paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
         playSound('chipBet', { volume:0.8 });
         markHandAction(seat, hi, 'double', doubledHand);
         await sleep(BEAT_MS);
-        // Beat 2: the double card slides in.
+        // Beat 2: reveal the double card. Re-read so we have the final card+status
+        // even if they posted after we first saw `doubled` (fixes silent/no-anim
+        // doubles where the card arrived a poll later).
+        let dh = doubledHand;
+        { const fresh = (await readHands()).filter(h=>h.seat_index===seat && !h.is_dealer);
+          const f = fresh.find(h=>h.hand_index===hi); if(f) dh = f; }
         delete G.revealCap[seat+':'+hi];
         paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
-        voiceHand(doubledHand);
+        voiceHand(dh);                  // idempotent: one total for the final cards
         await sleep(BEAT_MS);
         // Beat 3: if that card busted the hand, play the bust now (after the pause).
-        if(doubledHand.status==='bust'){ markHandAction(seat, hi, 'bust', doubledHand); await sleep(BEAT_MS); }
+        if(dh.status==='bust' && !bustShown.has(hi)){ bustShown.add(hi); markHandAction(seat, hi, 'bust', dh); await sleep(BEAT_MS); }
+        // keep trackers in sync with the re-read
+        prevCards[hi]=dh.cards.length; prevStatus[hi]=dh.status; prevDoubled[hi]=true;
       } else {
-        // ordinary change (hit / stand / bust / turn advance) — paint + voice
+        // ordinary change (hit / stand / bust / turn advance) — paint + voice.
         paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
+        // voice the active hand's newest total (idempotent), or its opening total
         if(ai!=null){
           const active = mine.find(h=>h.hand_index===ai);
-          if(!opened.has(ai)){ opened.add(ai); announcedCount[ai]=0; voiceHand(active); }
-          else if(active.cards.length > (announcedCount[ai] ?? 0)){ voiceHand(active); }
+          if(!opened.has(ai)){ opened.add(ai); announcedCount[ai]=0; }
+          voiceHand(active);
         }
+        // also flush the final total of any just-finished hand (a bust tips the
+        // total over in the same update that flips status)
+        mine.forEach(h=>{ if(opened.has(h.hand_index) && h.status!=='playing') voiceHand(h); });
+        // action text — each fires once per hand via the *-Shown guards, so a
+        // repaint or a coalesced poll can't double- or skip-play them.
         mine.forEach(h=>{
           const hi=h.hand_index, ps=prevStatus[hi] ?? 'playing', pc=prevCards[hi] ?? h.cards.length;
           const gainedCard = h.cards.length > pc;
-          if(h.status==='bust' && ps!=='bust'){
+          if((h.status==='bust') && !bustShown.has(hi)){
+            bustShown.add(hi);
             setTimeout(()=> markHandAction(seat, hi, 'bust', h), CARD_ANIM_MS);
-          } else if(gainedCard && h.cards.length>=3){
+          } else if(gainedCard && h.cards.length>=3 && h.status==='playing'){
             setTimeout(()=> showHandAction(hi,'hit'), CARD_ANIM_MS);
-          } else if(h.status==='stood' && ps==='playing'){
+          } else if(h.status==='stood' && !standShown.has(hi)){
+            standShown.add(hi);
             markHandAction(seat, hi, 'stand', h);
           }
         });
@@ -1721,6 +1786,10 @@ async function runSeatActions(seat){
       const { data:s } = await sb.from('sessions').select('deadline').eq('id',G.session.id).single();
       if(s && s.deadline){ deadline = new Date(s.deadline).getTime(); runClock(deadline); }
     }
+
+    // Return only AFTER the final state change has been painted/voiced above, so
+    // a stand or bust that lands in the same tick the seat completes still shows.
+    if(done || timedOut) return;
     await sleep(TURN_POLL_MS);
   }
 }
