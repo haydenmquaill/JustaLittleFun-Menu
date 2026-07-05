@@ -380,8 +380,8 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 <div id="table" class="felt">
   <div class="tbar">
     <div class="tbar-info">
-      <span class="rnd" id="t-round">Round 1</span>
-      <span class="phase" id="t-phase">At the table</span>
+      <span class="rnd" id="t-round">Spin 1</span>
+      <span class="phase" id="t-phase">At the wheel</span>
     </div>
     <div class="clock-wrap"><span class="clock" id="t-clock">0:30</span></div>
   </div>
@@ -402,7 +402,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
     </div>
     <div class="board-col">
       <div class="board-head">
-        <span class="bh-title">Bets on the table</span>
+        <span class="bh-title">Bets on the wheel</span>
         <span class="bh-pool" id="bh-pool">$0</span>
       </div>
       <div class="board-list" id="board-list">
@@ -419,7 +419,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 <!-- end-of-round screen (net standings + big-moments marquee + bottom banner) -->
 <div id="round-end">
   <div class="re-header">
-    <span class="re-title">Round <em id="re-round-n">1</em></span>
+    <span class="re-title">Spin <em id="re-round-n">1</em></span>
     <span class="re-side">Results</span>
   </div>
   <div class="re-body" id="re-body"></div>
@@ -443,7 +443,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
       <span class="champ-eyebrow">Champion</span>
       <div id="champ-trophy">🏆</div>
       <div id="champ-name">—</div>
-      <div id="champ-sub">Top of the table</div>
+      <div id="champ-sub">Top of the wheel</div>
       <div id="champ-balance">
         <div class="cb-lab">Final balance</div>
         <div class="cb-val" id="champ-balance-val">$0</div>
@@ -496,10 +496,10 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
     <div class="lobby-banner"><span class="b-title">Session <em>setup</em></span><span class="b-side">Settings</span></div>
     <div class="lobby-body">
       <div class="lobby-card">
-        <div class="lobby-card-head">Table settings</div>
+        <div class="lobby-card-head">Wheel settings</div>
         <div class="lobby-rows">
           <div class="lobby-row">
-            <span class="lab">Number of rounds<small>Spins before the final leaderboard</small></span>
+            <span class="lab">Number of spins<small>Spins before the final leaderboard</small></span>
             <div class="stepper" data-cfg="numRounds" data-min="1" data-max="20" data-step="1">
               <button data-dir="-1">–</button><span class="val"><span class="num">5</span></span><button data-dir="1">+</button>
             </div>
@@ -539,7 +539,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
       <div class="code-board"><div class="clab">Room code</div><div class="code" id="lobby-code">----</div></div>
       <div class="join-hint">Join at <b id="lobby-join-url">your-player-url</b></div>
       <div class="player-board">
-        <div class="player-board-head"><span>At the table</span><span id="lobby-count">0 joined</span></div>
+        <div class="player-board-head"><span>At the wheel</span><span id="lobby-count">0 joined</span></div>
         <div class="player-grid" id="lobby-players"><div class="player-empty">No players yet — share the code</div></div>
       </div>
       <div class="lobby-actions"><button class="lobby-btn" id="lobby-start-game" disabled>Spin them up</button></div>
@@ -1068,7 +1068,7 @@ async function playSession(){
 
   for(let r=0; r<G.cfg.numRounds; r++){
     G.round = r;                                     // 0-indexed, matches sessions.current_round + the player
-    $('t-round').textContent = `Round ${r+1} of ${G.cfg.numRounds}`;
+    $('t-round').textContent = `Spin ${r+1} of ${G.cfg.numRounds}`;
     await playRound();
   }
   // finished
@@ -1084,7 +1084,7 @@ async function playRound(){
   // 1. BETTING — open the window; the board fills live as the room bets
   resetWheelInstant();
   hideRoundEnd();
-  $('t-phase').textContent = 'At the table';        // stable top-banner label
+  $('t-phase').textContent = 'At the wheel';        // stable top-banner label
   // The previous round faded the ticker into "Accepting bets" as its countdown
   // ended; if so, leave that text in place rather than hard-resetting it (which
   // would kill the fade). On the very first round (or after AGAIN) there's no
@@ -1182,7 +1182,7 @@ let PHRASE_DATA = {
     'Lady luck awaits','Red or black?','Where she lands, nobody knows','Back your number'
   ],
   champion: {
-    subMany:'Top of the table', subSolo:'Last one standing',
+    subMany:'Top of the wheel', subSolo:'Last one standing',
     profitUp:'+${amount} on the night', profitDown:'\u2212${amount} on the night',
     profitFlat:'Broke even on the night'
   },
@@ -1350,7 +1350,7 @@ function buildRoundEnd(bets, isFinalRound, pocket, color){
     return `<div class="re-row"><span class="re-name">${esc(G.names[pid]||'Player')}</span>`+
            `<span class="re-outcome">${outcomeText(pid)}</span>`+
            `<span class="re-delta ${dCls}">${dTxt}</span></div>`;
-  }).join('') || `<div class="re-row"><span class="re-name">No bets this round</span></div>`;
+  }).join('') || `<div class="re-row"><span class="re-name">No bets this spin</span></div>`;
   const momentList = Object.entries(net).map(([pid,d])=>({
     name: G.names[pid]||'Player', amount: d, outcome: outcomeText(pid), round: G.round
   }));
@@ -1393,7 +1393,7 @@ function renderMomentsMarquee(track, moments){
     const amt = (m.amount>0?'+':'-')+'$'+Math.abs(m.amount);
     const detailBits = [];
     if(m.outcome) detailBits.push(m.outcome);
-    if(m.round!=null) detailBits.push(`Round ${m.round+1}`);
+    if(m.round!=null) detailBits.push(`Spin ${m.round+1}`);
     const detail = detailBits.join(' · ');
     return `<div class="mq-tile ${loss?'loss':''}"><div class="mq-body">`+
       `<div class="mq-who">${esc(m.name||'Player')}</div>`+
@@ -1563,7 +1563,7 @@ $('btn-again') && $('btn-again').addEventListener('click', ()=>{
     // reset the game's per-session runtime state, keep the room + players
     G.round = 0; G.history = [];
     G._tickerSeeded = false;
-    try{ await sb.rpc('bj_reset_session', { p_session_id:G.session.id }); }catch(e){}
+    try{ await sb.rpc('reset_roulette_session', { p_session_id:G.session.id }); }catch(e){}
     await refreshPlayers();
     $('lobby-overlay').style.display='flex';
     showStack('lobby-room');
