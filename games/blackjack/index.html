@@ -2213,8 +2213,8 @@ function showFinal(){
     const profit = (Number(champ.balance)||0) - start;
     const pEl = $('champ-profit');
     const c = PHRASE_DATA.champion || {};
-    pEl.textContent = profit>0 ? fillPhrase(c.profitUp,{amount:'$'+profit})
-                    : profit<0 ? fillPhrase(c.profitDown,{amount:'$'+Math.abs(profit)})
+    pEl.textContent = profit>0 ? fillPhrase(c.profitUp,{amount:profit})
+                    : profit<0 ? fillPhrase(c.profitDown,{amount:Math.abs(profit)})
                     : pickPhrase(c.profitFlat);
     pEl.classList.toggle('down', profit<0);
     $('champ-sub').textContent = standings.length>1 ? pickPhrase(c.subMany) : pickPhrase(c.subSolo);
