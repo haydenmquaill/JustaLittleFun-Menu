@@ -1,0 +1,176 @@
+{
+  "_comment": "Dealer voice pack: CLASSIC (measured, traditional croupier). Same line keys across every pack so playVoice('dealerBust') resolves against whichever pack the session picked at random. Each key is an array of interchangeable takes (one chosen at random per play). total_4..total_21 are the per-card hand-total calls (players only). basePath is prepended; drop files under audio/vo/classic/<folder>/N.mp3. Missing files stay silent.",
+  "basePath": "",
+  "lines": {
+    "placeYourBets": [
+      "place_your_bets/1.mp3",
+      "place_your_bets/2.mp3",
+      "place_your_bets/3.mp3"
+    ],
+    "betsClosed": [
+      "bets_closed/1.mp3",
+      "bets_closed/2.mp3",
+      "bets_closed/3.mp3"
+    ],
+    "dealersTurn": [
+      "dealers_turn/1.mp3",
+      "dealers_turn/2.mp3",
+      "dealers_turn/3.mp3"
+    ],
+    "playerBust": [
+      "player_bust/1.mp3",
+      "player_bust/2.mp3",
+      "player_bust/3.mp3"
+    ],
+    "playerBlackjack": [
+      "player_blackjack/1.mp3",
+      "player_blackjack/2.mp3",
+      "player_blackjack/3.mp3"
+    ],
+    "dealerBust": [
+      "dealer_bust/1.mp3",
+      "dealer_bust/2.mp3",
+      "dealer_bust/3.mp3"
+    ],
+    "dealerBlackjack": [
+      "dealer_blackjack/1.mp3",
+      "dealer_blackjack/2.mp3",
+      "dealer_blackjack/3.mp3"
+    ],
+    "dealerWin": [
+      "dealer_win/1.mp3",
+      "dealer_win/2.mp3",
+      "dealer_win/3.mp3"
+    ],
+    "dealerLose": [
+      "dealer_lose/1.mp3",
+      "dealer_lose/2.mp3",
+      "dealer_lose/3.mp3"
+    ],
+    "dealerPartial": [
+      "dealer_partial/1.mp3",
+      "dealer_partial/2.mp3",
+      "dealer_partial/3.mp3"
+    ],
+    "pushAll": [
+      "push_all/1.mp3",
+      "push_all/2.mp3",
+      "push_all/3.mp3"
+    ],
+    "pushWinner": [
+      "push_winner/1.mp3",
+      "push_winner/2.mp3",
+      "push_winner/3.mp3"
+    ],
+    "pushLoser": [
+      "push_loser/1.mp3",
+      "push_loser/2.mp3",
+      "push_loser/3.mp3"
+    ],
+    "pushMixed": [
+      "push_mixed/1.mp3",
+      "push_mixed/2.mp3",
+      "push_mixed/3.mp3"
+    ],
+    "winner": [
+      "winner/1.mp3",
+      "winner/2.mp3",
+      "winner/3.mp3"
+    ],
+    "signoff": [
+      "signoff/1.mp3",
+      "signoff/2.mp3",
+      "signoff/3.mp3"
+    ],
+    "total_4": [
+      "total/4/1.mp3",
+      "total/4/2.mp3",
+      "total/4/3.mp3"
+    ],
+    "total_5": [
+      "total/5/1.mp3",
+      "total/5/2.mp3",
+      "total/5/3.mp3"
+    ],
+    "total_6": [
+      "total/6/1.mp3",
+      "total/6/2.mp3",
+      "total/6/3.mp3"
+    ],
+    "total_7": [
+      "total/7/1.mp3",
+      "total/7/2.mp3",
+      "total/7/3.mp3"
+    ],
+    "total_8": [
+      "total/8/1.mp3",
+      "total/8/2.mp3",
+      "total/8/3.mp3"
+    ],
+    "total_9": [
+      "total/9/1.mp3",
+      "total/9/2.mp3",
+      "total/9/3.mp3"
+    ],
+    "total_10": [
+      "total/10/1.mp3",
+      "total/10/2.mp3",
+      "total/10/3.mp3"
+    ],
+    "total_11": [
+      "total/11/1.mp3",
+      "total/11/2.mp3",
+      "total/11/3.mp3"
+    ],
+    "total_12": [
+      "total/12/1.mp3",
+      "total/12/2.mp3",
+      "total/12/3.mp3"
+    ],
+    "total_13": [
+      "total/13/1.mp3",
+      "total/13/2.mp3",
+      "total/13/3.mp3"
+    ],
+    "total_14": [
+      "total/14/1.mp3",
+      "total/14/2.mp3",
+      "total/14/3.mp3"
+    ],
+    "total_15": [
+      "total/15/1.mp3",
+      "total/15/2.mp3",
+      "total/15/3.mp3"
+    ],
+    "total_16": [
+      "total/16/1.mp3",
+      "total/16/2.mp3",
+      "total/16/3.mp3"
+    ],
+    "total_17": [
+      "total/17/1.mp3",
+      "total/17/2.mp3",
+      "total/17/3.mp3"
+    ],
+    "total_18": [
+      "total/18/1.mp3",
+      "total/18/2.mp3",
+      "total/18/3.mp3"
+    ],
+    "total_19": [
+      "total/19/1.mp3",
+      "total/19/2.mp3",
+      "total/19/3.mp3"
+    ],
+    "total_20": [
+      "total/20/1.mp3",
+      "total/20/2.mp3",
+      "total/20/3.mp3"
+    ],
+    "total_21": [
+      "total/21/1.mp3",
+      "total/21/2.mp3",
+      "total/21/3.mp3"
+    ]
+  }
+}
