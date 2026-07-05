@@ -1522,7 +1522,7 @@ async function playRound(){
   // betting window over (timer expired or everyone's in) → lock bets. The clock
   // does NOT pause: it now counts down the short pre-deal breather to round
   // start. Ticker shows plain text; the top-right clock owns the countdown.
-  updateTicker('Bets closed');
+  setTicker('status-text', 'Bets closed');
   playVoice('betsClosed');
   runClock(Date.now()+BETS_CLOSED_WAIT_MS);   // clock counts down to the deal
   await sleep(BETS_CLOSED_WAIT_MS);
@@ -1962,29 +1962,59 @@ function _tickerLoop(ts){
   _tk.raf = requestAnimationFrame(_tickerLoop);
 }
 /* Point the ticker at a specific element id and set its message. Rebuilds the
-   copies to fill the clip and (re)starts the loop. */
+   copies to fill the clip and (re)starts the loop.
+
+   Every genuine text change on the SAME ticker element plays a vertical
+   crossfade: the current line sinks down + fades out, then the new line is
+   rebuilt, seeded above, and rises up + fades in. The very first paint, a switch
+   to a different ticker element, and reduced-motion all skip the fade and swap
+   instantly. (Per-second countdown ticks use updateTicker, which never fades.) */
 function setTicker(elId, msg){
   const el = $(elId), clip = el && el.parentElement;
   if(!el || !clip) return;
-  _tk.msg = msg;
   const sameEl = _tk.el === el;
-  el.innerHTML = '';
-  const mkCopy = ()=>{
-    const s = document.createElement('span'); s.className='ticker-copy'; s.textContent=msg; el.appendChild(s);
-    const sep = document.createElement('span'); sep.className='ticker-sep'; sep.textContent='\u00a0\u00a0\u25c6\u00a0\u00a0'; el.appendChild(sep);
+  const hadText = sameEl && !!(_tk.msg && _tk.msg.length) && el.querySelector('.ticker-copy');
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  // (Re)build the copies for `msg`, size them to fill the clip, and (re)start the
+  // scroll loop. Optionally seed them above their rest position so a release into
+  // fade-in-start → rest reads as an upward rise.
+  const build = (seedAbove)=>{
+    _tk.msg = msg;
+    el.classList.remove('fade-out');
+    el.innerHTML = '';
+    const mkCopy = ()=>{
+      const s = document.createElement('span'); s.className='ticker-copy'; s.textContent=msg; el.appendChild(s);
+      const sep = document.createElement('span'); sep.className='ticker-sep'; sep.textContent='\u00a0\u00a0\u25c6\u00a0\u00a0'; el.appendChild(sep);
+    };
+    mkCopy(); mkCopy();
+    _tk.el = el;
+    if(seedAbove){ el.classList.add('fade-in-start'); }
+    requestAnimationFrame(()=>{
+      const copies = el.querySelectorAll('.ticker-copy');
+      if(copies.length>=2){
+        _tk.unit = Math.abs(copies[1].getBoundingClientRect().left - copies[0].getBoundingClientRect().left);
+      }
+      const needed = _tk.unit>0 ? Math.ceil((clip.offsetWidth*2)/_tk.unit)+2 : 8;
+      while(el.querySelectorAll('.ticker-copy').length < needed) mkCopy();
+      if(!sameEl) _tk.x = 0;
+      if(!_tk.raf) _tk.raf = requestAnimationFrame(_tickerLoop);
+      if(seedAbove){
+        // force a reflow so the seeded (raised) position applies, then release →
+        // the new line rises up + fades in.
+        void el.offsetWidth;
+        el.classList.remove('fade-in-start');
+      }
+    });
   };
-  mkCopy(); mkCopy();
-  _tk.el = el;
-  requestAnimationFrame(()=>{
-    const copies = el.querySelectorAll('.ticker-copy');
-    if(copies.length>=2){
-      _tk.unit = Math.abs(copies[1].getBoundingClientRect().left - copies[0].getBoundingClientRect().left);
-    }
-    const needed = _tk.unit>0 ? Math.ceil((clip.offsetWidth*2)/_tk.unit)+2 : 8;
-    while(el.querySelectorAll('.ticker-copy').length < needed) mkCopy();
-    if(!sameEl) _tk.x = 0;
-    if(!_tk.raf) _tk.raf = requestAnimationFrame(_tickerLoop);
-  });
+
+  if(hadText && !reduce){
+    // sink the current line away, then rebuild + fade the new one in from above
+    el.classList.add('fade-out');
+    setTimeout(()=> build(true), 300);
+  } else {
+    build(false);
+  }
 }
 /* Update just the text on the current ticker element without resetting scroll
    position — used for the per-second countdown so the number ticks smoothly. */
@@ -1993,34 +2023,18 @@ function updateTicker(msg){
   _tk.msg = msg;
   el.querySelectorAll('.ticker-copy').forEach(s=> s.textContent = msg);
 }
-/* Swap the message on the CURRENT ticker element with a vertical crossfade: the
-   existing text sinks down + fades out, then the new text is seeded above and
-   rises up + fades in. Keeps the horizontal scroll position untouched (that
-   transform lives on .ticker-text; we only animate the child copies). Resolves
-   when the new text has settled. Falls back to a plain updateTicker if the
-   engine isn't pointed anywhere yet. */
+/* Explicit crossfade swap on the CURRENT ticker element (kept for callers that
+   want to await the transition, e.g. the countdown → "Accepting bets" hand-off).
+   setTicker now fades on its own, so this simply routes through it and resolves
+   after the animation would have completed. */
 function updateTickerFade(msg){
   const el = _tk.el;
   if(!el){ return Promise.resolve(); }
-  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches){
-    updateTicker(msg); return Promise.resolve();
-  }
-  return new Promise(resolve=>{
-    // 1. sink the current text away
-    el.classList.add('fade-out');
-    setTimeout(()=>{
-      // 2. swap the text and seed it above (no transition on the jump)
-      _tk.msg = msg;
-      el.querySelectorAll('.ticker-copy').forEach(s=> s.textContent = msg);
-      el.classList.remove('fade-out');
-      el.classList.add('fade-in-start');
-      // force a reflow so the seeded position takes effect before we release
-      void el.offsetWidth;
-      // 3. release → rises up + fades in
-      el.classList.remove('fade-in-start');
-      setTimeout(resolve, 300);
-    }, 300);
-  });
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  // reuse the element the engine is pointed at
+  const id = el.id;
+  setTicker(id, msg);
+  return new Promise(resolve=> setTimeout(resolve, reduce ? 0 : 650));
 }
 
 /* ════════ END-OF-ROUND SCREEN ════════ */
