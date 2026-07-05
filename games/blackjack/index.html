@@ -94,7 +94,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
    with the countdown in its own white parallelogram pushed to the right. */
 .tbar{ display:flex; align-items:center; justify-content:space-between;
   background:var(--blue); color:var(--white);
-  padding:6px 4px 6px 48px; margin:0 8px;
+  padding:6px 4px 6px 48px; margin:0 8px; min-height:76px; box-sizing:border-box;
   box-shadow:0 2px 12px rgba(0,0,0,0.4); flex-shrink:0;
   transform:skewX(-8deg); position:relative; z-index:101; }
 .tbar > *{ transform:skewX(8deg); }
@@ -109,8 +109,13 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 .tbar .clock.urgent{ color:var(--red); }
 
 /* dealer zone */
-.dealer-zone{ display:flex; flex-direction:column; align-items:center; padding-top:26px; }
-#table.dealer-turn .dealer-zone{ visibility:hidden; }
+.dealer-zone{ display:flex; flex-direction:column; align-items:center; padding-top:26px;
+  transition:opacity .45s ease, transform .45s ease; }
+.dealer-zone.hidden{ display:none; }
+.dealer-zone.fading{ opacity:0; transform:translateY(-30px) scale(.92); }
+.dealer-name{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.3rem; letter-spacing:2px;
+  text-transform:uppercase; color:#fff; background:var(--blue); padding:6px 22px; border-radius:8px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.4); text-align:center; margin-bottom:12px; }
 .zone-label{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.1rem; letter-spacing:5px; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:12px; }
 .hand-cards{ display:flex; gap:10px; }
 .badge{ font-family:'Oswald',sans-serif; font-weight:700; font-size:1.1rem; padding:3px 12px; border-radius:20px; margin-top:10px; letter-spacing:1px; text-transform:uppercase; }
@@ -126,7 +131,24 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 .active-hand{ display:flex; flex-direction:column; align-items:center; animation:pop .3s cubic-bezier(.2,.8,.2,1); }
 .active-hand.leaving{ animation:handLeave .4s cubic-bezier(.4,0,.6,1) both; }
 @keyframes handLeave{ from{ opacity:1; transform:translateY(0) scale(1); } to{ opacity:0; transform:translateY(-40px) scale(.85); } }
-.active-hand .who{ font-weight:800; font-size:2.4rem; text-transform:uppercase; letter-spacing:2px; margin-bottom:14px; }
+.active-hand .who{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.6rem; text-transform:uppercase;
+  letter-spacing:2px; margin-bottom:14px; color:#fff; background:var(--blue); padding:7px 26px; border-radius:9px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.4); }
+/* animated action / outcome text below the focused hand */
+.hand-action{ margin-top:14px; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:2.6rem;
+  line-height:1; letter-spacing:2px; text-transform:uppercase; min-height:2.6rem; }
+.hand-action.show{ animation:actionPop .5s cubic-bezier(.2,.8,.2,1); }
+@keyframes actionPop{ 0%{ opacity:0; transform:translateY(14px) scale(.8); }
+  55%{ opacity:1; transform:translateY(0) scale(1.14); }
+  70%{ transform:translateX(-3px) scale(1.1); } 82%{ transform:translateX(3px) scale(1.06); }
+  100%{ opacity:1; transform:translateX(0) scale(1); } }
+/* outcome colours (match the tile recolour) */
+.hand-action.a-bust{ color:#ff5a5a; } .hand-action.a-win{ color:#3ddb6e; }
+.hand-action.a-blackjack{ color:#f2c94c; } .hand-action.a-push{ color:#c2c8d2; }
+/* action colours — deliberately distinct from outcomes */
+.hand-action.a-hit{ color:#ffffff; } .hand-action.a-stand{ color:#3fd0c9; }
+.hand-action.a-double{ color:#ff9d3d; } .hand-action.a-split{ color:#4a90ff; }
+@media (prefers-reduced-motion:reduce){ .hand-action.show{ animation:none; } }
 @keyframes pop{ from{ transform:scale(.85); opacity:0; } to{ transform:scale(1); opacity:1; } }
 
 /* players row along the bottom */
@@ -148,11 +170,29 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 .hand-cell.active{ background:rgba(255,255,255,0.12); box-shadow:inset 0 0 0 2px var(--white); transform:translateY(-4px); }
 .hand-label{ font-size:0.8rem; color:rgba(255,255,255,0.45); font-family:'Oswald',sans-serif;
   letter-spacing:2px; text-transform:uppercase; }
+/* outcome word shown ABOVE the hand (blackjack at deal; win/loss/push at settle).
+   Reserves height so tiles don't jump when it appears. */
+.hand-outcome{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.7rem; line-height:1;
+  letter-spacing:2px; text-transform:uppercase; min-height:1.7rem; opacity:0; }
+.hand-outcome.show{ opacity:1; animation:outcomePop .55s cubic-bezier(.2,.8,.2,1); }
+@keyframes outcomePop{ 0%{ opacity:0; transform:translateY(10px) scale(.8); }
+  55%{ opacity:1; transform:translateY(0) scale(1.16); }
+  70%{ transform:translateX(-3px) scale(1.1); } 82%{ transform:translateX(3px) scale(1.05); }
+  100%{ opacity:1; transform:translateX(0) scale(1); } }
+.hand-outcome.o-win{ color:#3ddb6e; } .hand-outcome.o-loss{ color:#ff5a5a; }
+.hand-outcome.o-push{ color:#c2c8d2; } .hand-outcome.o-blackjack{ color:#f2c94c; }
+.hand-outcome.o-hit{ color:#ffffff; } .hand-outcome.o-stand{ color:#3fd0c9; }
+.hand-outcome.o-double{ color:#ff9d3d; } .hand-outcome.o-split{ color:#4a90ff; }
+@media (prefers-reduced-motion:reduce){ .hand-outcome.show{ animation:none; } }
 /* per-hand bet chip shown below the cards */
 .bet-chip{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.9rem; line-height:1;
   letter-spacing:.5px; color:#fff; background:rgba(0,0,0,0.32); padding:6px 16px; border-radius:8px;
   font-variant-numeric:tabular-nums; box-shadow:0 2px 8px rgba(0,0,0,0.35); transition:color .3s, background .3s; }
 .bet-chip .bc-c{ font-size:1.2rem; color:rgba(255,255,255,0.6); vertical-align:super; margin-right:1px; }
+/* a doubled bet stays visually raised (amber) until settle overwrites it */
+.bet-chip.chip-raised{ background:#c9781e; color:#fff; box-shadow:0 2px 12px rgba(255,157,61,0.5); }
+@keyframes betFlashDouble{ 0%,100%{ background:#c9781e; } 50%{ background:#ff9d3d; } }
+.bet-chip.settle-double{ animation:betWiggle .5s ease, betFlashDouble .5s ease; }
 /* outcome recolour — applied per hand-cell at settle */
 .hand-cell.out-win{ background:var(--green); box-shadow:0 6px 22px rgba(30,125,58,0.5); }
 .hand-cell.out-loss{ background:var(--red); box-shadow:0 6px 22px rgba(200,16,46,0.5); }
@@ -228,7 +268,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
   color:var(--blue); letter-spacing:3px; text-transform:uppercase; text-align:center; }
 
 /* ══════════ BOTTOM TICKER (persistent flowing marquee, equal to the top banner) ══════════ */
-.ticker-bar{ flex-shrink:0; margin:0 8px; background:var(--blue); color:#fff;
+.ticker-bar{ flex-shrink:0; margin:0 8px; background:var(--blue); color:#fff; min-height:76px; box-sizing:border-box;
   transform:skewX(-8deg); box-shadow:0 -2px 12px rgba(0,0,0,0.4);
   display:flex; align-items:center; padding:6px 4px 6px 48px; position:relative; z-index:101; }
 .ticker-wrap{ transform:skewX(8deg); flex:1; min-width:0; }
@@ -248,7 +288,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
   padding:30px 36px 0; overflow:hidden; }
 #round-end.on{ display:flex; }
 #round-end .re-header{ background:var(--blue); box-shadow:0 2px 12px rgba(0,0,0,0.4);
-  transform:skewX(-8deg); padding:6px 48px; margin:0 8px 26px;
+  transform:skewX(-8deg); padding:6px 48px; margin:0 8px 26px; min-height:76px; box-sizing:border-box;
   display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
 #round-end .re-header > *{ transform:skewX(8deg); }
 #round-end .re-title{ font-family:'Barlow Condensed',sans-serif; font-weight:800;
@@ -305,7 +345,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
   flex-direction:column; padding:30px 36px 0; overflow:hidden; }
 #final-overlay.active{ display:flex; }
 #final-header{ background:var(--blue); box-shadow:0 2px 12px rgba(0,0,0,0.4);
-  transform:skewX(-8deg); padding:6px 48px; margin:0 8px 26px;
+  transform:skewX(-8deg); padding:6px 48px; margin:0 8px 26px; min-height:76px; box-sizing:border-box;
   display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
 #final-header > *{ transform:skewX(8deg); }
 #final-header .fh-title{ font-family:'Barlow Condensed',sans-serif; font-weight:800;
@@ -399,7 +439,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 #now-playing .np-eyebrow{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.3rem;
   letter-spacing:5px; text-transform:uppercase; color:rgba(255,255,255,0.55); }
 #now-playing .np-title{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:3rem;
-  line-height:1; letter-spacing:.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  line-height:1.15; padding-bottom:2px; letter-spacing:.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 #now-playing .np-artist{ font-family:'Oswald',sans-serif; font-weight:500; font-size:1.7rem;
   color:rgba(255,255,255,0.7); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 @media (prefers-reduced-motion:reduce){ #now-playing{ transition:opacity .3s ease; transform:none; } }
@@ -418,8 +458,8 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
     <div class="clock-wrap"><span class="clock" id="t-clock">0:30</span></div>
   </div>
 
-  <div class="dealer-zone">
-    <div class="zone-label">Dealer</div>
+  <div class="dealer-zone hidden" id="dealer-zone">
+    <div class="dealer-name">Dealer</div>
     <div class="hand-cards" id="dealer-cards"></div>
     <div id="dealer-badge"></div>
   </div>
@@ -591,6 +631,7 @@ const BETS_CLOSED_WAIT_MS = 12000;   // breather after betting closes before the
 const DEAL_IN_HOLD_MS = 10000;       // "Deal them in" wipe holds this long before betting opens
 const CARD_ANIM_MS = 300;            // must match .card-in animation duration (CSS)
 const TURN_POLL_MS = 150;            // how often the turn loop checks for a player action
+const BEAT_MS = 450;                 // pause between choreographed beats (double/split staging)
 const SUITS = { S:['♠','black'], H:['♥','red'], D:['♦','red'], C:['♣','black'] };
 
 const SUPABASE_URL = 'https://lhzxsjjgsvlnlixygjif.supabase.co';
@@ -715,13 +756,25 @@ async function initAudio(){
   }
   // pick a dealer pack for this session. Shuffle the list and try packs until
   // one actually loads, so a listed-but-missing pack can't silently collapse the
-  // random choice back onto the built-in fallback.
-  const order = [...DEALER_PACKS];
+  // random choice back onto the built-in fallback. Also avoid the same pack
+  // three sessions in a row: if the last two picks were the same pack, drop it
+  // from the candidate list (when another pack is available).
+  let recent = [];
+  try{ recent = JSON.parse(localStorage.getItem('bjDealerHistory')||'[]'); }catch(e){ recent = []; }
+  let candidates = [...DEALER_PACKS];
+  if(recent.length>=2 && recent[recent.length-1]===recent[recent.length-2]){
+    const blocked = recent[recent.length-1];
+    const filtered = candidates.filter(p=>p!==blocked);
+    if(filtered.length) candidates = filtered;   // only block if an alternative exists
+  }
+  const order = [...candidates];
   for(let i=order.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [order[i],order[j]]=[order[j],order[i]]; }
   let picked = false;
   await loadSoundManifest();
   for(const pack of order){ if(await loadVoicePack(pack)){ picked = true; break; } }
   if(!picked){ _dealerPack = 'classic'; }   // nothing loaded — inline fallback stays
+  // record the pick for the no-three-in-a-row rule (keep the last few)
+  try{ recent.push(_dealerPack); localStorage.setItem('bjDealerHistory', JSON.stringify(recent.slice(-5))); }catch(e){}
   // Priority decode: the first playlist track + the wipe whoosh, so background
   // music and the whoosh can start the instant the context unlocks. Mark ready
   // as soon as these land, then decode everything else in the background.
@@ -785,7 +838,15 @@ function playVoice(key, { volume=1 } = {}){
   const src=Audio_.ctx.createBufferSource(); src.buffer=buffer;
   const g=Audio_.ctx.createGain(); g.gain.value=volume; src.connect(g).connect(Audio_.buses.voice);
   _duck(true); let released=false; const rel=()=>{ if(!released){ released=true; _duck(false); } };
-  src.onended=rel; setTimeout(rel, buffer.duration*1000 + 400); src.start(0); return src;
+  src.onended=rel; setTimeout(rel, buffer.duration*1000 + 400); src.start(0);
+  return { src, duration: buffer.duration };
+}
+/* Play a voice line and resolve when it finishes (plus a small gap), so lines
+   can be sequenced without overlapping. Resolves immediately if silent/missing. */
+function playVoiceAwait(key, gapMs=350, opts={}){
+  const r = playVoice(key, opts);
+  const ms = r ? r.duration*1000 + gapMs : 0;
+  return new Promise(res=> setTimeout(res, ms));
 }
 /* Speak a PLAYER hand's current total: total_4…total_21, or playerBust over 21.
    Never called for the dealer. Fired as a card finishes sliding in. */
@@ -818,11 +879,11 @@ async function announceDealerOutcome(hands){
   const losers  = players.filter(h=>h.status==='lost' || h.status==='bust').length;
   const pushes  = players.filter(h=>h.status==='push').length;
 
-  // 1) state line first (if applicable)
+  // 1) state line first (if applicable), fully spoken before the outcome line
   const dealerBust = dealer && dealer.status==='bust';
   const dealerBJ   = dealer && bjIsNatural(dealer.cards);
-  if(dealerBJ){ playVoice('dealerBlackjack'); await sleep(1100); }
-  else if(dealerBust){ playVoice('dealerBust'); await sleep(1100); }
+  if(dealerBJ){ await playVoiceAwait('dealerBlackjack', 500); }
+  else if(dealerBust){ await playVoiceAwait('dealerBust', 500); }
 
   // 2) outcome line
   let key;
@@ -973,11 +1034,13 @@ function renderCards(container, cards, size='', hideSecond=false){
 
 /* wipe every card zone so each round starts on a clean table */
 function clearTable(){
+  resetActionState();
   $('dealer-cards').innerHTML='';
   $('dealer-badge').innerHTML='';
   $('center-stage').innerHTML='';
   $('center-stage').removeAttribute('data-key');
   $('players-row').innerHTML='';
+  const dz = $('dealer-zone'); if(dz){ dz.classList.add('hidden'); dz.classList.remove('fading'); }
 }
 
 /* ════════ TV table paint from a snapshot of hands ════════ */
@@ -988,14 +1051,97 @@ async function readHands(){
 }
 function badge(kind, text){ return `<span class="badge ${kind}">${text}</span>`; }
 
+/* Show the outcome word above a specific hand's seat-cell (blackjack at deal;
+   win/loss/push at settle). Replays the flash-wiggle each call. */
+const OUTCOME_LABELS = { win:'Win', loss:'Loss', push:'Push', blackjack:'Blackjack' };
+function showHandOutcome(seat, handIndex, kind){
+  const el = document.querySelector(`.hand-outcome[data-seat="${seat}"][data-hand="${handIndex}"]`);
+  if(!el) return;
+  el.className = 'hand-outcome'; void el.offsetWidth;   // reset then replay
+  el.textContent = OUTCOME_LABELS[kind] || '';
+  el.classList.add('o-'+kind, 'show');
+}
+
 /* At settle, animate each hand's bet chip to its result: loss counts down to 0,
    win/blackjack counts up to the gross payout, push stays put — each with a
    wiggle-flash. Driven off the settled hands. */
+/* Animate a single bet chip counting from → to, then a wiggle-flash. */
+function animateBetChip(chip, from, to, flashClass){
+  if(!chip) return;
+  const DUR = 600, t0 = performance.now();
+  const write = v => { chip.innerHTML = `<span class="bc-c">$</span>${Math.round(v)}`; };
+  const finish = ()=>{ write(to);
+    chip.classList.remove('settle-win','settle-loss','settle-push','settle-blackjack','settle-double');
+    void chip.offsetWidth; if(flashClass) chip.classList.add(flashClass); };
+  if(to===from){ if(flashClass) chip.classList.add(flashClass); return; }
+  const tick = now => { const p=Math.min(1,(now-t0)/DUR); const e=1-Math.pow(1-p,3);
+    write(from+(to-from)*e); if(p<1) requestAnimationFrame(tick); else finish(); };
+  requestAnimationFrame(tick);
+}
+
+/* Round-scoped live action state per hand ("seat:hand" → {...}), so mid-play
+   changes (bust red + zeroed bet, double raise, stand/double text) survive the
+   frequent paintTable rebuilds during the turn loop. Reset each round. */
+function resetActionState(){ G.actionState = {}; G.revealCap = {}; G.dealerRevealCap = null; }
+function _asKey(seat,hand){ return seat+':'+hand; }
+
+/* Apply any stored live state onto a freshly built cell/chip/outcome element. */
+function applyHandActionState(cell, chip, oc, seat, handIndex){
+  const s = G.actionState && G.actionState[_asKey(seat,handIndex)];
+  if(!s) return;
+  if(s.tileClass) cell.classList.add(s.tileClass);
+  if(s.betText!=null && chip) chip.innerHTML = `<span class="bc-c">$</span>${s.betText}`;
+  if(s.chipRaised && chip) chip.classList.add('chip-raised');
+  if(s.text && oc){ oc.textContent = s.text; oc.classList.add('o-'+s.textKind, 'show'); }
+}
+
+/* Mark a live action on a hand DURING play: updates stored state + animates the
+   real elements then and there (both the seat tile and, via showHandAction, the
+   focused hand). kinds: bust / double / stand (hit/split are transient flashes). */
+function markHandAction(seat, handIndex, kind, hand){
+  G.actionState ??= {};
+  const key = _asKey(seat,handIndex);
+  const s = G.actionState[key] ??= {};
+  const chip = document.querySelector(`.bet-chip[data-seat="${seat}"][data-hand="${handIndex}"]`);
+  const cell = chip ? chip.closest('.hand-cell') : null;
+  const oc = document.querySelector(`.hand-outcome[data-seat="${seat}"][data-hand="${handIndex}"]`);
+  const stake = Number(hand?.stake)||0;
+
+  if(kind==='split'){
+    s.text = 'Split'; s.textKind = 'split';
+    if(oc){ oc.className='hand-outcome'; void oc.offsetWidth; oc.textContent='Split'; oc.classList.add('o-split','show'); }
+    showHandAction(handIndex,'split');
+  } else if(kind==='double'){
+    // stake has already been doubled server-side; animate from half → full,
+    // keep the chip raised (amber) and show DOUBLE until settle.
+    s.betText = stake; s.chipRaised = true; s.text = 'Double'; s.textKind = 'double';
+    if(chip){ chip.classList.add('chip-raised'); animateBetChip(chip, Math.round(stake/2), stake, 'settle-double'); }
+    if(oc){ oc.className='hand-outcome'; void oc.offsetWidth; oc.textContent='Double'; oc.classList.add('o-double','show'); }
+    showHandAction(handIndex,'double');
+  } else if(kind==='stand'){
+    s.text = 'Stand'; s.textKind = 'stand';
+    if(oc){ oc.className='hand-outcome'; void oc.offsetWidth; oc.textContent='Stand'; oc.classList.add('o-stand','show'); }
+    showHandAction(handIndex,'stand');
+  } else if(kind==='bust'){
+    // final: red tile, bet drops to zero now, BUST text stays through settle.
+    s.tileClass = 'out-loss'; s.betText = 0; s.chipRaised = false;
+    s.text = 'Bust'; s.textKind = 'bust'; s.final = true;
+    if(cell){ cell.classList.remove('out-win','out-push','out-blackjack'); cell.classList.add('out-loss'); }
+    if(chip){ chip.classList.remove('chip-raised'); animateBetChip(chip, stake, 0, 'settle-loss'); }
+    if(oc){ oc.className='hand-outcome'; void oc.offsetWidth; oc.textContent='Bust'; oc.classList.add('o-bust','show'); }
+    showHandAction(handIndex,'bust');
+  }
+}
+
 function animateBetOutcome(hands){
   const players = hands.filter(h=>!h.is_dealer);
   players.forEach(h=>{
+    // skip hands already resolved live (busted) — their bet/text/tile are final
+    const s = G.actionState && G.actionState[_asKey(h.seat_index,h.hand_index)];
+    if(s && s.final) return;
     const chip = document.querySelector(`.bet-chip[data-seat="${h.seat_index}"][data-hand="${h.hand_index}"]`);
     if(!chip) return;
+    chip.classList.remove('chip-raised');
     const stake = Number(h.stake)||0;
     const payout = Number(h.payout)||0;   // gross returned: 0 on loss, stake on push, >stake on win
     const st = h.status;
@@ -1004,22 +1150,7 @@ function animateBetOutcome(hands){
                      : st==='push' ? 'settle-push' : 'settle-loss';
     const from = stake;
     const to = (st==='lost'||st==='bust') ? 0 : (payout || stake);
-    const DUR = 600, t0 = performance.now();
-    const write = v => { chip.innerHTML = `<span class="bc-c">$</span>${Math.round(v)}`; };
-    const tick = now => {
-      const p = Math.min(1, (now-t0)/DUR);
-      const eased = 1-Math.pow(1-p,3);
-      write(from + (to-from)*eased);
-      if(p<1){ requestAnimationFrame(tick); }
-      else {
-        write(to);
-        chip.classList.remove('settle-win','settle-loss','settle-push','settle-blackjack');
-        void chip.offsetWidth;                 // restart animation
-        chip.classList.add(flashClass);
-      }
-    };
-    if(to===from){ chip.classList.add(flashClass); }   // push: flash in place
-    else requestAnimationFrame(tick);
+    animateBetChip(chip, from, to, flashClass);
   });
 }
 
@@ -1029,14 +1160,17 @@ function paintTable(hands, { hideHole=true, activeSeat=null } = {}){
 
   // dealer
   if(dealer){
-    renderCards($('dealer-cards'), dealer.cards, '', hideHole && dealer.status==='playing');
-    const showTotal = !(hideHole && dealer.status==='playing');
+    // during the paced initial deal, only show up to dealerRevealCap cards
+    const dcap = (G.dealerRevealCap==null) ? dealer.cards.length : Math.min(G.dealerRevealCap, dealer.cards.length);
+    const dcards = dealer.cards.slice(0, dcap);
+    renderCards($('dealer-cards'), dcards, '', hideHole && dealer.status==='playing');
+    const showTotal = !(hideHole && dealer.status==='playing') && dcap>=dealer.cards.length;
     let db='';
     if(showTotal){
       const t = handTotal(dealer.cards);
       if(dealer.status==='bust') db = badge('bust','Bust');
       else db = badge('total', t);
-    } else db = badge('total','?');
+    } else db = badge('total', dcap>0?'?':'');
     $('dealer-badge').innerHTML = db;
   }
 
@@ -1062,29 +1196,40 @@ function paintTable(hands, { hideHole=true, activeSeat=null } = {}){
 
     const handRow = document.createElement('div'); handRow.className='hand-row';
     hs.forEach(h => {
-      const settled = h.status!=='playing';
+      // recolour only on a genuine final outcome. 'stood' is not an outcome — the
+      // hand is waiting on the dealer — so it stays neutral (grey), never red.
       let outClass = '';
-      if(settled){
-        outClass = h.status==='blackjack' ? ' out-blackjack'
-                 : h.status==='won' ? ' out-win'
-                 : h.status==='push' ? ' out-push' : ' out-loss';
-      }
+      if(h.status==='blackjack')      outClass=' out-blackjack';
+      else if(h.status==='won')       outClass=' out-win';
+      else if(h.status==='push')      outClass=' out-push';
+      else if(h.status==='lost' || h.status==='bust') outClass=' out-loss';
       const activeCell = isTurn && h.hand_index===activeHandIdx;
       const cell = document.createElement('div');
       cell.className = 'hand-cell' + (activeCell?' active':'') + outClass;
+
+      // outcome word above the hand (populated by showHandOutcome at deal/settle)
+      const oc = document.createElement('div'); oc.className='hand-outcome';
+      oc.dataset.seat = seat; oc.dataset.hand = h.hand_index;
+      cell.appendChild(oc);
 
       if(split){
         const lab = document.createElement('div'); lab.className='hand-label';
         lab.textContent = `Hand ${h.hand_index+1}`; cell.appendChild(lab);
       }
       const mini = document.createElement('div'); mini.style.display='flex'; mini.style.gap='4px';
-      h.cards.forEach(c => mini.appendChild(cardEl(c,'sm')));
+      const tcap = (G.revealCap && G.revealCap[seat+':'+h.hand_index]);
+      const tlimit = (tcap==null) ? h.cards.length : Math.min(tcap, h.cards.length);
+      h.cards.slice(0, tlimit).forEach(c => mini.appendChild(cardEl(c,'sm')));
       cell.appendChild(mini);
 
       const chip = document.createElement('div'); chip.className='bet-chip';
       chip.dataset.seat = seat; chip.dataset.hand = h.hand_index;
       chip.innerHTML = `<span class="bc-c">$</span>${Number(h.stake)}`;
       cell.appendChild(chip);
+
+      // re-apply any mid-play state (bust red + zeroed bet, double raise + text,
+      // stand text) so it survives this rebuild
+      applyHandActionState(cell, chip, oc, seat, h.hand_index);
 
       handRow.appendChild(cell);
     });
@@ -1152,6 +1297,24 @@ function clearCenterStage(){
   return new Promise(res=> setTimeout(()=>{ stage.innerHTML=''; stage.removeAttribute('data-key'); res(); }, 420));
 }
 
+/* Show animated action/outcome text below a focused hand. `kind` picks the
+   colour class (hit/stand/double/split/bust/win/blackjack/push). Replays the
+   pop+wiggle each call. Targets the active-hand whose action element matches
+   the hand index; falls back to the only hand on screen. */
+const ACTION_LABELS = { hit:'Hit', stand:'Stand', double:'Double', split:'Split',
+  bust:'Bust', win:'Win', blackjack:'Blackjack', push:'Push' };
+function showHandAction(handIndex, kind){
+  const stage = $('center-stage'); if(!stage) return;
+  let el = stage.querySelector(`.hand-action[data-hand="${handIndex}"]`);
+  if(!el){ const all = stage.querySelectorAll('.hand-action'); if(all.length===1) el = all[0]; }
+  if(!el) return;
+  const label = ACTION_LABELS[kind] || '';
+  el.className = 'hand-action';                 // reset colour + animation
+  void el.offsetWidth;
+  el.textContent = label;
+  el.classList.add('a-'+kind, 'show');
+}
+
 /* enlarge the active seat's hand(s) in the center. Incremental: if the same
    seat/hands are already shown, slide in only newly drawn cards; otherwise
    rebuild (new seat, or first paint). */
@@ -1173,18 +1336,24 @@ function paintCenter(hands, seat){
       cc = document.createElement('div'); cc.className='hand-cards';
       wrap.appendChild(cc);
       badgeHost = document.createElement('div'); wrap.appendChild(badgeHost);
+      const act = document.createElement('div'); act.className='hand-action'; act.dataset.hand = h.hand_index;
+      wrap.appendChild(act);
       stage.appendChild(wrap);
     } else {
       cc = wrap.querySelector('.hand-cards');
-      badgeHost = cc.nextElementSibling;
+      badgeHost = wrap.querySelector('.hand-cards').nextElementSibling;
     }
-    // append only new cards, with slide-in
-    for(let i=cc.children.length; i<h.cards.length; i++){
+    // append only new cards, with slide-in — but never beyond this hand's
+    // reveal cap (used to hold a card back during a double/split choreography).
+    const cap = (G.revealCap && G.revealCap[seat+':'+h.hand_index]);
+    const limit = (cap==null) ? h.cards.length : Math.min(cap, h.cards.length);
+    for(let i=cc.children.length; i<limit; i++){
       cc.appendChild(cardEl(h.cards[i],'big',false,true));
     }
-    const t = handTotal(h.cards);
-    badgeHost.innerHTML = h.status==='bust'?badge('bust','Bust')
-      : h.status==='blackjack'?badge('blackjack','Blackjack'):badge('total',t);
+    const shownCards = h.cards.slice(0, limit);
+    const t = handTotal(shownCards);
+    badgeHost.innerHTML = (h.status==='bust' && limit>=h.cards.length)?badge('bust','Bust')
+      : (h.status==='blackjack')?badge('blackjack','Blackjack'):badge('total',t);
   });
 }
 
@@ -1254,16 +1423,53 @@ async function playRound(){
   playSound('chipBet', { volume:0.8 });        // chips down as the round begins
   await sb.rpc('deal_blackjack_round', { p_session_id:G.session.id });
   let hands = await readHands();
+  { const dz=$('dealer-zone'); if(dz){ dz.classList.remove('hidden','fading'); } }  // dealer appears for play
+
+  // Paced deal, casino order: one card to each seat, dealer up-card, second card
+  // to each seat, dealer hole card. Reveal caps hold every hand at 0 then step
+  // up a card at a time so each lands individually with its sound.
+  const dealSeats = [...seats].sort((a,b)=>a-b);
+  const seatHand0 = s => hands.find(h=>!h.is_dealer && h.seat_index===s && h.hand_index===0);
+  const dealer0 = hands.find(h=>h.is_dealer);
+  // start everything hidden
+  hands.filter(h=>!h.is_dealer).forEach(h=>{ G.revealCap[h.seat_index+':'+h.hand_index]=0; });
+  G.dealerRevealCap = 0;
   paintTable(hands, { hideHole:true });
-  await sleep(1200);
+  const DEAL_STEP = 260;
+  // round 1: one card to each player
+  for(const s of dealSeats){
+    const h0 = seatHand0(s); if(!h0) continue;
+    G.revealCap[s+':0'] = 1; paintTable(hands,{hideHole:true});
+    playSound('cardDeal', { volume:0.7, rate:0.97+Math.random()*0.06 });
+    await sleep(DEAL_STEP);
+  }
+  // dealer up-card
+  G.dealerRevealCap = 1; paintTable(hands,{hideHole:true});
+  playSound('cardDeal', { volume:0.7 });
+  await sleep(DEAL_STEP);
+  // round 2: second card to each player
+  for(const s of dealSeats){
+    const h0 = seatHand0(s); if(!h0) continue;
+    G.revealCap[s+':0'] = 2; paintTable(hands,{hideHole:true});
+    playSound('cardDeal', { volume:0.7, rate:0.97+Math.random()*0.06 });
+    await sleep(DEAL_STEP);
+  }
+  // dealer hole card (stays face-down)
+  G.dealerRevealCap = 2; paintTable(hands,{hideHole:true});
+  playSound('cardDeal', { volume:0.7 });
+  await sleep(DEAL_STEP);
+  // deal complete — clear caps so subsequent paints show everything
+  hands.filter(h=>!h.is_dealer).forEach(h=>{ delete G.revealCap[h.seat_index+':'+h.hand_index]; });
+  G.dealerRevealCap = null;
+  await sleep(600);
 
   // Player naturals are known the moment the deal completes (a two-card 21),
-  // before anyone acts. Announce each one, with a 1s beat between, so the table
-  // hears it before the turn loop begins.
+  // before anyone acts. Announce each with a 1.5s beat so it lands clearly.
   const naturals = hands.filter(h=>!h.is_dealer && h.status==='blackjack');
-  for(const _bj of naturals){
+  for(const bj of naturals){
+    showHandOutcome(bj.seat_index, bj.hand_index, 'blackjack');   // flash above the hand
     playVoice('playerBlackjack');
-    await sleep(1000);
+    await sleep(1500);
   }
 
   // 3. TURN LOOP
@@ -1299,7 +1505,14 @@ async function playRound(){
   const mustPlay = livePlayers.length>0 && !(allLiveAreNaturals && !dealerNatural);
 
   setTicker('status-text', 'DEALER\u2019S TURN');
-  $('table').classList.add('dealer-turn');        // hides the top dealer zone (shown centre-stage instead)
+  // fade the top dealer zone away (the dealer is shown centre-stage now) and
+  // keep it hidden for the remainder of the round.
+  await new Promise(res=>{
+    const dz=$('dealer-zone');
+    if(!dz || dz.classList.contains('hidden')){ res(); return; }
+    dz.classList.add('fading');
+    setTimeout(()=>{ dz.classList.add('hidden'); dz.classList.remove('fading'); res(); }, 460);
+  });
   if(mustPlay){
     playVoice('dealersTurn');
     await sb.rpc('bj_begin_seat', { p_session_id:G.session.id, p_seat:-1, p_seconds:READY_SECONDS });
@@ -1317,12 +1530,23 @@ async function playRound(){
     hands = await readHands(); paintTable(hands,{hideHole:false});
     await sleep(1000);
   }
-  $('table').classList.remove('dealer-turn');
 
   // 5. SETTLE
   $('t-phase').textContent = 'Results';
   await sb.rpc('settle_blackjack_round', { p_session_id:G.session.id });
   hands = await readHands(); paintTable(hands,{hideHole:false});
+  // outcome word above each player's hand: win / loss / push (a hand that won
+  // via a natural keeps the "Blackjack" word). Hands that busted during play are
+  // already final (BUST text, red tile, bet at zero) so we leave them untouched.
+  hands.filter(h=>!h.is_dealer).forEach(h=>{
+    const s = G.actionState && G.actionState[_asKey(h.seat_index,h.hand_index)];
+    if(s && s.final) return;                 // busted-in-play → leave as BUST
+    const kind = h.status==='blackjack' ? 'blackjack'
+               : h.status==='won' ? 'win'
+               : h.status==='push' ? 'push'
+               : (h.status==='lost' || h.status==='bust') ? 'loss' : null;
+    if(kind) showHandOutcome(h.seat_index, h.hand_index, kind);
+  });
   animateBetOutcome(hands);           // count each bet to its payout, wiggle-flash, recolour tile
   await announceDealerOutcome(hands);
   // hold on the settled table so players see the outcome before we transition
@@ -1382,6 +1606,10 @@ async function runSeatActions(seat){
   const announcedCount = {};   // hand_index -> cards already voiced
   const opened = new Set();    // hand indices whose start-total we've announced
   let prevHandCount = 1, doubledSeen = false;
+  const prevCards = {};        // hand_index -> last seen card count (for action text)
+  const prevStatus = {};       // hand_index -> last seen status
+  const prevDoubled = {};      // hand_index -> last seen doubled flag
+  const shownSplit = new Set();// hand indices we've already flashed "Split" on
 
   const activeIndex = mine => {
     const playing = mine.filter(h=>h.status==='playing').map(h=>h.hand_index);
@@ -1399,7 +1627,8 @@ async function runSeatActions(seat){
     const seed = (await readHands()).filter(h=>h.seat_index===seat && !h.is_dealer);
     prevHandCount = seed.length || 1;
     const ai = activeIndex(seed);
-    seed.forEach(h=>{ announcedCount[h.hand_index] = h.cards.length; });
+    seed.forEach(h=>{ announcedCount[h.hand_index] = h.cards.length;
+      prevCards[h.hand_index]=h.cards.length; prevStatus[h.hand_index]=h.status; prevDoubled[h.hand_index]=!!h.doubled; });
     if(ai!=null){
       const h = seed.find(x=>x.hand_index===ai);
       opened.add(ai); announcedCount[ai] = 0; voiceHand(h);   // announce start total
@@ -1417,30 +1646,77 @@ async function runSeatActions(seat){
     const sig = JSON.stringify(mine.map(h=>[h.hand_index,h.cards.length,h.status]));
     if(sig !== lastSig){
       lastSig = sig;
-      paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
 
-      // chip sound for the two staking actions (split adds a hand; double flags a hand)
-      if(mine.length > prevHandCount) playSound('chipBet', { volume:0.8 });
-      prevHandCount = mine.length;
-      if(mine.some(h=>h.doubled) && !doubledSeen){ playSound('chipBet', { volume:0.8 }); doubledSeen = true; }
-
+      // detect per-hand transitions BEFORE painting, so we can choreograph the
+      // ones that need staged beats (double, split) rather than showing at once.
       const ai = activeIndex(mine);
-      // if a hand we were announcing just left 'playing' (stood or busted) and
-      // gained a final card we haven't voiced (a bust adds the tipping card in
-      // the same update that flips status), flush that last card/bust now.
+
+      // flush a just-finished hand's final voiced total (bust tips over in the
+      // same update that flips status)
       mine.forEach(h=>{
         if(opened.has(h.hand_index) && h.status!=='playing' && h.cards.length > (announcedCount[h.hand_index] ?? 0)){
           voiceHand(h);
         }
       });
-      if(ai!=null){
-        const active = mine.find(h=>h.hand_index===ai);
-        // a newly active hand (e.g. after a split, or moving to the next hand):
-        // announce its current total first
-        if(!opened.has(ai)){ opened.add(ai); announcedCount[ai] = 0; voiceHand(active); }
-        // otherwise, if the active hand gained a card (hit/double), announce it
-        else if(active.cards.length > (announcedCount[ai] ?? 0)){ voiceHand(active); }
+
+      // Is this change a SPLIT (a new hand appeared) or a DOUBLE (a hand just
+      // flagged doubled)? Those get staged choreography; everything else paints
+      // normally.
+      const isSplit = mine.length > prevHandCount;
+      const doubledHand = mine.find(h=> h.doubled && !(prevDoubled[h.hand_index]));
+
+      if(isSplit){
+        // Beat 1: separate into two hands + SPLIT text together, holding each
+        // hand to its single starting card. Beat 2 (after a pause): deal.
+        mine.forEach(h=>{ G.revealCap[seat+':'+h.hand_index] = 1; });   // show one card each
+        playSound('chipBet', { volume:0.8 });
+        paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
+        mine.forEach(h=>{ shownSplit.add(h.hand_index); markHandAction(seat,h.hand_index,'split',h); });
+        await sleep(BEAT_MS);
+        // deal: lift the caps, paint the now-two-card hands
+        mine.forEach(h=>{ delete G.revealCap[seat+':'+h.hand_index]; });
+        paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
+        // voice the (now active) first hand's total
+        if(ai!=null){ const a=mine.find(h=>h.hand_index===ai); if(a){ opened.add(ai); announcedCount[ai]=0; voiceHand(a); } }
+      } else if(doubledHand){
+        const hi = doubledHand.hand_index;
+        // Beat 1: DOUBLE text + bet raise together, holding the new card back.
+        G.revealCap[seat+':'+hi] = doubledHand.cards.length - 1;
+        paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
+        playSound('chipBet', { volume:0.8 });
+        markHandAction(seat, hi, 'double', doubledHand);
+        await sleep(BEAT_MS);
+        // Beat 2: the double card slides in.
+        delete G.revealCap[seat+':'+hi];
+        paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
+        voiceHand(doubledHand);
+        await sleep(BEAT_MS);
+        // Beat 3: if that card busted the hand, play the bust now (after the pause).
+        if(doubledHand.status==='bust'){ markHandAction(seat, hi, 'bust', doubledHand); await sleep(BEAT_MS); }
+      } else {
+        // ordinary change (hit / stand / bust / turn advance) — paint + voice
+        paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
+        if(ai!=null){
+          const active = mine.find(h=>h.hand_index===ai);
+          if(!opened.has(ai)){ opened.add(ai); announcedCount[ai]=0; voiceHand(active); }
+          else if(active.cards.length > (announcedCount[ai] ?? 0)){ voiceHand(active); }
+        }
+        mine.forEach(h=>{
+          const hi=h.hand_index, ps=prevStatus[hi] ?? 'playing', pc=prevCards[hi] ?? h.cards.length;
+          const gainedCard = h.cards.length > pc;
+          if(h.status==='bust' && ps!=='bust'){
+            setTimeout(()=> markHandAction(seat, hi, 'bust', h), CARD_ANIM_MS);
+          } else if(gainedCard && h.cards.length>=3){
+            setTimeout(()=> showHandAction(hi,'hit'), CARD_ANIM_MS);
+          } else if(h.status==='stood' && ps==='playing'){
+            markHandAction(seat, hi, 'stand', h);
+          }
+        });
       }
+
+      // update prev-state trackers for all hands
+      prevHandCount = mine.length;
+      mine.forEach(h=>{ prevCards[h.hand_index]=h.cards.length; prevStatus[h.hand_index]=h.status; prevDoubled[h.hand_index]=!!h.doubled; });
 
       const { data:s } = await sb.from('sessions').select('deadline').eq('id',G.session.id).single();
       if(s && s.deadline){ deadline = new Date(s.deadline).getTime(); runClock(deadline); }
@@ -1583,7 +1859,10 @@ function buildRoundEnd(hands, isFinalRound){
            `<span class="re-outcome">${outcomeText(pid)}</span>`+
            `<span class="re-delta ${dCls}">${dTxt}</span></div>`;
   }).join('') || `<div class="re-row"><span class="re-name">No hands this round</span></div>`;
-  renderMomentsMarquee($('re-marquee-track'), net);
+  const momentList = Object.entries(net).map(([pid,d])=>({
+    name: G.names[pid]||'Player', amount: d, outcome: outcomeText(pid), round: G.round
+  }));
+  renderMomentsMarquee($('re-marquee-track'), momentList);
   $('round-end').classList.add('on');
   // live countdown ticker (two-digit padded so text width doesn't jump)
   const label = isFinalRound ? 'Final results in' : 'Next round in';
@@ -1602,32 +1881,35 @@ function hideRoundEnd(){ $('round-end').classList.remove('on'); }
    enough times to fill the row (and duplicated for a seamless loop). Positive =
    win tile, negative = loss. The wrapping #...-marquee is hidden when there are
    no moments. */
-function renderMomentsMarquee(track, netById){
+/* Render a marquee from an array of moment objects:
+   { name, amount (signed net), outcome (label string), round (int|null) }.
+   Tiles show the player, what happened + round, and the amount. Hidden if empty;
+   tiles repeat to fill the row. */
+function renderMomentsMarquee(track, moments){
   if(!track) return;
-  const wrap = track.parentElement;   // the #...-marquee container
-  const moments = Object.entries(netById)
-    .filter(([,d])=>d!==0)
-    .sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]))
-    .slice(0,8);
-  if(!moments.length){
+  const wrap = track.parentElement;
+  const list = (moments||[]).filter(m=>m && m.amount!==0)
+    .sort((a,b)=>Math.abs(b.amount)-Math.abs(a.amount)).slice(0,8);
+  if(!list.length){
     track.innerHTML=''; if(wrap) wrap.style.display='none';
     if(_marquees.get(track)){ cancelAnimationFrame(_marquees.get(track)); _marquees.delete(track); }
     return;
   }
   if(wrap) wrap.style.display='';
-  const tile = ([pid,d])=>{
-    const loss = d<0;
-    const amt = (d>0?'+':'-')+'$'+Math.abs(d);
+  const tile = m => {
+    const loss = m.amount<0;
+    const amt = (m.amount>0?'+':'-')+'$'+Math.abs(m.amount);
+    const detailBits = [];
+    if(m.outcome) detailBits.push(m.outcome);
+    if(m.round!=null) detailBits.push(`Round ${m.round}`);
+    const detail = detailBits.join(' · ');
     return `<div class="mq-tile ${loss?'loss':''}"><div class="mq-body">`+
-      `<div class="mq-who">${esc(G.names[pid]||'Player')}</div>`+
-      `<div class="mq-detail">${loss?'Lost this round':'Won this round'}</div>`+
+      `<div class="mq-who">${esc(m.name||'Player')}</div>`+
+      `<div class="mq-detail">${esc(detail)}</div>`+
       `</div><div class="mq-amount">${amt}</div></div>`;
   };
-  const baseHtml = moments.map(tile).join('');
+  const baseHtml = list.map(tile).join('');
   track.innerHTML = baseHtml;
-  // Repeat the set until the tiles are at least ~2× the visible width, so a
-  // short set (1–2 tiles) still fills the row rather than leaving a gap, then
-  // the scroller loops on that padded run.
   requestAnimationFrame(()=>{
     const clip = track.parentElement;
     const targetW = (clip ? clip.offsetWidth : 1200) * 2;
@@ -1754,8 +2036,12 @@ function showFinal(){
 
   // render standings (hidden) + marquee (hidden until 1st)
   renderFinalStandings(standings, start);
-  const netAll = {}; G.players.forEach(p=>{ netAll[p.id] = (Number(p.balance)||0) - start; });
-  renderMomentsMarquee($('final-marquee-track'), netAll);
+  const nightMoments = G.players.map(p=>{
+    const d = (Number(p.balance)||0) - start;
+    return { name: p.display_name||'Player', amount: d,
+             outcome: d>0?'Up for the night':d<0?'Down for the night':'Even', round: null };
+  });
+  renderMomentsMarquee($('final-marquee-track'), nightMoments);
   const marquee = $('final-marquee'); if(marquee) marquee.style.visibility = 'hidden';
 
   $('final-overlay').classList.add('active');
