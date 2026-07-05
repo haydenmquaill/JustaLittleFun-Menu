@@ -1,0 +1,20 @@
+{
+  "_comment": "Blackjack SFX manifest. basePath is prepended to every url. A sound's url may be a single file OR an array of interchangeable takes (one picked at random per play) — to add variety, just add more entries to the array; filenames only need to match what you list here. bus is one of: sfx, music, ambience. Missing files stay silent.",
+  "basePath": "audio/sfx/",
+  "sounds": {
+    "cardDeal":   { "url": ["deal/1.mp3", "deal/2.mp3", "deal/3.mp3", "deal/4.mp3", "deal/5.mp3", "deal/6.mp3", "deal/7.mp3", "deal/8.mp3"], "bus": "sfx" },
+    "chipBet":    { "url": ["chip/1.mp3", "chip/2.mp3", "chip/3.mp3", "chip/4.mp3", "chip/5.mp3"], "bus": "sfx" },
+    "holeFlip":   { "url": ["flip/1.mp3", "flip/2.mp3", "flip/3.mp3", "flip/4.mp3", "flip/5.mp3"], "bus": "sfx" },
+    "uiWhoosh":   { "url": "general/ui_whoosh.mp3", "bus": "sfx" },
+    "fanfare":    { "url": "general/fanfare.mp3", "bus": "music" },
+    "cheer":      { "url": "general/cheer.mp3", "bus": "ambience" }
+  },
+  "_music_comment": "Background music. Plays from initial load in a shuffle bag (every track once before any repeat, no repeat across the seam). Each entry: url (required), title, artist, cover (all optional). cover is a relative path under basePath; if omitted a placeholder disc shows in the Now Playing toast. The toast is suppressed on the lobby/menu, so startup music plays with no UI.",
+  "music": [
+    { "url": "music/ocean_sunset.mp3", "title": "Ocean Sunset", "artist": "LouPlays", "cover": "music/ocean_sunset.jpg" },
+    { "url": "music/rhodes_shuffling.mp3", "title": "Rhodes Shuffling", "artist": "LouPlays", "cover": "music/rhodes_shuffling.jpg" },
+    { "url": "music/sunlit_drift.mp3", "title": "Sunlit Drift", "artist": "Unknown", "cover": "music/sunlit_drift.jpg" },
+    { "url": "music/monaco_state_of_mind.mp3", "title": "Monaco State of Mind", "artist": "KINDRED", "cover": "music/monaco_state_of_mind.jpg" },
+    { "url": "music/aviary_groove.mp3", "title": "Aviary Groove", "artist": "Maverick", "cover": "music/aviary_groove.jpg" }
+  ]
+}

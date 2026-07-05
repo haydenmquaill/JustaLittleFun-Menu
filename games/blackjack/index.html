@@ -151,7 +151,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
   from{ transform:translate(40px,-56px) rotate(9deg); opacity:0; }
   to{ transform:translate(0,0) rotate(0); opacity:1; }
 }
-.card-in{ animation:cardSlideIn .34s cubic-bezier(.2,.8,.25,1) both; }
+.card-in{ animation:cardSlideIn .30s cubic-bezier(.2,.8,.25,1) both; }
 /* hole-card flip reveal */
 @keyframes cardFlip{
   0%{ transform:rotateY(90deg); opacity:.2; }
@@ -343,6 +343,24 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 #final-marquee::before{ content:"Big moments"; position:absolute; top:0; left:0; z-index:3;
   font-family:'Oswald',sans-serif; font-weight:700; font-size:1rem; letter-spacing:6px;
   text-transform:uppercase; color:rgba(255,255,255,0.85); background:var(--dark); padding:8px 22px; }
+/* ══════════ NOW PLAYING toast (bottom-left, slides in on track change) ══════════ */
+#now-playing{ position:fixed; left:24px; bottom:24px; z-index:10000;
+  display:flex; align-items:center; gap:14px; padding:12px 20px 12px 12px;
+  background:var(--blue); color:#fff; box-shadow:0 8px 28px rgba(0,0,0,0.5);
+  transform:translateX(calc(-100% - 40px)); opacity:0;
+  transition:transform .45s cubic-bezier(.2,.8,.2,1), opacity .45s ease; max-width:420px; }
+#now-playing.show{ transform:translateX(0); opacity:1; }
+#now-playing .np-cover{ width:56px; height:56px; flex-shrink:0; background:#0d1c3a center/cover no-repeat;
+  display:flex; align-items:center; justify-content:center; font-size:1.8rem; color:rgba(255,255,255,0.5); }
+#now-playing .np-cover.placeholder{ background:repeating-linear-gradient(45deg,#0d1c3a 0 6px,#12244a 6px 12px); }
+#now-playing .np-meta{ min-width:0; display:flex; flex-direction:column; gap:2px; }
+#now-playing .np-eyebrow{ font-family:'Oswald',sans-serif; font-weight:600; font-size:0.7rem;
+  letter-spacing:3px; text-transform:uppercase; color:rgba(255,255,255,0.55); }
+#now-playing .np-title{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.5rem;
+  line-height:1; letter-spacing:.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#now-playing .np-artist{ font-family:'Oswald',sans-serif; font-weight:500; font-size:0.95rem;
+  color:rgba(255,255,255,0.7); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+@media (prefers-reduced-motion:reduce){ #now-playing{ transition:opacity .3s ease; transform:none; } }
 </style>
 </head>
 
@@ -418,6 +436,16 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
   </div>
 </div>
 <canvas id="confetti-canvas"></canvas>
+
+<!-- Now Playing toast (bottom-left) -->
+<div id="now-playing">
+  <div class="np-cover placeholder">♪</div>
+  <div class="np-meta">
+    <span class="np-eyebrow">Now playing</span>
+    <span class="np-title">—</span>
+    <span class="np-artist"></span>
+  </div>
+</div>
 
 <!-- wipe transition overlay -->
 <div id="wipe-overlay" class="in no-phrase boot">
@@ -519,6 +547,8 @@ const PLAYER_JOIN_URL = 'https://haydenmquaill.github.io/JustaLittleFun';
 const BET_SECONDS = 30, READY_SECONDS = 5, ACTION_SECONDS = 15, RECAP_SECONDS = 30;
 const BETS_CLOSED_WAIT_MS = 12000;   // breather after betting closes before the deal (BETS CLOSED holds)
 const DEAL_IN_HOLD_MS = 10000;       // "Deal them in" wipe holds this long before betting opens
+const CARD_ANIM_MS = 300;            // must match .card-in animation duration (CSS)
+const TURN_POLL_MS = 150;            // how often the turn loop checks for a player action
 const SUITS = { S:['♠','black'], H:['♥','red'], D:['♦','red'], C:['♣','black'] };
 
 const SUPABASE_URL = 'https://lhzxsjjgsvlnlixygjif.supabase.co';
@@ -530,11 +560,306 @@ const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;
 
 const G = { cfg:structuredClone(DEFAULT_CONFIG), session:null, channel:null, players:[], rosterPoll:null, round:1, names:{} };
 
-/* Audio stubs — the full sfx/vo mixer lands in the next pass. Until then these
-   are silent no-ops so playSound/playVoice calls throughout the game are safe. */
-if(typeof window.playSound !== 'function'){ window.playSound = ()=>null; }
-if(typeof window.playVoice !== 'function'){ window.playVoice = ()=>null; }
-const playSound = window.playSound, playVoice = window.playVoice;
+/* ════════════════════════════════════════════════════════════
+   AUDIO — Web Audio mixer (buses, one-shots, loop beds, ducked VO),
+   first-gesture unlock, runtime JSON manifests. Ported from the horse
+   HOST, trimmed to blackjack: buses music/ambience/sfx/voice, one crowd
+   bed, a single VO language, and dealer "voice packs" (one chosen at
+   random per session). Every missing clip is a silent no-op, so the game
+   runs identically with no audio files present.
+════════════════════════════════════════════════════════════ */
+const Audio_ = { ctx:null, master:null, buses:{}, buffers:{}, _decoding:{}, loops:{}, muted:false, ready:false, _ducked:0, _readyCbs:[] };
+const BUS_BASE = { music:0.6, ambience:0.55, sfx:0.9, voice:1.0 };
+
+/* Inline fallbacks keep every key defined until the JSON resolves (or if it
+   fails). basePath is prepended by the loader. url may be a single file or an
+   array of interchangeable takes (random per play). */
+let SOUND_MANIFEST = {
+  cardDeal:  { url:['audio/sfx/card1.mp3','audio/sfx/card2.mp3','audio/sfx/card3.mp3'], bus:'sfx' },
+  chipBet:   { url:['audio/sfx/chip1.mp3','audio/sfx/chip2.mp3'], bus:'sfx' },
+  holeFlip:  { url:['audio/sfx/flip1.mp3','audio/sfx/flip2.mp3'], bus:'sfx' },
+  bust:      { url:['audio/sfx/bust1.mp3','audio/sfx/bust2.mp3'], bus:'sfx' },
+  blackjack: { url:['audio/sfx/blackjack1.mp3','audio/sfx/blackjack2.mp3'], bus:'sfx' },
+  win:       { url:['audio/sfx/win1.mp3','audio/sfx/win2.mp3'], bus:'sfx' },
+  push:      { url:['audio/sfx/push1.mp3','audio/sfx/push2.mp3'], bus:'sfx' },
+  uiWhoosh:  { url:'audio/sfx/ui_whoosh.mp3',   bus:'sfx' },
+  fanfare:   { url:'audio/sfx/fanfare.mp3',     bus:'music' },
+  cheer:     { url:'audio/sfx/cheer.mp3',       bus:'ambience' },
+};
+/* In-round background music playlist. Each track: { url, title, artist, cover? }.
+   Played one at a time via a shuffle bag (every track once before any repeat).
+   Overlaid from the SFX manifest's "music" array at runtime. */
+let MUSIC_PLAYLIST = [];
+let _soundManifestLoaded = null;
+
+/* Dealer voice packs — same key set per pack, one chosen at random per session.
+   Folder layout: audio/vo/<pack>/vo-manifest.json  */
+const DEALER_PACKS = ['classic','vegas','smooth'];
+let _dealerPack = 'classic';
+let VOICE_MANIFEST = (()=>{
+  const base='audio/vo/classic/'; const m={};
+  const one = (k,folder)=> m[k]=[base+folder+'/1.mp3'];
+  one('placeYourBets','place_your_bets'); one('betsClosed','bets_closed'); one('dealersTurn','dealers_turn');
+  one('playerBust','player_bust'); one('playerBlackjack','player_blackjack');
+  one('dealerBust','dealer_bust'); one('dealerBlackjack','dealer_blackjack');
+  one('dealerWin','dealer_win'); one('dealerLose','dealer_lose'); one('dealerPartial','dealer_partial');
+  one('pushAll','push_all'); one('pushWinner','push_winner'); one('pushLoser','push_loser'); one('pushMixed','push_mixed');
+  one('winner','winner'); one('signoff','signoff');
+  for(let t=4;t<=21;t++) m['total_'+t]=[base+'total/'+t+'/1.mp3'];
+  return m;
+})();
+const _voicePackLoaded = {};   // pack -> load promise
+
+function _specUrls(spec){ if(!spec||!spec.url) return []; return Array.isArray(spec.url)?spec.url:[spec.url]; }
+function _pickUrl(spec){ const l=_specUrls(spec); return l.length? l[(Math.random()*l.length)|0] : null; }
+function _buf(url){ return Audio_.buffers[url]||null; }
+function _spec(name){ return SOUND_MANIFEST[name]||null; }
+
+async function _decodeUrls(urls){
+  if(!Audio_.ctx) return;
+  await Promise.all([...urls].map(url=>{
+    if(!url || Audio_.buffers[url]) return;
+    if(Audio_._decoding[url]) return Audio_._decoding[url];
+    const p = (async ()=>{
+      try{ const r=await fetch(url); if(!r.ok) throw 0; Audio_.buffers[url]=await Audio_.ctx.decodeAudioData(await r.arrayBuffer()); }
+      catch(e){/* missing clip → stays silent */}
+      finally{ delete Audio_._decoding[url]; }
+    })();
+    Audio_._decoding[url]=p; return p;
+  }));
+}
+/* Load + overlay the SFX manifest JSON (basePath prepended). Inline fallback
+   stays if the fetch fails. */
+function loadSoundManifest(){
+  if(_soundManifestLoaded) return _soundManifestLoaded;
+  _soundManifestLoaded = (async ()=>{
+    try{
+      const res = await fetch('audio/sfx/sfx-manifest.json'); if(!res.ok) throw 0;
+      const m = await res.json(); const base = m.basePath||''; const pre = u=>Array.isArray(u)?u.map(x=>base+x):base+u;
+      for(const [name,spec] of Object.entries(m.sounds||{})){
+        if(name[0]==='_'||!spec||!spec.url) continue;
+        SOUND_MANIFEST[name] = { url:pre(spec.url), bus:spec.bus||'sfx', ...(spec.loop?{loop:true}:{}) };
+      }
+      // background-music playlist: array of { url, title, artist, cover? }
+      if(Array.isArray(m.music)){
+        MUSIC_PLAYLIST = m.music.filter(t=>t&&t.url).map(t=>({
+          url: base + t.url, title: t.title||'', artist: t.artist||'', cover: t.cover? base+t.cover : ''
+        }));
+      }
+    }catch(e){/* keep inline fallback */}
+  })();
+  return _soundManifestLoaded;
+}
+/* Load a dealer voice pack's vo-manifest.json and make it active. */
+function loadVoicePack(pack){
+  if(_voicePackLoaded[pack]) return _voicePackLoaded[pack];
+  const p = (async ()=>{
+    try{
+      const res = await fetch(`audio/vo/${pack}/vo-manifest.json`); if(!res.ok) throw 0;
+      const m = await res.json(); const base = `audio/vo/${pack}/` + (m.basePath||'');
+      const lines = m.lines || {}; const out = {};
+      for(const [k,arr] of Object.entries(lines)){ if(k[0]==='_') continue; out[k] = (arr||[]).map(u=>base+u); }
+      if(Object.keys(out).length) VOICE_MANIFEST = out;
+      _dealerPack = pack;
+    }catch(e){/* keep inline fallback */}
+  })();
+  _voicePackLoaded[pack]=p; return p;
+}
+function _allVoiceUrls(){ const s=new Set(); Object.values(VOICE_MANIFEST).forEach(a=>(a||[]).forEach(u=>s.add(u))); return s; }
+
+async function initAudio(){
+  if(Audio_.ctx) return;
+  const Ctx = window.AudioContext || window.webkitAudioContext; if(!Ctx) return;
+  Audio_.ctx = new Ctx();
+  Audio_.master = Audio_.ctx.createGain(); Audio_.master.connect(Audio_.ctx.destination);
+  for(const name of ['music','ambience','sfx','voice']){
+    const g = Audio_.ctx.createGain(); g.gain.value = BUS_BASE[name]!=null?BUS_BASE[name]:1; g.connect(Audio_.master); Audio_.buses[name]=g;
+  }
+  // pick a random dealer pack for this session, load manifests
+  _dealerPack = DEALER_PACKS[(Math.random()*DEALER_PACKS.length)|0];
+  await Promise.all([loadSoundManifest(), loadVoicePack(_dealerPack)]);
+  // decode everything (small set; missing files skipped)
+  const urls = new Set(); Object.values(SOUND_MANIFEST).forEach(s=>_specUrls(s).forEach(u=>urls.add(u)));
+  MUSIC_PLAYLIST.forEach(t=>urls.add(t.url));
+  _allVoiceUrls().forEach(u=>urls.add(u));
+  await _decodeUrls(urls);
+  Audio_.ready = true;
+  const cbs = Audio_._readyCbs; Audio_._readyCbs=[]; cbs.forEach(fn=>{ try{fn();}catch(e){} });
+}
+function onAudioReady(fn){ if(Audio_.ready){ try{fn();}catch(e){} return; } Audio_._readyCbs.push(fn); }
+function unlockAudio(){ if(!Audio_.ctx){ initAudio(); } if(Audio_.ctx && Audio_.ctx.state==='suspended'){ Audio_.ctx.resume(); } }
+(function armFirstGesture(){
+  const kick = ()=>{ unlockAudio(); if(Audio_.ctx && Audio_.ctx.state==='running'){ ['pointerdown','touchstart','keydown','click'].forEach(ev=>document.removeEventListener(ev,kick,true)); } };
+  ['pointerdown','touchstart','keydown','click'].forEach(ev=>document.addEventListener(ev,kick,true));
+})();
+
+function playSound(name, { volume=1, rate=1, bus=null } = {}){
+  if(!Audio_.ready || Audio_.muted) return null;
+  const spec=_spec(name); if(!spec) return null;
+  const buffer=_buf(_pickUrl(spec)); if(!buffer) return null;
+  const src=Audio_.ctx.createBufferSource(); src.buffer=buffer; src.playbackRate.value=rate;
+  const g=Audio_.ctx.createGain(); g.gain.value=volume;
+  src.connect(g).connect(Audio_.buses[bus||spec.bus]||Audio_.buses.sfx); src.start(0); return src;
+}
+function _startLoopNow(name, { volume=1, fade=0.5 } = {}){
+  if(Audio_.muted || Audio_.loops[name]) return;
+  const spec=_spec(name); if(!spec) return; const buffer=_buf(_pickUrl(spec)); if(!buffer) return;
+  const src=Audio_.ctx.createBufferSource(); src.buffer=buffer; src.loop=true;
+  const g=Audio_.ctx.createGain(); g.gain.value=0; src.connect(g).connect(Audio_.buses[spec.bus]||Audio_.buses.ambience); src.start(0);
+  const now=Audio_.ctx.currentTime; g.gain.linearRampToValueAtTime(volume, now+fade);
+  Audio_.loops[name]={ src, gain:g, vol:volume };
+}
+function startLoop(name, opts={}){ onAudioReady(()=>{ if(!Audio_.muted && !Audio_.loops[name]) _startLoopNow(name, opts); }); }
+function stopLoop(name, fade=0.5){
+  const l=Audio_.loops[name]; if(!l) return; const now=Audio_.ctx.currentTime;
+  try{ l.gain.gain.cancelScheduledValues(now); l.gain.gain.setValueAtTime(l.gain.gain.value, now); l.gain.gain.linearRampToValueAtTime(0, now+fade); l.src.stop(now+fade+0.05); }catch(e){}
+  delete Audio_.loops[name];
+}
+/* Duck music+ambience+sfx while VO plays (reference-counted). */
+function _duck(on){
+  if(!Audio_.ctx) return; const now=Audio_.ctx.currentTime;
+  Audio_._ducked = Math.max(0, Audio_._ducked + (on?1:-1));
+  const ducked = Audio_._ducked>0;
+  ['music','ambience','sfx'].forEach(busName=>{
+    const g=Audio_.buses[busName]; if(!g) return; const full=BUS_BASE[busName]!=null?BUS_BASE[busName]:1;
+    g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now);
+    g.gain.linearRampToValueAtTime(ducked? full*0.25 : full, now+0.25);
+  });
+}
+function playVoice(key, { volume=1 } = {}){
+  if(!Audio_.ready || Audio_.muted) return null;
+  const entry=VOICE_MANIFEST[key]; if(!entry||!entry.length) return null;
+  const url=entry[(Math.random()*entry.length)|0]; const buffer=_buf(url); if(!buffer) return null;
+  const src=Audio_.ctx.createBufferSource(); src.buffer=buffer;
+  const g=Audio_.ctx.createGain(); g.gain.value=volume; src.connect(g).connect(Audio_.buses.voice);
+  _duck(true); let released=false; const rel=()=>{ if(!released){ released=true; _duck(false); } };
+  src.onended=rel; setTimeout(rel, buffer.duration*1000 + 400); src.start(0); return src;
+}
+/* Speak a PLAYER hand's current total: total_4…total_21, or playerBust over 21.
+   Never called for the dealer. Fired as a card finishes sliding in. */
+function callHandTotal(cards){
+  const t = handTotal(cards);
+  if(t > 21) playVoice('playerBust');
+  else if(t >= 4) playVoice('total_'+t);
+}
+
+/* Dealer outcome announcement, played after settle. Two lines at most:
+   1) a STATE line if the dealer busted or had a natural (dealerBust / dealerBlackjack)
+   2) an OUTCOME line describing the table:
+        - if ANY player pushed the dealer → a push variant, encoding who else is present:
+            pushAll     (everyone pushed)
+            pushMixed   (push + at least one winner AND at least one loser)
+            pushWinner  (push + winner(s), no losers)
+            pushLoser   (push + loser(s), no winners)
+        - else (no ties) → dealerWin (nobody beat the dealer)
+                          / dealerLose (everyone live beat the dealer)
+                          / dealerPartial (some beat, some didn't)
+   A player counts as "beat the dealer" if their settled status is won/blackjack;
+   "lost" if lost/bust; "push" if push. chipBet plays with the outcome line when
+   at least one player won. */
+async function announceDealerOutcome(hands){
+  const players = hands.filter(h=>!h.is_dealer);
+  const dealer  = hands.find(h=>h.is_dealer);
+  if(!players.length) return;
+
+  const winners = players.filter(h=>h.status==='won' || h.status==='blackjack').length;
+  const losers  = players.filter(h=>h.status==='lost' || h.status==='bust').length;
+  const pushes  = players.filter(h=>h.status==='push').length;
+
+  // 1) state line first (if applicable)
+  const dealerBust = dealer && dealer.status==='bust';
+  const dealerBJ   = dealer && bjIsNatural(dealer.cards);
+  if(dealerBJ){ playVoice('dealerBlackjack'); await sleep(1100); }
+  else if(dealerBust){ playVoice('dealerBust'); await sleep(1100); }
+
+  // 2) outcome line
+  let key;
+  if(pushes > 0){
+    if(winners>0 && losers>0) key='pushMixed';
+    else if(winners>0)        key='pushWinner';
+    else if(losers>0)         key='pushLoser';
+    else                      key='pushAll';
+  } else {
+    if(winners===0)                 key='dealerWin';     // nobody beat the dealer
+    else if(losers===0)             key='dealerLose';    // everyone live beat them
+    else                            key='dealerPartial'; // mix of beat / not
+  }
+  if(winners>0) playSound('chipBet', { volume:0.8 });    // chips paid out
+  playVoice(key);
+}
+/* menu music (lobby only) */
+/* menu music removed — the background music playlist is the only bed and plays
+   from load. */
+
+/* ── In-round background music: shuffle-bag playlist ──────────────────────────
+   Plays every track once in random order before any repeats (a "shuffle bag");
+   when the bag empties it reshuffles, avoiding an immediate repeat across the
+   seam. Tracks play one at a time (not looped); onended advances. A Now Playing
+   toast slides in on each change — suppressed while the lobby is showing. */
+const _music = { on:false, bag:[], current:-1, src:null, gain:null, toastTimer:null };
+function _reshuffleBag(){
+  const n = MUSIC_PLAYLIST.length;
+  _music.bag = Array.from({length:n}, (_,i)=>i);
+  for(let i=n-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [_music.bag[i],_music.bag[j]]=[_music.bag[j],_music.bag[i]]; }
+  // avoid the last-played track leading the fresh bag
+  if(n>1 && _music.bag[0]===_music.current){ [_music.bag[0],_music.bag[1]]=[_music.bag[1],_music.bag[0]]; }
+}
+function _nextTrackIndex(){
+  if(!MUSIC_PLAYLIST.length) return -1;
+  if(!_music.bag.length) _reshuffleBag();
+  return _music.bag.shift();
+}
+function _playTrack(idx){
+  if(!Audio_.ctx || Audio_.muted || idx<0) return;
+  const track = MUSIC_PLAYLIST[idx]; if(!track) return;
+  const buffer = _buf(track.url);
+  _music.current = idx;
+  if(!buffer){ // clip missing/undecoded — skip to the next after a beat
+    setTimeout(()=>{ if(_music.on) _playTrack(_nextTrackIndex()); }, 400); return;
+  }
+  const src = Audio_.ctx.createBufferSource(); src.buffer = buffer;
+  const g = Audio_.ctx.createGain(); g.gain.value = 0;
+  src.connect(g).connect(Audio_.buses.music);
+  const now = Audio_.ctx.currentTime;
+  g.gain.linearRampToValueAtTime(0.75, now + 1.2);   // gentle fade-in
+  src.onended = ()=>{ if(_music.on && _music.src===src){ _playTrack(_nextTrackIndex()); } };
+  src.start(0);
+  _music.src = src; _music.gain = g;
+  showNowPlaying(track);
+}
+function startMusicPlaylist(){
+  onAudioReady(()=>{
+    if(_music.on || Audio_.muted || !MUSIC_PLAYLIST.length) return;
+    _music.on = true; _reshuffleBag(); _playTrack(_nextTrackIndex());
+  });
+}
+function stopMusicPlaylist(fade=1.0){
+  _music.on = false;
+  if(_music.src && _music.gain && Audio_.ctx){
+    const now = Audio_.ctx.currentTime;
+    try{ _music.gain.gain.cancelScheduledValues(now); _music.gain.gain.setValueAtTime(_music.gain.gain.value, now);
+      _music.gain.gain.linearRampToValueAtTime(0, now+fade); _music.src.stop(now+fade+0.05); }catch(e){}
+  }
+  _music.src=null; _music.gain=null;
+  hideNowPlaying();
+}
+
+/* Now Playing toast (bottom-left). Suppressed while the lobby overlay is up. */
+function showNowPlaying(track){
+  const lobbyUp = $('lobby-overlay') && $('lobby-overlay').style.display !== 'none';
+  if(lobbyUp) return;
+  const el = $('now-playing'); if(!el) return;
+  const cover = el.querySelector('.np-cover');
+  if(track.cover){ cover.style.backgroundImage = `url("${track.cover}")`; cover.classList.remove('placeholder'); cover.textContent=''; }
+  else { cover.style.backgroundImage = ''; cover.classList.add('placeholder'); cover.textContent = '♪'; }
+  el.querySelector('.np-title').textContent = track.title || 'Unknown track';
+  el.querySelector('.np-artist').textContent = track.artist || '';
+  el.querySelector('.np-artist').style.display = track.artist ? '' : 'none';
+  el.classList.add('show');
+  if(_music.toastTimer) clearTimeout(_music.toastTimer);
+  _music.toastTimer = setTimeout(()=> el.classList.remove('show'), 5000);
+}
+function hideNowPlaying(){ const el=$('now-playing'); if(el) el.classList.remove('show'); if(_music.toastTimer) clearTimeout(_music.toastTimer); }
 
 /* ════════ card + hand rendering (JALFCards renderer) ════════ */
 const ALL_THEMES = JALFCards.themeNames();     // e.g. Classic, Casino Green, …
@@ -568,6 +893,8 @@ function handTotal(cards){
     if(r==='A'){t+=11;a++;} else if('TJQK'.includes(r)) t+=10; else t+=parseInt(r,10); }
   while(t>21&&a>0){t-=10;a--;} return t;
 }
+/* natural blackjack = exactly two cards totalling 21 */
+function bjIsNatural(cards){ return Array.isArray(cards) && cards.length===2 && handTotal(cards)===21; }
 /* Incremental paint: keep already-shown cards in place and slide in only the
    new ones, so hits and deals animate instead of the whole hand popping.
    `hideSecond` renders card index 1 face-down (dealer hole). */
@@ -582,6 +909,7 @@ function renderCards(container, cards, size='', hideSecond=false){
   for(let i=start;i<cards.length;i++){
     const faceDown = hideSecond && i===1;
     container.appendChild(cardEl(cards[i], size, faceDown, true));
+    playSound('cardDeal', { volume:0.7, rate:0.97 + Math.random()*0.06 });
   }
 }
 
@@ -666,6 +994,7 @@ async function revealDealer(finalCards, status){
 
   // 1. up-card face up, hole face down
   cc.appendChild(cardEl(cards[0],'big',false,true));
+  playSound('cardDeal', { volume:0.7 });
   const hole = cardEl(cards[1],'big',true,true);   // face-down initially
   cc.appendChild(hole);
   setBadge('?');
@@ -675,18 +1004,20 @@ async function revealDealer(finalCards, status){
   const realHole = cardEl(cards[1],'big',false,false);
   realHole.classList.add('card-flip');
   cc.replaceChild(realHole, hole);
+  playSound('holeFlip', { volume:0.85 });
   setBadge(handTotal(cards.slice(0,2)));
   await sleep(700);
 
   // 3. slide in each subsequent draw one at a time
   for(let i=2;i<cards.length;i++){
     cc.appendChild(cardEl(cards[i],'big',false,true));
+    playSound('cardDeal', { volume:0.7, rate:0.97 + Math.random()*0.06 });
     setBadge(handTotal(cards.slice(0,i+1)));
     await sleep(850);
   }
 
-  // 4. final status badge
-  if(status==='bust') setBadge('Bust','bust');
+  // 4. final status badge (dealer bust is announced by voice at the outcome step)
+  if(status==='bust'){ setBadge('Bust','bust'); }
   else setBadge(handTotal(cards));
 }
 
@@ -772,6 +1103,7 @@ async function playRound(){
   hideRoundEnd();                     // ensure last round's end screen is gone
   $('t-phase').textContent = 'Place your bets';
   setTicker('status-text', 'Accepting bets');
+  playVoice('placeYourBets');
   await sb.rpc('bj_open_betting', { p_session_id:G.session.id, p_seconds:BET_SECONDS });
   runClock(Date.now()+BET_SECONDS*1000);
   await waitForBetsOrTimeout(BET_SECONDS*1000);
@@ -780,6 +1112,7 @@ async function playRound(){
   // start. Ticker shows plain text; the top-right clock owns the countdown.
   $('t-phase').textContent = 'Bets closed';
   updateTicker('Bets closed');
+  playVoice('betsClosed');
   runClock(Date.now()+BETS_CLOSED_WAIT_MS);   // clock counts down to the deal
   await sleep(BETS_CLOSED_WAIT_MS);
   stopClock();
@@ -787,10 +1120,20 @@ async function playRound(){
   // 2. DEAL
   const seats = await activeSeats();
   if(seats.length===0){ $('t-phase').textContent='No bets — skipping'; await sleep(1500); return; }
+  playSound('chipBet', { volume:0.8 });        // chips down as the round begins
   await sb.rpc('deal_blackjack_round', { p_session_id:G.session.id });
   let hands = await readHands();
   paintTable(hands, { hideHole:true });
   await sleep(1200);
+
+  // Player naturals are known the moment the deal completes (a two-card 21),
+  // before anyone acts. Announce each one, with a 1s beat between, so the table
+  // hears it before the turn loop begins.
+  const naturals = hands.filter(h=>!h.is_dealer && h.status==='blackjack');
+  for(const _bj of naturals){
+    playVoice('playerBlackjack');
+    await sleep(1000);
+  }
 
   // 3. TURN LOOP
   for(const seat of seats){
@@ -799,6 +1142,8 @@ async function playRound(){
     $('t-phase').textContent = 'Up next';
     await sb.rpc('bj_begin_seat', { p_session_id:G.session.id, p_seat:seat, p_seconds:READY_SECONDS });
     hands = await readHands(); paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
+    // announce this seat's starting total (primary hand) as their turn opens
+    { const h0 = hands.find(h=>!h.is_dealer && h.seat_index===seat && h.hand_index===0); if(h0) callHandTotal(h0.cards); }
     runClock(Date.now()+READY_SECONDS*1000);
     await sleep(READY_SECONDS*1000);
 
@@ -811,24 +1156,39 @@ async function playRound(){
     await sleep(700);
   }
 
-  // 4. DEALER
+  // 4. DEALER — but only if at least one player hand is still live. If every
+  //    player has busted there's nothing to beat, so the dealer doesn't play:
+  //    we just flip the hole card for show, skip the draw, and settle (all
+  //    busts lose regardless of the dealer's total).
   $('center-stage').innerHTML='';
-  $('t-phase').textContent = 'Dealer plays';
-  await sb.rpc('bj_begin_seat', { p_session_id:G.session.id, p_seat:-1, p_seconds:READY_SECONDS });
-  await sleep(800);
-  const { data:dealerRow } = await sb.rpc('run_blackjack_dealer', { p_session_id:G.session.id });
-  // reveal in the center stage: flip hole, then draw cards one at a time
-  const dc = (dealerRow && dealerRow.cards) ? dealerRow.cards
-             : ((await readHands()).find(h=>h.is_dealer)?.cards || []);
-  const dStatus = (dealerRow && dealerRow.status) || 'stood';
-  await revealDealer(dc, dStatus);
-  hands = await readHands(); paintTable(hands,{hideHole:false});
-  await sleep(1200);
+  hands = await readHands();
+  const liveHand = hands.some(h=>!h.is_dealer && h.status!=='bust');
+  if(liveHand){
+    $('t-phase').textContent = 'Dealer plays';
+    playVoice('dealersTurn');
+    await sb.rpc('bj_begin_seat', { p_session_id:G.session.id, p_seat:-1, p_seconds:READY_SECONDS });
+    await sleep(800);
+    const { data:dealerRow } = await sb.rpc('run_blackjack_dealer', { p_session_id:G.session.id });
+    const dc = (dealerRow && dealerRow.cards) ? dealerRow.cards
+               : ((await readHands()).find(h=>h.is_dealer)?.cards || []);
+    const dStatus = (dealerRow && dealerRow.status) || 'stood';
+    await revealDealer(dc, dStatus);
+    hands = await readHands(); paintTable(hands,{hideHole:false});
+    await sleep(1200);
+  } else {
+    // everyone busted — reveal the dealer's hole for the audience, no draw
+    $('t-phase').textContent = 'All bust';
+    const dealer = hands.find(h=>h.is_dealer);
+    await revealDealer(dealer?dealer.cards:[], dealer?dealer.status:'stood');
+    hands = await readHands(); paintTable(hands,{hideHole:false});
+    await sleep(1000);
+  }
 
   // 5. SETTLE
   $('t-phase').textContent = 'Settling';
   await sb.rpc('settle_blackjack_round', { p_session_id:G.session.id });
   hands = await readHands(); paintTable(hands,{hideHole:false});
+  await announceDealerOutcome(hands);
   // hold on the settled table so players see the outcome before we transition
   await sleep(5000);
 
@@ -869,27 +1229,55 @@ async function seatDone(seat){
   return data===true;
 }
 
-/* poll a seat's action window: players act via their phones; on timeout, force-stand */
+/* poll a seat's action window at a tight cadence so a phone action is noticed
+   almost immediately; players act via their phones; on timeout, force-stand.
+   When a hand gains a card, the total (or bust) is called out as the card
+   finishes sliding in — the ~150ms discovery is hidden under the animation. */
 async function runSeatActions(seat){
   let deadline = Date.now()+ACTION_SECONDS*1000;
   let lastCards = '';
+  const counts = {};   // hand_index -> last seen card count (for this seat)
+  runSeatActions._lastHandCount = 1;   // this seat starts with one hand
+  runSeatActions._doubledSeen = false;
+  // seed from the current state so the turn-start cards aren't re-announced
+  {
+    const seed = await readHands();
+    const mineSeed = seed.filter(h=>h.seat_index===seat && !h.is_dealer);
+    mineSeed.forEach(h=>{ counts[h.hand_index]=h.cards.length; });
+    runSeatActions._lastHandCount = mineSeed.length || 1;
+  }
   while(true){
     if(await seatDone(seat)) return;
     if(Date.now() > deadline){
       await sb.rpc('bj_force_stand_seat', { p_session_id:G.session.id, p_seat:seat });
       return;
     }
-    // detect an action (card count / hand count changed) → reset the 10s clock + repaint
     const hands = await readHands();
-    const sig = JSON.stringify(hands.filter(h=>h.seat_index===seat).map(h=>[h.hand_index,h.cards.length,h.status]));
+    const mine = hands.filter(h=>h.seat_index===seat && !h.is_dealer);
+    const sig = JSON.stringify(mine.map(h=>[h.hand_index,h.cards.length,h.status]));
     if(sig !== lastCards){
       lastCards = sig;
       paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
+      // any hand that gained a card → announce its new total as the card lands
+      mine.forEach(h=>{
+        const prev = counts[h.hand_index] ?? 0;
+        if(h.cards.length > prev){
+          const cardsNow = h.cards.slice();
+          setTimeout(()=> callHandTotal(cardsNow), CARD_ANIM_MS);
+        }
+        counts[h.hand_index] = h.cards.length;
+      });
+      // chip sound for the two staking actions: a split adds a new hand_index
+      // for this seat; a double flags the hand doubled.
+      const seatHandCount = mine.length;
+      if(seatHandCount > (runSeatActions._lastHandCount ?? 1)) playSound('chipBet', { volume:0.8 });
+      runSeatActions._lastHandCount = seatHandCount;
+      if(mine.some(h=>h.doubled) && !runSeatActions._doubledSeen){ playSound('chipBet', { volume:0.8 }); runSeatActions._doubledSeen = true; }
       // read the server's (reset) deadline so host + server agree
       const { data:s } = await sb.from('sessions').select('deadline').eq('id',G.session.id).single();
       if(s && s.deadline){ deadline = new Date(s.deadline).getTime(); runClock(deadline); }
     }
-    await sleep(500);
+    await sleep(TURN_POLL_MS);
   }
 }
 
@@ -1175,6 +1563,10 @@ function showFinal(){
     launchConfetti();
     playSound('cheer', { volume:1.0 });
     playSound('fanfare', { volume:0.9 });
+    // hold the sign-off voice until the fanfare has mostly rung out, then winner
+    // → signoff, spaced so neither is masked by the sting or each other.
+    setTimeout(()=> playVoice('winner'), 1400);
+    setTimeout(()=> playVoice('signoff'), 4200);
   });
 }
 /* AGAIN — return to the SAME lobby room (players stay connected) with a wipe,
@@ -1183,6 +1575,7 @@ $('btn-again') && $('btn-again').addEventListener('click', ()=>{
   doWipe(async ()=>{
     $('final-overlay').classList.remove('active');
     $('table').classList.remove('on'); $('table').style.display='none';
+    // background music keeps playing across AGAIN
     // reset the game's per-session runtime state, keep the room + players
     G.round = 1;
     try{ await sb.rpc('bj_reset_session', { p_session_id:G.session.id }); }catch(e){}
@@ -1199,6 +1592,7 @@ $('btn-mainmenu') && $('btn-mainmenu').addEventListener('click', ()=>{
     try{ await sb.rpc('close_session',{p_session_id:G.session.id}); }catch(e){}
     if(G.rosterPoll){ clearInterval(G.rosterPoll); G.rosterPoll=null; }
     G.session=null; G.players=[]; G.names={}; G.round=1;
+    // background music keeps playing back on the menu
     $('final-overlay').classList.remove('active');
     $('table').classList.remove('on'); $('table').style.display='none';
     $('lobby-overlay').style.display='flex';
@@ -1296,6 +1690,7 @@ $('lobby-start-game').addEventListener('click',()=>{
   doWipe(()=> new Promise(resolve=>{
     $('lobby-overlay').style.display='none';
     $('table').style.display='flex'; $('table').classList.add('on');
+    // background music already running from load — nothing to swap here
     setTimeout(resolve, DEAL_IN_HOLD_MS);        // hold under the cover for 10s
   }).then(()=>{
     // cover is about to slide away — start the game loop now so betting (and its
@@ -1303,6 +1698,9 @@ $('lobby-start-game').addEventListener('click',()=>{
     playSession().catch(e=>{ console.error(e); alert('Game error: '+(e.message||e)); });
   }));
 });
+/* start the background music playlist from load (first gesture unlocks the
+   context; the Now Playing toast is suppressed while the lobby is showing). */
+startMusicPlaylist();
 </script>
 </body>
 </html>
