@@ -563,7 +563,7 @@ const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-const G = { cfg:structuredClone(DEFAULT_CONFIG), session:null, channel:null, players:[], rosterPoll:null, round:1, names:{}, history:[] };
+const G = { cfg:structuredClone(DEFAULT_CONFIG), session:null, channel:null, players:[], rosterPoll:null, round:0, names:{}, history:[] };
 
 /* ════════════════════════════════════════════════════════════
    AUDIO — Web Audio mixer (buses, one-shots, loop beds, ducked VO),
@@ -1056,9 +1056,9 @@ async function playSession(){
   G.players.forEach(p => G.names[p.id]=p.display_name);
   buildWheel();                        // draw the wheel for the chosen mode
 
-  for(let r=1; r<=G.cfg.numRounds; r++){
-    G.round = r;
-    $('t-round').textContent = `Round ${r} of ${G.cfg.numRounds}`;
+  for(let r=0; r<G.cfg.numRounds; r++){
+    G.round = r;                                     // 0-indexed, matches sessions.current_round + the player
+    $('t-round').textContent = `Round ${r+1} of ${G.cfg.numRounds}`;
     await playRound();
   }
   // finished
@@ -1078,25 +1078,37 @@ async function playRound(){
   setTicker('status-text', 'Accepting bets');
   playVoice('placeYourBets');
   await renderBets();
-  await sb.rpc('open_betting', { p_session_id:G.session.id, p_round_number:G.round,
+  const { data:ob, error:obErr } = await sb.rpc('open_betting', { p_session_id:G.session.id, p_round_number:G.round,
     p_odds_table:PAYOUT, p_seconds:G.cfg.bettingSeconds });
-  const betDeadline = Date.now() + G.cfg.bettingSeconds*1000;
+  if(obErr){ console.error('open_betting failed:', obErr); }
+  // Authority for the close is the DB-stamped time (so host + phones agree to the
+  // same instant), not our local clock. Fall back to a local deadline if absent.
+  const betDeadline = (ob && ob.betting_closes_at)
+    ? new Date(ob.betting_closes_at).getTime()
+    : Date.now() + G.cfg.bettingSeconds*1000;
   runClock(betDeadline);
   // poll the board through the window so the pool ticks up as bets land
   while(Date.now() < betDeadline){ await renderBets(); await sleep(1500); }
   stopClock();
+
+  // 2. BETS CLOSED — flip the session to 'starting' so every phone stops its
+  // clock at zero and locks the board at the SAME moment (this is the status the
+  // players wait for; without it their countdown runs into the negatives and the
+  // board stays tappable into the spin). Sweep un-confirmed slips first.
   updateTicker('No more bets');
-  // roulette term first, blackjack key as fallback (whichever file exists plays)
   if(!playVoice('noMoreBets')) playVoice('betsClosed');
+  try{ await sb.rpc('discard_session_slips', { p_session_id:G.session.id }); }catch(e){ /* best-effort */ }
+  try{ await sb.rpc('start_countdown', { p_session_id:G.session.id }); }catch(e){ console.error('start_countdown failed:', e); }
   await renderBets();
   await sleep(1600);
 
-  // 2. SPIN — pick the winning pocket, animate the wheel to it
+  // 3. SPIN — flip to 'racing' as the wheel actually turns, then animate
   const POCKETS = wheelPockets();
   const winIndex = Math.floor(Math.random()*POCKETS.length);
   const pocket = POCKETS[winIndex], color = colorOf(pocket);
   $('t-phase').textContent = 'Spinning';
   setTicker('status-text', 'Round and round…');
+  try{ await sb.rpc('start_racing', { p_session_id:G.session.id }); }catch(e){ console.error('start_racing failed:', e); }
   playVoice('spinning');                            // e.g. "round and round it goes"
   startLoop('wheelSpin', { volume:0.6, fade:0.4 }); // ambient ball-in-track loop (if present)
   playSound('chipBet', { volume:0.7 });
@@ -1108,7 +1120,8 @@ async function playRound(){
   callWinningNumber(pocket, color);                 // "17" · "black" (or generic sting)
   await sleep(900);
 
-  // 3. SETTLE — DB flips every pending bet to won/lost and pays winners
+  // 4. SETTLE — DB flips every pending bet to won/lost and pays winners, and
+  // stamps the result. This moves the session to 'settling'.
   $('t-phase').textContent = 'Paying out';
   await sb.rpc('settle_roulette_round', { p_session_id:G.session.id,
     p_round_number:G.round, p_result:{ number:pocket, color } });
@@ -1118,8 +1131,8 @@ async function playRound(){
   if(anyWin){ playSound('payout', { volume:0.8 }); playVoice('payingOut'); }
   await sleep(2600);
 
-  // 4. round-end board with the same countdown ticker as blackjack
-  const isFinalRound = G.round >= G.cfg.numRounds;
+  // 5. round-end board with the same countdown ticker as blackjack
+  const isFinalRound = G.round >= G.cfg.numRounds-1;
   const bets = await loadRoundBets();
   const stopReCountdown = await new Promise(res=> doWipe(()=>{ const stop=buildRoundEnd(bets, isFinalRound, pocket, color); res(stop); }));
   await sleep(RECAP_SECONDS*1000);
@@ -1252,7 +1265,7 @@ function buildRoundEnd(bets, isFinalRound, pocket, color){
     if(b.status==='won') wins[b.player_id] = (wins[b.player_id]||0) + 1;
   });
   const rows = Object.entries(net).sort((a,b)=>b[1]-a[1]);
-  $('re-round-n').textContent = G.round;
+  $('re-round-n').textContent = G.round+1;
   // outcome summary per player: how many of their bets landed
   const outcomeText = pid => {
     const w = wins[pid]||0, n = count[pid]||0;
@@ -1307,7 +1320,7 @@ function renderMomentsMarquee(track, moments){
     const amt = (m.amount>0?'+':'-')+'$'+Math.abs(m.amount);
     const detailBits = [];
     if(m.outcome) detailBits.push(m.outcome);
-    if(m.round!=null) detailBits.push(`Round ${m.round}`);
+    if(m.round!=null) detailBits.push(`Round ${m.round+1}`);
     const detail = detailBits.join(' · ');
     return `<div class="mq-tile ${loss?'loss':''}"><div class="mq-body">`+
       `<div class="mq-who">${esc(m.name||'Player')}</div>`+
@@ -1475,7 +1488,7 @@ $('btn-again') && $('btn-again').addEventListener('click', ()=>{
     $('table').classList.remove('on'); $('table').style.display='none';
     // background music keeps playing across AGAIN
     // reset the game's per-session runtime state, keep the room + players
-    G.round = 1; G.history = [];
+    G.round = 0; G.history = [];
     try{ await sb.rpc('bj_reset_session', { p_session_id:G.session.id }); }catch(e){}
     await refreshPlayers();
     $('lobby-overlay').style.display='flex';
@@ -1489,7 +1502,7 @@ $('btn-mainmenu') && $('btn-mainmenu').addEventListener('click', ()=>{
   doWipe(async ()=>{
     try{ await sb.rpc('close_session',{p_session_id:G.session.id}); }catch(e){}
     if(G.rosterPoll){ clearInterval(G.rosterPoll); G.rosterPoll=null; }
-    G.session=null; G.players=[]; G.names={}; G.round=1; G.history=[];
+    G.session=null; G.players=[]; G.names={}; G.round=0; G.history=[];
     // background music keeps playing back on the menu
     $('final-overlay').classList.remove('active');
     $('table').classList.remove('on'); $('table').style.display='none';
@@ -1566,7 +1579,7 @@ $('confirm-yes').addEventListener('click',()=>{
   doWipe(async ()=>{
     if(G.session){try{await sb.rpc('close_session',{p_session_id:G.session.id});}catch(e){}}
     if(G.rosterPoll){ clearInterval(G.rosterPoll); G.rosterPoll=null; }
-    G.session=null; G.players=[]; G.names={}; G.round=1; G.history=[];
+    G.session=null; G.players=[]; G.names={}; G.round=0; G.history=[];
     showStack('lobby-menu');
   });
 });
