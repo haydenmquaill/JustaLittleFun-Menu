@@ -563,7 +563,7 @@ const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-const G = { cfg:structuredClone(DEFAULT_CONFIG), session:null, channel:null, players:[], rosterPoll:null, round:1, names:{} };
+const G = { cfg:structuredClone(DEFAULT_CONFIG), session:null, channel:null, players:[], rosterPoll:null, round:1, names:{}, history:[] };
 
 /* ════════════════════════════════════════════════════════════
    AUDIO — Web Audio mixer (buses, one-shots, loop beds, ducked VO),
@@ -981,6 +981,7 @@ function spinTo(winIndex, { rotorTurns=6, ballTurns=9, dur=5200 }={}){
   return new Promise(resolve=>{
     const N=wheelPockets().length, step=360/N;
     const rotor=$('wheel-rotor'), ball=$('ball-rotor');
+    if(!rotor||!ball){ resolve(); return; }
     const target = rotorTurns*360 - ((winIndex+0.5)*step);
     rotor.style.transition=`transform ${dur}ms cubic-bezier(.15,.55,.15,1)`;
     ball.style.transition=`transform ${dur}ms cubic-bezier(.1,.6,.2,1)`;
@@ -1133,15 +1134,15 @@ async function playRound(){
    {tokens}. */
 let PHRASE_DATA = {
   wipeTransitions: [
-    'Just a little fun!','Place your bets','Hit or stand?','Dealer\u2019s choice',
-    'Lady luck awaits','Shuffle up and deal','Twenty-one or bust','Read \u2019em and weep'
+    'Just a little fun!','Place your bets','Round and round','No more bets',
+    'Lady luck awaits','Red or black?','Where she lands, nobody knows','Back your number'
   ],
   champion: {
     subMany:'Top of the table', subSolo:'Last one standing',
     profitUp:'+${amount} on the night', profitDown:'\u2212${amount} on the night',
     profitFlat:'Broke even on the night'
   },
-  finaleTicker: 'That\u2019s the table \u2014 final results are up'
+  finaleTicker: 'That\u2019s the wheel \u2014 final results are up'
 };
 function pickPhrase(v){ if(Array.isArray(v)) return v.length? v[(Math.random()*v.length)|0] : ''; return v!=null? v : ''; }
 function fillTokens(tpl, vals){ return String(tpl||'').replace(/\{(\w+)\}/g,(_,k)=> (vals&&vals[k]!=null)? vals[k] : ''); }
@@ -1474,7 +1475,7 @@ $('btn-again') && $('btn-again').addEventListener('click', ()=>{
     $('table').classList.remove('on'); $('table').style.display='none';
     // background music keeps playing across AGAIN
     // reset the game's per-session runtime state, keep the room + players
-    G.round = 1;
+    G.round = 1; G.history = [];
     try{ await sb.rpc('bj_reset_session', { p_session_id:G.session.id }); }catch(e){}
     await refreshPlayers();
     $('lobby-overlay').style.display='flex';
@@ -1488,7 +1489,7 @@ $('btn-mainmenu') && $('btn-mainmenu').addEventListener('click', ()=>{
   doWipe(async ()=>{
     try{ await sb.rpc('close_session',{p_session_id:G.session.id}); }catch(e){}
     if(G.rosterPoll){ clearInterval(G.rosterPoll); G.rosterPoll=null; }
-    G.session=null; G.players=[]; G.names={}; G.round=1;
+    G.session=null; G.players=[]; G.names={}; G.round=1; G.history=[];
     // background music keeps playing back on the menu
     $('final-overlay').classList.remove('active');
     $('table').classList.remove('on'); $('table').style.display='none';
@@ -1565,7 +1566,7 @@ $('confirm-yes').addEventListener('click',()=>{
   doWipe(async ()=>{
     if(G.session){try{await sb.rpc('close_session',{p_session_id:G.session.id});}catch(e){}}
     if(G.rosterPoll){ clearInterval(G.rosterPoll); G.rosterPoll=null; }
-    G.session=null; G.players=[]; G.names={}; G.round=1;
+    G.session=null; G.players=[]; G.names={}; G.round=1; G.history=[];
     showStack('lobby-menu');
   });
 });
