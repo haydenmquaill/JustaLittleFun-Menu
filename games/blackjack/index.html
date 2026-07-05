@@ -1519,12 +1519,17 @@ async function playRound(){
   await sb.rpc('bj_open_betting', { p_session_id:G.session.id, p_seconds:BET_SECONDS });
   runClock(Date.now()+BET_SECONDS*1000);
   await waitForBetsOrTimeout(BET_SECONDS*1000);
-  // betting window over (timer expired or everyone's in) → lock bets. The clock
-  // does NOT pause: it now counts down the short pre-deal breather to round
-  // start. Ticker shows plain text; the top-right clock owns the countdown.
+  // Betting window over — either the timer expired or every player is already in.
+  // Authoritatively CLOSE betting in the DB now (stamp the deadline to now) so
+  // every phone hides its stake pad and place_blackjack_bet stops accepting late
+  // bets — including the all-in-early case, where the original deadline would
+  // otherwise still be in the future through the pre-deal breather.
+  try{ await sb.rpc('bj_close_betting', { p_session_id:G.session.id }); }catch(e){ console.error('bj_close_betting failed:', e); }
+  // The clock does NOT pause: it now counts down the short pre-deal breather to
+  // the deal. Ticker shows plain text; the top-right clock owns the countdown.
   setTicker('status-text', 'Bets closed');
   playVoice('betsClosed');
-  runClock(Date.now()+BETS_CLOSED_WAIT_MS);   // clock counts down to the deal
+  runClock(Date.now()+BETS_CLOSED_WAIT_MS);   // local TV clock — counts down to the deal
   await sleep(BETS_CLOSED_WAIT_MS);
   stopClock();
 
