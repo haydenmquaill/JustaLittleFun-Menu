@@ -1673,33 +1673,35 @@ async function playRound(){
   // hold on the settled table so players see the outcome before we transition
   await sleep(5000);
 
-  // 6. NEXT-ROUND COUNTDOWN (stay on the main table screen — no post-round screen).
-  //    On the FINAL round we skip the countdown entirely and let playSession()
-  //    wipe straight to the final results. Otherwise we run a live "NEXT ROUND IN
-  //    XX" countdown right here in the bottom ticker, then fade it into
-  //    "ACCEPTING BETS" as the next round's betting opens.
+  // 6. COUNTDOWN (stay on the main table screen — no post-round screen). Every
+  //    round runs a live countdown in the bottom ticker: "NEXT ROUND IN XX" for
+  //    normal rounds, "FINAL RESULTS IN XX" on the last one. A normal round then
+  //    fades into "ACCEPTING BETS" and advances to the next round; the final round
+  //    just runs out the clock, then playSession() wipes to the final results.
   await refreshPlayers();             // settled balances (kept for final screen)
   const isFinalRound = G.round >= G.cfg.numRounds;
+  // drive the players' countdown clock too (works for both the next-round and the
+  // final-results wait — it's just a timed deadline on their side).
+  await sb.rpc('bj_start_recap', { p_session_id:G.session.id, p_seconds:RECAP_SECONDS });
+  // live countdown in the ticker (two-digit padded so the width doesn't jump).
+  // The count itself just updates the number — no fade per step; only the final
+  // transition to ACCEPTING BETS fades (normal rounds only).
+  const pad = n => String(n).padStart(2,'0');
+  const label = isFinalRound ? 'Final results in' : 'Next round in';
+  let remain = RECAP_SECONDS;
+  setTicker('status-text', `${label} ${pad(remain)}`);
+  await new Promise(res=>{
+    const iv = setInterval(()=>{
+      remain--;
+      if(remain<=0){ clearInterval(iv); res(); return; }
+      updateTicker(`${label} ${pad(remain)}`);
+    }, 1000);
+  });
   if(!isFinalRound){
-    await sb.rpc('bj_start_recap', { p_session_id:G.session.id, p_seconds:RECAP_SECONDS });
-    // live countdown in the ticker (two-digit padded so the width doesn't jump).
-    // The count itself just updates the number — no fade per step. Only the final
-    // transition to ACCEPTING BETS fades.
-    const pad = n => String(n).padStart(2,'0');
-    let remain = RECAP_SECONDS;
-    setTicker('status-text', `Next round in ${pad(remain)}`);
-    await new Promise(res=>{
-      const iv = setInterval(()=>{
-        remain--;
-        if(remain<=0){ clearInterval(iv); res(); return; }
-        updateTicker(`Next round in ${pad(remain)}`);
-      }, 1000);
-    });
     // fade the countdown into ACCEPTING BETS; the next playRound leaves this in
     // place (guarded by G._tickerSeeded) rather than hard-resetting it.
     await updateTickerFade('Accepting bets');
     G._tickerSeeded = true;
-
     await sb.rpc('bj_next_round', { p_session_id:G.session.id });
   }
 }
