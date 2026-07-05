@@ -110,6 +110,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 
 /* dealer zone */
 .dealer-zone{ display:flex; flex-direction:column; align-items:center; padding-top:26px; }
+#table.dealer-turn .dealer-zone{ visibility:hidden; }
 .zone-label{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.1rem; letter-spacing:5px; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:12px; }
 .hand-cards{ display:flex; gap:10px; }
 .badge{ font-family:'Oswald',sans-serif; font-weight:700; font-size:1.1rem; padding:3px 12px; border-radius:20px; margin-top:10px; letter-spacing:1px; text-transform:uppercase; }
@@ -123,16 +124,55 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 /* center stage — active player's enlarged hand */
 .center-stage{ flex:1; display:flex; align-items:center; justify-content:center; gap:40px; }
 .active-hand{ display:flex; flex-direction:column; align-items:center; animation:pop .3s cubic-bezier(.2,.8,.2,1); }
+.active-hand.leaving{ animation:handLeave .4s cubic-bezier(.4,0,.6,1) both; }
+@keyframes handLeave{ from{ opacity:1; transform:translateY(0) scale(1); } to{ opacity:0; transform:translateY(-40px) scale(.85); } }
 .active-hand .who{ font-weight:800; font-size:2.4rem; text-transform:uppercase; letter-spacing:2px; margin-bottom:14px; }
 @keyframes pop{ from{ transform:scale(.85); opacity:0; } to{ transform:scale(1); opacity:1; } }
 
 /* players row along the bottom */
 .players-row{ display:flex; justify-content:center; gap:18px; padding:22px 34px 34px; flex-wrap:wrap; }
-.seat{ display:flex; flex-direction:column; align-items:center; gap:8px; padding:14px 16px; border-radius:12px; min-width:130px; transition:background .2s, transform .2s; }
-.seat.active{ background:rgba(255,255,255,0.12); box-shadow:inset 0 0 0 2px var(--white); transform:translateY(-6px); }
+/* a player's group: name header + one hand-cell per hand (splits = 2+ cells).
+   align-items:stretch lets the name tile span the full width of the hand row. */
+.seat{ display:flex; flex-direction:column; align-items:stretch; gap:8px; padding:6px; border-radius:12px;
+  transition:transform .2s; position:relative; }
 .seat.done{ opacity:.6; }
-.seat .seat-name{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.3rem; letter-spacing:1px; }
-.seat .seat-sub{ font-size:1rem; color:rgba(255,255,255,0.5); font-family:'Oswald',sans-serif; letter-spacing:1px; }
+.seat.turn{ transform:translateY(-6px); }
+.seat .seat-name{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.3rem; letter-spacing:2px;
+  text-transform:uppercase; color:#fff; background:var(--blue); padding:6px 22px; border-radius:8px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.4); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.seat .hand-row{ display:flex; gap:10px; align-items:flex-start; justify-content:center; }
+/* one hand: cards + its own bet chip; recolours by its own outcome */
+.hand-cell{ display:flex; flex-direction:column; align-items:center; gap:8px; padding:12px 14px;
+  border-radius:10px; min-width:120px; background:transparent;
+  transition:background .35s, box-shadow .35s, transform .2s; }
+.hand-cell.active{ background:rgba(255,255,255,0.12); box-shadow:inset 0 0 0 2px var(--white); transform:translateY(-4px); }
+.hand-label{ font-size:0.8rem; color:rgba(255,255,255,0.45); font-family:'Oswald',sans-serif;
+  letter-spacing:2px; text-transform:uppercase; }
+/* per-hand bet chip shown below the cards */
+.bet-chip{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.9rem; line-height:1;
+  letter-spacing:.5px; color:#fff; background:rgba(0,0,0,0.32); padding:6px 16px; border-radius:8px;
+  font-variant-numeric:tabular-nums; box-shadow:0 2px 8px rgba(0,0,0,0.35); transition:color .3s, background .3s; }
+.bet-chip .bc-c{ font-size:1.2rem; color:rgba(255,255,255,0.6); vertical-align:super; margin-right:1px; }
+/* outcome recolour — applied per hand-cell at settle */
+.hand-cell.out-win{ background:var(--green); box-shadow:0 6px 22px rgba(30,125,58,0.5); }
+.hand-cell.out-loss{ background:var(--red); box-shadow:0 6px 22px rgba(200,16,46,0.5); }
+.hand-cell.out-push{ background:#4a4f57; box-shadow:0 6px 22px rgba(0,0,0,0.4); }
+.hand-cell.out-blackjack{ background:linear-gradient(135deg,#d4af37,#b8912e); box-shadow:0 6px 26px rgba(212,175,55,0.6); }
+.hand-cell.out-blackjack .bet-chip{ color:#3a2f0a; background:rgba(255,255,255,0.35); }
+.hand-cell.out-blackjack .hand-label{ color:#3a2f0a; }
+/* payout animation on the bet chip: a wiggle + flash */
+@keyframes betWiggle{ 0%{transform:translateX(0) scale(1);} 20%{transform:translateX(-3px) scale(1.12);}
+  40%{transform:translateX(3px) scale(1.12);} 60%{transform:translateX(-2px) scale(1.08);}
+  80%{transform:translateX(2px) scale(1.04);} 100%{transform:translateX(0) scale(1);} }
+@keyframes betFlashWin{ 0%,100%{ background:rgba(0,0,0,0.32); } 50%{ background:#2fbf5a; } }
+@keyframes betFlashLoss{ 0%,100%{ background:rgba(0,0,0,0.32); } 50%{ background:#e23b3b; } }
+@keyframes betFlashPush{ 0%,100%{ background:rgba(0,0,0,0.32); } 50%{ background:#8a919c; } }
+@keyframes betFlashBJ{ 0%,100%{ background:rgba(255,255,255,0.35); } 50%{ background:#ffe9a3; } }
+.bet-chip.settle-win{ animation:betWiggle .5s ease, betFlashWin .5s ease; }
+.bet-chip.settle-loss{ animation:betWiggle .5s ease, betFlashLoss .5s ease; }
+.bet-chip.settle-push{ animation:betWiggle .5s ease, betFlashPush .5s ease; }
+.bet-chip.settle-blackjack{ animation:betWiggle .5s ease, betFlashBJ .5s ease; }
+@media (prefers-reduced-motion:reduce){ .bet-chip.settle-win,.bet-chip.settle-loss,.bet-chip.settle-push,.bet-chip.settle-blackjack{ animation:none; } }
 
 /* playing cards */
 .card{ width:74px; height:104px; border-radius:8px; background:#fff; color:#111; box-shadow:0 3px 10px rgba(0,0,0,0.5); display:flex; flex-direction:column; justify-content:space-between; padding:7px 9px; font-weight:800; position:relative; }
@@ -208,11 +248,11 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
   padding:30px 36px 0; overflow:hidden; }
 #round-end.on{ display:flex; }
 #round-end .re-header{ background:var(--blue); box-shadow:0 2px 12px rgba(0,0,0,0.4);
-  transform:skewX(-8deg); padding:16px 56px; margin:0 8px 26px;
+  transform:skewX(-8deg); padding:6px 48px; margin:0 8px 26px;
   display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
 #round-end .re-header > *{ transform:skewX(8deg); }
 #round-end .re-title{ font-family:'Barlow Condensed',sans-serif; font-weight:800;
-  font-size:4rem; letter-spacing:2px; text-transform:uppercase; line-height:1; color:#fff; }
+  font-size:3.4rem; letter-spacing:3px; text-transform:uppercase; line-height:1; color:#fff; }
 #round-end .re-title em{ font-style:normal; color:rgba(255,255,255,0.55); }
 #round-end .re-side{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.4rem;
   letter-spacing:8px; text-transform:uppercase; color:rgba(255,255,255,0.6); }
@@ -227,6 +267,8 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 .re-row .re-bal{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:2.2rem;
   color:var(--blue); font-variant-numeric:tabular-nums; }
 .re-row .re-bal .re-c{ font-size:1.3rem; color:var(--mid); vertical-align:super; margin-right:2px; }
+.re-row .re-outcome{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.5rem;
+  letter-spacing:2px; text-transform:uppercase; color:var(--mid); margin-left:auto; padding-right:28px; }
 .re-row .re-delta{ flex:0 0 150px; text-align:right; font-family:'Oswald',sans-serif; font-weight:700;
   font-size:1.6rem; letter-spacing:1px; font-variant-numeric:tabular-nums; }
 .re-row .re-delta.up{ color:var(--green); } .re-row .re-delta.down{ color:var(--red); }
@@ -263,11 +305,11 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
   flex-direction:column; padding:30px 36px 0; overflow:hidden; }
 #final-overlay.active{ display:flex; }
 #final-header{ background:var(--blue); box-shadow:0 2px 12px rgba(0,0,0,0.4);
-  transform:skewX(-8deg); padding:16px 56px; margin:0 8px 26px;
+  transform:skewX(-8deg); padding:6px 48px; margin:0 8px 26px;
   display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
 #final-header > *{ transform:skewX(8deg); }
 #final-header .fh-title{ font-family:'Barlow Condensed',sans-serif; font-weight:800;
-  font-size:4rem; letter-spacing:2px; text-transform:uppercase; line-height:1; color:#fff; }
+  font-size:3.4rem; letter-spacing:3px; text-transform:uppercase; line-height:1; color:#fff; }
 #final-header .fh-title em{ font-style:normal; color:rgba(255,255,255,0.55); }
 #final-actions{ display:flex; gap:14px; align-items:stretch; }
 .fh-btn{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:2.1rem;
@@ -344,21 +386,21 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
   font-family:'Oswald',sans-serif; font-weight:700; font-size:1rem; letter-spacing:6px;
   text-transform:uppercase; color:rgba(255,255,255,0.85); background:var(--dark); padding:8px 22px; }
 /* ══════════ NOW PLAYING toast (bottom-left, slides in on track change) ══════════ */
-#now-playing{ position:fixed; left:24px; bottom:24px; z-index:10000;
-  display:flex; align-items:center; gap:14px; padding:12px 20px 12px 12px;
-  background:var(--blue); color:#fff; box-shadow:0 8px 28px rgba(0,0,0,0.5);
-  transform:translateX(calc(-100% - 40px)); opacity:0;
-  transition:transform .45s cubic-bezier(.2,.8,.2,1), opacity .45s ease; max-width:420px; }
+#now-playing{ position:fixed; left:32px; bottom:32px; z-index:10000;
+  display:flex; align-items:center; gap:26px; padding:22px 40px 22px 22px;
+  background:var(--blue); color:#fff; box-shadow:0 10px 36px rgba(0,0,0,0.55);
+  transform:translateX(calc(-100% - 60px)); opacity:0;
+  transition:transform .45s cubic-bezier(.2,.8,.2,1), opacity .45s ease; max-width:760px; }
 #now-playing.show{ transform:translateX(0); opacity:1; }
-#now-playing .np-cover{ width:56px; height:56px; flex-shrink:0; background:#0d1c3a center/cover no-repeat;
-  display:flex; align-items:center; justify-content:center; font-size:1.8rem; color:rgba(255,255,255,0.5); }
-#now-playing .np-cover.placeholder{ background:repeating-linear-gradient(45deg,#0d1c3a 0 6px,#12244a 6px 12px); }
-#now-playing .np-meta{ min-width:0; display:flex; flex-direction:column; gap:2px; }
-#now-playing .np-eyebrow{ font-family:'Oswald',sans-serif; font-weight:600; font-size:0.7rem;
-  letter-spacing:3px; text-transform:uppercase; color:rgba(255,255,255,0.55); }
-#now-playing .np-title{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.5rem;
+#now-playing .np-cover{ width:112px; height:112px; flex-shrink:0; background:#0d1c3a center/cover no-repeat;
+  display:flex; align-items:center; justify-content:center; font-size:3.4rem; color:rgba(255,255,255,0.5); }
+#now-playing .np-cover.placeholder{ background:repeating-linear-gradient(45deg,#0d1c3a 0 10px,#12244a 10px 20px); }
+#now-playing .np-meta{ min-width:0; display:flex; flex-direction:column; gap:5px; }
+#now-playing .np-eyebrow{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.3rem;
+  letter-spacing:5px; text-transform:uppercase; color:rgba(255,255,255,0.55); }
+#now-playing .np-title{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:3rem;
   line-height:1; letter-spacing:.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-#now-playing .np-artist{ font-family:'Oswald',sans-serif; font-weight:500; font-size:0.95rem;
+#now-playing .np-artist{ font-family:'Oswald',sans-serif; font-weight:500; font-size:1.7rem;
   color:rgba(255,255,255,0.7); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 @media (prefers-reduced-motion:reduce){ #now-playing{ transition:opacity .3s ease; transform:none; } }
 </style>
@@ -575,16 +617,12 @@ const BUS_BASE = { music:0.6, ambience:0.55, sfx:0.9, voice:1.0 };
    fails). basePath is prepended by the loader. url may be a single file or an
    array of interchangeable takes (random per play). */
 let SOUND_MANIFEST = {
-  cardDeal:  { url:['audio/sfx/card1.mp3','audio/sfx/card2.mp3','audio/sfx/card3.mp3'], bus:'sfx' },
-  chipBet:   { url:['audio/sfx/chip1.mp3','audio/sfx/chip2.mp3'], bus:'sfx' },
-  holeFlip:  { url:['audio/sfx/flip1.mp3','audio/sfx/flip2.mp3'], bus:'sfx' },
-  bust:      { url:['audio/sfx/bust1.mp3','audio/sfx/bust2.mp3'], bus:'sfx' },
-  blackjack: { url:['audio/sfx/blackjack1.mp3','audio/sfx/blackjack2.mp3'], bus:'sfx' },
-  win:       { url:['audio/sfx/win1.mp3','audio/sfx/win2.mp3'], bus:'sfx' },
-  push:      { url:['audio/sfx/push1.mp3','audio/sfx/push2.mp3'], bus:'sfx' },
-  uiWhoosh:  { url:'audio/sfx/ui_whoosh.mp3',   bus:'sfx' },
-  fanfare:   { url:'audio/sfx/fanfare.mp3',     bus:'music' },
-  cheer:     { url:'audio/sfx/cheer.mp3',       bus:'ambience' },
+  cardDeal:  { url:['audio/sfx/deal/1.mp3','audio/sfx/deal/2.mp3','audio/sfx/deal/3.mp3','audio/sfx/deal/4.mp3','audio/sfx/deal/5.mp3','audio/sfx/deal/6.mp3','audio/sfx/deal/7.mp3','audio/sfx/deal/8.mp3'], bus:'sfx' },
+  chipBet:   { url:['audio/sfx/chip/1.mp3','audio/sfx/chip/2.mp3','audio/sfx/chip/3.mp3','audio/sfx/chip/4.mp3','audio/sfx/chip/5.mp3'], bus:'sfx' },
+  holeFlip:  { url:['audio/sfx/flip/1.mp3','audio/sfx/flip/2.mp3','audio/sfx/flip/3.mp3','audio/sfx/flip/4.mp3','audio/sfx/flip/5.mp3'], bus:'sfx' },
+  uiWhoosh:  { url:'audio/sfx/general/ui_whoosh.mp3', bus:'sfx' },
+  fanfare:   { url:'audio/sfx/general/fanfare.mp3',   bus:'music' },
+  cheer:     { url:'audio/sfx/general/cheer.mp3',     bus:'ambience' },
 };
 /* In-round background music playlist. Each track: { url, title, artist, cover? }.
    Played one at a time via a shuffle bag (every track once before any repeat).
@@ -594,7 +632,7 @@ let _soundManifestLoaded = null;
 
 /* Dealer voice packs — same key set per pack, one chosen at random per session.
    Folder layout: audio/vo/<pack>/vo-manifest.json  */
-const DEALER_PACKS = ['classic','vegas','smooth'];
+const DEALER_PACKS = ['classic','smooth'];   // add 'vegas' etc. here once its files exist
 let _dealerPack = 'classic';
 let VOICE_MANIFEST = (()=>{
   const base='audio/vo/classic/'; const m={};
@@ -659,9 +697,9 @@ function loadVoicePack(pack){
       const m = await res.json(); const base = `audio/vo/${pack}/` + (m.basePath||'');
       const lines = m.lines || {}; const out = {};
       for(const [k,arr] of Object.entries(lines)){ if(k[0]==='_') continue; out[k] = (arr||[]).map(u=>base+u); }
-      if(Object.keys(out).length) VOICE_MANIFEST = out;
-      _dealerPack = pack;
-    }catch(e){/* keep inline fallback */}
+      if(Object.keys(out).length){ VOICE_MANIFEST = out; _dealerPack = pack; return true; }
+      return false;
+    }catch(e){ return false; }   // keep inline fallback
   })();
   _voicePackLoaded[pack]=p; return p;
 }
@@ -675,16 +713,30 @@ async function initAudio(){
   for(const name of ['music','ambience','sfx','voice']){
     const g = Audio_.ctx.createGain(); g.gain.value = BUS_BASE[name]!=null?BUS_BASE[name]:1; g.connect(Audio_.master); Audio_.buses[name]=g;
   }
-  // pick a random dealer pack for this session, load manifests
-  _dealerPack = DEALER_PACKS[(Math.random()*DEALER_PACKS.length)|0];
-  await Promise.all([loadSoundManifest(), loadVoicePack(_dealerPack)]);
-  // decode everything (small set; missing files skipped)
-  const urls = new Set(); Object.values(SOUND_MANIFEST).forEach(s=>_specUrls(s).forEach(u=>urls.add(u)));
-  MUSIC_PLAYLIST.forEach(t=>urls.add(t.url));
-  _allVoiceUrls().forEach(u=>urls.add(u));
-  await _decodeUrls(urls);
+  // pick a dealer pack for this session. Shuffle the list and try packs until
+  // one actually loads, so a listed-but-missing pack can't silently collapse the
+  // random choice back onto the built-in fallback.
+  const order = [...DEALER_PACKS];
+  for(let i=order.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [order[i],order[j]]=[order[j],order[i]]; }
+  let picked = false;
+  await loadSoundManifest();
+  for(const pack of order){ if(await loadVoicePack(pack)){ picked = true; break; } }
+  if(!picked){ _dealerPack = 'classic'; }   // nothing loaded — inline fallback stays
+  // Priority decode: the first playlist track + the wipe whoosh, so background
+  // music and the whoosh can start the instant the context unlocks. Mark ready
+  // as soon as these land, then decode everything else in the background.
+  const priority = new Set();
+  if(MUSIC_PLAYLIST[0]) priority.add(MUSIC_PLAYLIST[0].url);
+  _specUrls(_spec('uiWhoosh')).forEach(u=>priority.add(u));
+  await _decodeUrls(priority);
   Audio_.ready = true;
   const cbs = Audio_._readyCbs; Audio_._readyCbs=[]; cbs.forEach(fn=>{ try{fn();}catch(e){} });
+  // background: decode the rest (remaining music, sfx, all voice takes)
+  const rest = new Set(); Object.values(SOUND_MANIFEST).forEach(s=>_specUrls(s).forEach(u=>rest.add(u)));
+  MUSIC_PLAYLIST.forEach(t=>rest.add(t.url));
+  _allVoiceUrls().forEach(u=>rest.add(u));
+  priority.forEach(u=>rest.delete(u));
+  _decodeUrls(rest);   // not awaited — fills in as clips finish decoding
 }
 function onAudioReady(fn){ if(Audio_.ready){ try{fn();}catch(e){} return; } Audio_._readyCbs.push(fn); }
 function unlockAudio(){ if(!Audio_.ctx){ initAudio(); } if(Audio_.ctx && Audio_.ctx.state==='suspended'){ Audio_.ctx.resume(); } }
@@ -895,6 +947,12 @@ function handTotal(cards){
 }
 /* natural blackjack = exactly two cards totalling 21 */
 function bjIsNatural(cards){ return Array.isArray(cards) && cards.length===2 && handTotal(cards)===21; }
+/* display name for a seat (uppercased for the turn banner) */
+function seatDisplayName(hands, seat){
+  const h = hands.find(x=>!x.is_dealer && x.seat_index===seat);
+  const nm = h ? (G.names[h.player_id] || 'Player') : 'Player';
+  return String(nm).toUpperCase();
+}
 /* Incremental paint: keep already-shown cards in place and slide in only the
    new ones, so hits and deals animate instead of the whole hand popping.
    `hideSecond` renders card index 1 face-down (dealer hole). */
@@ -930,6 +988,41 @@ async function readHands(){
 }
 function badge(kind, text){ return `<span class="badge ${kind}">${text}</span>`; }
 
+/* At settle, animate each hand's bet chip to its result: loss counts down to 0,
+   win/blackjack counts up to the gross payout, push stays put — each with a
+   wiggle-flash. Driven off the settled hands. */
+function animateBetOutcome(hands){
+  const players = hands.filter(h=>!h.is_dealer);
+  players.forEach(h=>{
+    const chip = document.querySelector(`.bet-chip[data-seat="${h.seat_index}"][data-hand="${h.hand_index}"]`);
+    if(!chip) return;
+    const stake = Number(h.stake)||0;
+    const payout = Number(h.payout)||0;   // gross returned: 0 on loss, stake on push, >stake on win
+    const st = h.status;
+    const flashClass = st==='blackjack' ? 'settle-blackjack'
+                     : st==='won' ? 'settle-win'
+                     : st==='push' ? 'settle-push' : 'settle-loss';
+    const from = stake;
+    const to = (st==='lost'||st==='bust') ? 0 : (payout || stake);
+    const DUR = 600, t0 = performance.now();
+    const write = v => { chip.innerHTML = `<span class="bc-c">$</span>${Math.round(v)}`; };
+    const tick = now => {
+      const p = Math.min(1, (now-t0)/DUR);
+      const eased = 1-Math.pow(1-p,3);
+      write(from + (to-from)*eased);
+      if(p<1){ requestAnimationFrame(tick); }
+      else {
+        write(to);
+        chip.classList.remove('settle-win','settle-loss','settle-push','settle-blackjack');
+        void chip.offsetWidth;                 // restart animation
+        chip.classList.add(flashClass);
+      }
+    };
+    if(to===from){ chip.classList.add(flashClass); }   // push: flash in place
+    else requestAnimationFrame(tick);
+  });
+}
+
 function paintTable(hands, { hideHole=true, activeSeat=null } = {}){
   const dealer = hands.find(h => h.is_dealer);
   const players = hands.filter(h => !h.is_dealer).sort((a,b)=> a.seat_index-b.seat_index || a.hand_index-b.hand_index);
@@ -947,28 +1040,56 @@ function paintTable(hands, { hideHole=true, activeSeat=null } = {}){
     $('dealer-badge').innerHTML = db;
   }
 
-  // bottom seats — one tile per player (splits shown as stacked mini-hands)
+  // bottom seats — one GROUP per player (shared name header), one hand-cell per
+  // hand so each split hand shows its own outcome colour + bet chip.
   const bySeat = {};
   players.forEach(h => { (bySeat[h.seat_index] ??= []).push(h); });
   const row = $('players-row'); row.innerHTML='';
   Object.keys(bySeat).map(Number).sort((a,b)=>a-b).forEach(seat => {
-    const hs = bySeat[seat];
+    const hs = bySeat[seat].sort((a,b)=>a.hand_index-b.hand_index);
     const name = G.names[hs[0].player_id] || 'Player';
-    const tile = document.createElement('div');
-    tile.className = 'seat' + (seat===activeSeat?' active':'') + (hs.every(h=>h.status!=='playing')?' done':'');
-    const cardsWrap = document.createElement('div'); cardsWrap.style.display='flex'; cardsWrap.style.gap='8px';
+    const isTurn = seat===activeSeat;
+    const seatSettled = hs.every(h=>h.status!=='playing');
+    // the active hand within this seat = lowest still-playing hand index
+    const playingIdx = hs.filter(h=>h.status==='playing').map(h=>h.hand_index);
+    const activeHandIdx = playingIdx.length ? Math.min(...playingIdx) : null;
+    const split = hs.length>1;
+
+    const group = document.createElement('div');
+    group.className = 'seat' + (isTurn?' turn':'') + (seatSettled?' done':'');
+    group.dataset.seat = seat;
+    group.innerHTML = `<div class="seat-name">${esc(name)}</div>`;
+
+    const handRow = document.createElement('div'); handRow.className='hand-row';
     hs.forEach(h => {
+      const settled = h.status!=='playing';
+      let outClass = '';
+      if(settled){
+        outClass = h.status==='blackjack' ? ' out-blackjack'
+                 : h.status==='won' ? ' out-win'
+                 : h.status==='push' ? ' out-push' : ' out-loss';
+      }
+      const activeCell = isTurn && h.hand_index===activeHandIdx;
+      const cell = document.createElement('div');
+      cell.className = 'hand-cell' + (activeCell?' active':'') + outClass;
+
+      if(split){
+        const lab = document.createElement('div'); lab.className='hand-label';
+        lab.textContent = `Hand ${h.hand_index+1}`; cell.appendChild(lab);
+      }
       const mini = document.createElement('div'); mini.style.display='flex'; mini.style.gap='4px';
       h.cards.forEach(c => mini.appendChild(cardEl(c,'sm')));
-      cardsWrap.appendChild(mini);
+      cell.appendChild(mini);
+
+      const chip = document.createElement('div'); chip.className='bet-chip';
+      chip.dataset.seat = seat; chip.dataset.hand = h.hand_index;
+      chip.innerHTML = `<span class="bc-c">$</span>${Number(h.stake)}`;
+      cell.appendChild(chip);
+
+      handRow.appendChild(cell);
     });
-    const sub = hs.length>1 ? `${hs.length} hands` :
-      (hs[0].status==='playing' ? `${handTotal(hs[0].cards)}` :
-       hs[0].status[0].toUpperCase()+hs[0].status.slice(1));
-    tile.innerHTML = `<div class="seat-name">${esc(name)}</div>`;
-    tile.appendChild(cardsWrap);
-    tile.insertAdjacentHTML('beforeend', `<div class="seat-sub">$${hs[0].stake} · ${sub}</div>`);
-    row.appendChild(tile);
+    group.appendChild(handRow);
+    row.appendChild(group);
   });
 }
 
@@ -1019,6 +1140,16 @@ async function revealDealer(finalCards, status){
   // 4. final status badge (dealer bust is announced by voice at the outcome step)
   if(status==='bust'){ setBadge('Bust','bust'); }
   else setBadge(handTotal(cards));
+}
+
+/* animate the focused hand(s) out, then clear the center stage (instead of an
+   abrupt vanish). Resolves after the leave animation. */
+function clearCenterStage(){
+  const stage = $('center-stage');
+  const items = Array.from(stage.querySelectorAll('.active-hand'));
+  if(!items.length){ stage.innerHTML=''; stage.removeAttribute('data-key'); return Promise.resolve(); }
+  items.forEach(el=>el.classList.add('leaving'));
+  return new Promise(res=> setTimeout(()=>{ stage.innerHTML=''; stage.removeAttribute('data-key'); res(); }, 420));
 }
 
 /* enlarge the active seat's hand(s) in the center. Incremental: if the same
@@ -1101,7 +1232,7 @@ async function playRound(){
   // 1. BETTING
   clearTable();                       // clean slate: clear last round's cards
   hideRoundEnd();                     // ensure last round's end screen is gone
-  $('t-phase').textContent = 'Place your bets';
+  $('t-phase').textContent = 'Betting';           // stable top-banner label
   setTicker('status-text', 'Accepting bets');
   playVoice('placeYourBets');
   await sb.rpc('bj_open_betting', { p_session_id:G.session.id, p_seconds:BET_SECONDS });
@@ -1110,7 +1241,6 @@ async function playRound(){
   // betting window over (timer expired or everyone's in) → lock bets. The clock
   // does NOT pause: it now counts down the short pre-deal breather to round
   // start. Ticker shows plain text; the top-right clock owns the countdown.
-  $('t-phase').textContent = 'Bets closed';
   updateTicker('Bets closed');
   playVoice('betsClosed');
   runClock(Date.now()+BETS_CLOSED_WAIT_MS);   // clock counts down to the deal
@@ -1119,7 +1249,8 @@ async function playRound(){
 
   // 2. DEAL
   const seats = await activeSeats();
-  if(seats.length===0){ $('t-phase').textContent='No bets — skipping'; await sleep(1500); return; }
+  if(seats.length===0){ setTicker('status-text','No bets this round — sitting it out'); await sleep(1500); return; }
+  $('t-phase').textContent = 'Playing';            // stable through the whole play phase
   playSound('chipBet', { volume:0.8 });        // chips down as the round begins
   await sb.rpc('deal_blackjack_round', { p_session_id:G.session.id });
   let hands = await readHands();
@@ -1139,16 +1270,14 @@ async function playRound(){
   for(const seat of seats){
     // skip seats already resolved by a natural
     if(await seatDone(seat)) { continue; }
-    $('t-phase').textContent = 'Up next';
+    const seatName = seatDisplayName(hands, seat);
+    setTicker('status-text', `${seatName}\u2019S TURN`);   // bottom banner carries the play-by-play
     await sb.rpc('bj_begin_seat', { p_session_id:G.session.id, p_seat:seat, p_seconds:READY_SECONDS });
     hands = await readHands(); paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
-    // announce this seat's starting total (primary hand) as their turn opens
-    { const h0 = hands.find(h=>!h.is_dealer && h.seat_index===seat && h.hand_index===0); if(h0) callHandTotal(h0.cards); }
     runClock(Date.now()+READY_SECONDS*1000);
     await sleep(READY_SECONDS*1000);
 
     // open action window, then poll until seat done or clock expires (with resets)
-    $('t-phase').textContent = 'Player acting';
     await sb.rpc('bj_open_action', { p_session_id:G.session.id, p_seconds:ACTION_SECONDS });
     await runSeatActions(seat);
     stopClock();
@@ -1156,15 +1285,22 @@ async function playRound(){
     await sleep(700);
   }
 
-  // 4. DEALER — but only if at least one player hand is still live. If every
-  //    player has busted there's nothing to beat, so the dealer doesn't play:
-  //    we just flip the hole card for show, skip the draw, and settle (all
-  //    busts lose regardless of the dealer's total).
-  $('center-stage').innerHTML='';
+  // 4. DEALER. The dealer only needs to draw when there's a live player hand
+  //    that isn't already beaten. Two skip cases:
+  //      • everyone busted → nothing to beat; flip hole for show, no draw.
+  //      • every live player has blackjack and the dealer's two cards are NOT a
+  //        natural → the dealer can't win or push against naturals, so no draw.
+  await clearCenterStage();
   hands = await readHands();
-  const liveHand = hands.some(h=>!h.is_dealer && h.status!=='bust');
-  if(liveHand){
-    $('t-phase').textContent = 'Dealer plays';
+  const dealerHand = hands.find(h=>h.is_dealer);
+  const livePlayers = hands.filter(h=>!h.is_dealer && h.status!=='bust');
+  const allLiveAreNaturals = livePlayers.length>0 && livePlayers.every(h=>h.status==='blackjack' || bjIsNatural(h.cards));
+  const dealerNatural = dealerHand && bjIsNatural(dealerHand.cards);
+  const mustPlay = livePlayers.length>0 && !(allLiveAreNaturals && !dealerNatural);
+
+  setTicker('status-text', 'DEALER\u2019S TURN');
+  $('table').classList.add('dealer-turn');        // hides the top dealer zone (shown centre-stage instead)
+  if(mustPlay){
     playVoice('dealersTurn');
     await sb.rpc('bj_begin_seat', { p_session_id:G.session.id, p_seat:-1, p_seconds:READY_SECONDS });
     await sleep(800);
@@ -1176,18 +1312,18 @@ async function playRound(){
     hands = await readHands(); paintTable(hands,{hideHole:false});
     await sleep(1200);
   } else {
-    // everyone busted — reveal the dealer's hole for the audience, no draw
-    $('t-phase').textContent = 'All bust';
-    const dealer = hands.find(h=>h.is_dealer);
-    await revealDealer(dealer?dealer.cards:[], dealer?dealer.status:'stood');
+    // no draw needed — reveal the dealer's hole for the audience, then settle
+    await revealDealer(dealerHand?dealerHand.cards:[], dealerHand?dealerHand.status:'stood');
     hands = await readHands(); paintTable(hands,{hideHole:false});
     await sleep(1000);
   }
+  $('table').classList.remove('dealer-turn');
 
   // 5. SETTLE
-  $('t-phase').textContent = 'Settling';
+  $('t-phase').textContent = 'Results';
   await sb.rpc('settle_blackjack_round', { p_session_id:G.session.id });
   hands = await readHands(); paintTable(hands,{hideHole:false});
+  animateBetOutcome(hands);           // count each bet to its payout, wiggle-flash, recolour tile
   await announceDealerOutcome(hands);
   // hold on the settled table so players see the outcome before we transition
   await sleep(5000);
@@ -1229,23 +1365,47 @@ async function seatDone(seat){
   return data===true;
 }
 
-/* poll a seat's action window at a tight cadence so a phone action is noticed
+/* Poll a seat's action window at a tight cadence so a phone action is noticed
    almost immediately; players act via their phones; on timeout, force-stand.
-   When a hand gains a card, the total (or bust) is called out as the card
-   finishes sliding in — the ~150ms discovery is hidden under the animation. */
+
+   Voice sequencing (strict, in play order): the "active hand" is the seat's
+   lowest hand_index still `playing` — exactly the hand the phone is acting on.
+   When a hand first becomes active we announce its current total (this covers
+   the turn-start call for hand 0, and — after a split — re-announcing hand 0
+   and then announcing hand 1's start). While a hand is active, each newly drawn
+   card (hit or double) announces the new total, and a bust is called. Because
+   only the active hand is ever announced, calls stay in order even though split
+   hands render side-by-side. Totals fire as the card finishes sliding in. */
 async function runSeatActions(seat){
   let deadline = Date.now()+ACTION_SECONDS*1000;
-  let lastCards = '';
-  const counts = {};   // hand_index -> last seen card count (for this seat)
-  runSeatActions._lastHandCount = 1;   // this seat starts with one hand
-  runSeatActions._doubledSeen = false;
-  // seed from the current state so the turn-start cards aren't re-announced
+  let lastSig = '';
+  const announcedCount = {};   // hand_index -> cards already voiced
+  const opened = new Set();    // hand indices whose start-total we've announced
+  let prevHandCount = 1, doubledSeen = false;
+
+  const activeIndex = mine => {
+    const playing = mine.filter(h=>h.status==='playing').map(h=>h.hand_index);
+    return playing.length ? Math.min(...playing) : null;
+  };
+  // announce a hand's total up to its current cards, marking cards as voiced
+  const voiceHand = h => {
+    const cardsNow = h.cards.slice();
+    setTimeout(()=> callHandTotal(cardsNow), CARD_ANIM_MS);
+    announcedCount[h.hand_index] = h.cards.length;
+  };
+
+  // seed: announce the opening hand (lowest index) once, seed the rest silently
   {
-    const seed = await readHands();
-    const mineSeed = seed.filter(h=>h.seat_index===seat && !h.is_dealer);
-    mineSeed.forEach(h=>{ counts[h.hand_index]=h.cards.length; });
-    runSeatActions._lastHandCount = mineSeed.length || 1;
+    const seed = (await readHands()).filter(h=>h.seat_index===seat && !h.is_dealer);
+    prevHandCount = seed.length || 1;
+    const ai = activeIndex(seed);
+    seed.forEach(h=>{ announcedCount[h.hand_index] = h.cards.length; });
+    if(ai!=null){
+      const h = seed.find(x=>x.hand_index===ai);
+      opened.add(ai); announcedCount[ai] = 0; voiceHand(h);   // announce start total
+    }
   }
+
   while(true){
     if(await seatDone(seat)) return;
     if(Date.now() > deadline){
@@ -1255,25 +1415,33 @@ async function runSeatActions(seat){
     const hands = await readHands();
     const mine = hands.filter(h=>h.seat_index===seat && !h.is_dealer);
     const sig = JSON.stringify(mine.map(h=>[h.hand_index,h.cards.length,h.status]));
-    if(sig !== lastCards){
-      lastCards = sig;
+    if(sig !== lastSig){
+      lastSig = sig;
       paintTable(hands,{hideHole:true,activeSeat:seat}); paintCenter(hands,seat);
-      // any hand that gained a card → announce its new total as the card lands
+
+      // chip sound for the two staking actions (split adds a hand; double flags a hand)
+      if(mine.length > prevHandCount) playSound('chipBet', { volume:0.8 });
+      prevHandCount = mine.length;
+      if(mine.some(h=>h.doubled) && !doubledSeen){ playSound('chipBet', { volume:0.8 }); doubledSeen = true; }
+
+      const ai = activeIndex(mine);
+      // if a hand we were announcing just left 'playing' (stood or busted) and
+      // gained a final card we haven't voiced (a bust adds the tipping card in
+      // the same update that flips status), flush that last card/bust now.
       mine.forEach(h=>{
-        const prev = counts[h.hand_index] ?? 0;
-        if(h.cards.length > prev){
-          const cardsNow = h.cards.slice();
-          setTimeout(()=> callHandTotal(cardsNow), CARD_ANIM_MS);
+        if(opened.has(h.hand_index) && h.status!=='playing' && h.cards.length > (announcedCount[h.hand_index] ?? 0)){
+          voiceHand(h);
         }
-        counts[h.hand_index] = h.cards.length;
       });
-      // chip sound for the two staking actions: a split adds a new hand_index
-      // for this seat; a double flags the hand doubled.
-      const seatHandCount = mine.length;
-      if(seatHandCount > (runSeatActions._lastHandCount ?? 1)) playSound('chipBet', { volume:0.8 });
-      runSeatActions._lastHandCount = seatHandCount;
-      if(mine.some(h=>h.doubled) && !runSeatActions._doubledSeen){ playSound('chipBet', { volume:0.8 }); runSeatActions._doubledSeen = true; }
-      // read the server's (reset) deadline so host + server agree
+      if(ai!=null){
+        const active = mine.find(h=>h.hand_index===ai);
+        // a newly active hand (e.g. after a split, or moving to the next hand):
+        // announce its current total first
+        if(!opened.has(ai)){ opened.add(ai); announcedCount[ai] = 0; voiceHand(active); }
+        // otherwise, if the active hand gained a card (hit/double), announce it
+        else if(active.cards.length > (announcedCount[ai] ?? 0)){ voiceHand(active); }
+      }
+
       const { data:s } = await sb.from('sessions').select('deadline').eq('id',G.session.id).single();
       if(s && s.deadline){ deadline = new Date(s.deadline).getTime(); runClock(deadline); }
     }
@@ -1281,13 +1449,44 @@ async function runSeatActions(seat){
   }
 }
 
+/* ════════ PHRASES (external phrases.json, mirrors the horse HOST) ════════
+   Built-in fallback; loadPhrases() overlays audio/../phrases.json when present so
+   copy is editable without touching code. A value may be a single string or an
+   array of interchangeable variants; pickPhrase picks one, fillPhrase fills
+   {tokens}. */
+let PHRASE_DATA = {
+  wipeTransitions: [
+    'Just a little fun!','Place your bets','Hit or stand?','Dealer\u2019s choice',
+    'Lady luck awaits','Shuffle up and deal','Twenty-one or bust','Read \u2019em and weep'
+  ],
+  champion: {
+    subMany:'Top of the table', subSolo:'Last one standing',
+    profitUp:'+${amount} on the night', profitDown:'\u2212${amount} on the night',
+    profitFlat:'Broke even on the night'
+  },
+  finaleTicker: 'That\u2019s the table \u2014 final results are up'
+};
+function pickPhrase(v){ if(Array.isArray(v)) return v.length? v[(Math.random()*v.length)|0] : ''; return v!=null? v : ''; }
+function fillTokens(tpl, vals){ return String(tpl||'').replace(/\{(\w+)\}/g,(_,k)=> (vals&&vals[k]!=null)? vals[k] : ''); }
+function fillPhrase(v, vals){ return fillTokens(pickPhrase(v), vals); }
+let _phrasesLoaded = null;
+function loadPhrases(){
+  if(_phrasesLoaded) return _phrasesLoaded;
+  _phrasesLoaded = (async ()=>{
+    try{ const r=await fetch('phrases.json'); if(!r.ok) throw 0; const j=await r.json();
+      PHRASE_DATA = Object.assign({}, PHRASE_DATA, j);
+    }catch(e){/* keep built-in fallback */}
+  })();
+  return _phrasesLoaded;
+}
+loadPhrases();
+
 /* ════════ WIPE TRANSITION (ported from horse HOST) ════════ */
 let _wipeCleanupId = null;
 const WIPE_SLIDE_MS = 700;
-const WIPE_PHRASES = ['Just a little fun!','Place your bets','Hit or stand?','Dealer\u2019s choice','Lady luck awaits'];
 function doWipe(callback, holdMs=0){
   const w = $('wipe-overlay'), p = $('wipe-phrase');
-  p.textContent = WIPE_PHRASES[(Math.random()*WIPE_PHRASES.length)|0];
+  p.textContent = pickPhrase(PHRASE_DATA.wipeTransitions);
   if(_wipeCleanupId){ clearTimeout(_wipeCleanupId); _wipeCleanupId=null; }
   w.classList.remove('boot','no-phrase');
   w.style.transition='none'; w.classList.remove('out','in'); void w.offsetWidth;
@@ -1366,30 +1565,34 @@ function updateTicker(msg){
    countdown to the next round (or final results on the last round). Returns a
    function that stops the countdown interval. */
 function buildRoundEnd(hands, isFinalRound){
-  const net = {};
+  const net = {}, outcome = {};
   hands.filter(h=>!h.is_dealer).forEach(h=>{
     net[h.player_id] = (net[h.player_id]||0) + ((Number(h.payout)||0) - Number(h.stake));
+    (outcome[h.player_id] ??= []).push(h.status);
   });
-  const balById = {}; G.players.forEach(p=>balById[p.id]=p.balance);
   const rows = Object.entries(net).sort((a,b)=>b[1]-a[1]);
   $('re-round-n').textContent = G.round;
+  // outcome label for a player's hand(s): a single hand shows its status; splits
+  // summarise (e.g. "Won · Lost") in play order.
+  const outLabel = st => ({won:'Won',lost:'Lost',push:'Push',blackjack:'Blackjack',bust:'Bust'}[st] || (st? st[0].toUpperCase()+st.slice(1) : ''));
+  const outcomeText = pid => (outcome[pid]||[]).map(outLabel).join(' · ');
   $('re-body').innerHTML = rows.map(([pid,d])=>{
     const dCls = d>0?'up':d<0?'down':'flat';
     const dTxt = d>0?`+$${d}`:d<0?`-$${Math.abs(d)}`:'Push';
-    const bal = Math.round(Number(balById[pid])||0).toLocaleString();
     return `<div class="re-row"><span class="re-name">${esc(G.names[pid]||'Player')}</span>`+
-           `<span class="re-bal"><span class="re-c">$</span>${bal}</span>`+
+           `<span class="re-outcome">${outcomeText(pid)}</span>`+
            `<span class="re-delta ${dCls}">${dTxt}</span></div>`;
   }).join('') || `<div class="re-row"><span class="re-name">No hands this round</span></div>`;
   renderMomentsMarquee($('re-marquee-track'), net);
   $('round-end').classList.add('on');
-  // live countdown ticker
+  // live countdown ticker (two-digit padded so text width doesn't jump)
   const label = isFinalRound ? 'Final results in' : 'Next round in';
+  const pad = n => String(n).padStart(2,'0');
   let remain = RECAP_SECONDS;
-  setTicker('re-status-text', `${label} ${remain}`);
+  setTicker('re-status-text', `${label} ${pad(remain)}`);
   const iv = setInterval(()=>{
     remain--; if(remain<0) remain=0;
-    updateTicker(`${label} ${remain}`);
+    updateTicker(`${label} ${pad(remain)}`);
   }, 1000);
   return ()=> clearInterval(iv);
 }
@@ -1540,9 +1743,12 @@ function showFinal(){
     $('champ-balance-val').textContent = '$'+Math.round(Number(champ.balance)||0).toLocaleString();
     const profit = (Number(champ.balance)||0) - start;
     const pEl = $('champ-profit');
-    pEl.textContent = profit>0 ? `+$${profit} on the night` : profit<0 ? `−$${Math.abs(profit)} on the night` : 'Broke even';
+    const c = PHRASE_DATA.champion || {};
+    pEl.textContent = profit>0 ? fillPhrase(c.profitUp,{amount:'$'+profit})
+                    : profit<0 ? fillPhrase(c.profitDown,{amount:'$'+Math.abs(profit)})
+                    : pickPhrase(c.profitFlat);
     pEl.classList.toggle('down', profit<0);
-    $('champ-sub').textContent = standings.length>1 ? 'Top of the table' : 'Last one standing';
+    $('champ-sub').textContent = standings.length>1 ? pickPhrase(c.subMany) : pickPhrase(c.subSolo);
   };
   $('champion-card').classList.add('pending');
 
@@ -1553,7 +1759,7 @@ function showFinal(){
   const marquee = $('final-marquee'); if(marquee) marquee.style.visibility = 'hidden';
 
   $('final-overlay').classList.add('active');
-  setTicker('final-status-text', 'That\u2019s the table \u2014 final results are up');
+  setTicker('final-status-text', pickPhrase(PHRASE_DATA.finaleTicker));
 
   // reveal bottom→top; on the winner landing, paint champion + confetti + marquee
   revealStandingsBottomUp(()=>{
