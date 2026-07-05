@@ -125,12 +125,19 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 .badge.won{ background:var(--green); color:#fff; }
 .badge.lost{ background:rgba(0,0,0,0.3); color:rgba(255,255,255,0.6); }
 .badge.push{ background:#555; color:#fff; }
-/* dealer BUST — new animated text format (replaces the old red pill badge),
-   mirroring the focused-hand .hand-action a-bust pop. */
+/* animated BUST / BLACKJACK text (replaces the old pill badges below a hand),
+   mirroring the focused-hand .hand-action pop. Used for the dealer and for the
+   enlarged centre-stage player hand. */
+.big-outcome-text{ margin-top:10px; font-family:'Barlow Condensed',sans-serif; font-weight:800;
+  font-size:2rem; line-height:1; letter-spacing:2px; text-transform:uppercase; }
+.big-outcome-text.o-bust{ color:#ff5a5a; }
+.big-outcome-text.o-blackjack{ color:#f2c94c; }
+.big-outcome-text.show{ animation:actionPop .5s cubic-bezier(.2,.8,.2,1); }
+/* legacy alias kept so existing dealer markup still styles correctly */
 .dealer-bust-text{ margin-top:10px; font-family:'Barlow Condensed',sans-serif; font-weight:800;
   font-size:2rem; line-height:1; letter-spacing:2px; text-transform:uppercase; color:#ff5a5a; }
 .dealer-bust-text.show{ animation:actionPop .5s cubic-bezier(.2,.8,.2,1); }
-@media (prefers-reduced-motion:reduce){ .dealer-bust-text.show{ animation:none; } }
+@media (prefers-reduced-motion:reduce){ .big-outcome-text.show,.dealer-bust-text.show{ animation:none; } }
 
 /* center stage — active player's enlarged hand */
 .center-stage{ flex:1; display:flex; align-items:center; justify-content:center; gap:40px; }
@@ -171,9 +178,22 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 .seat .hand-row{ display:flex; gap:10px; align-items:flex-start; justify-content:center; }
 /* one hand: cards + its own bet chip; recolours by its own outcome */
 .hand-cell{ display:flex; flex-direction:column; align-items:center; gap:8px; padding:12px 14px;
-  border-radius:10px; min-width:120px; background:transparent;
+  border-radius:10px; min-width:120px; background:transparent; position:relative;
   transition:background .35s, box-shadow .35s, transform .2s; }
 .hand-cell.active{ background:rgba(255,255,255,0.12); box-shadow:inset 0 0 0 2px var(--white); transform:translateY(-4px); }
+/* at-a-glance running total, top-right of each hand tile */
+.hand-total{ position:absolute; top:6px; right:6px; z-index:2;
+  min-width:30px; height:30px; padding:0 8px; border-radius:15px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Oswald',sans-serif; font-weight:700; font-size:1.25rem; line-height:1;
+  font-variant-numeric:tabular-nums; color:#fff; background:rgba(0,0,0,0.55);
+  box-shadow:0 2px 6px rgba(0,0,0,0.4); }
+.hand-total.bust{ background:var(--red); }
+.hand-total.bj{ background:linear-gradient(135deg,#d4af37,#b8912e); color:#2a2205; }
+/* on a recoloured outcome tile, lift the counter off the coloured background */
+.hand-cell.out-win .hand-total, .hand-cell.out-loss .hand-total,
+.hand-cell.out-push .hand-total{ background:rgba(0,0,0,0.4); }
+.hand-cell.out-blackjack .hand-total{ background:rgba(255,255,255,0.35); color:#2a2205; }
 .hand-label{ font-size:0.8rem; color:rgba(255,255,255,0.45); font-family:'Oswald',sans-serif;
   letter-spacing:2px; text-transform:uppercase; }
 /* outcome word shown ABOVE the hand (blackjack at deal; win/loss/push at settle).
@@ -294,14 +314,13 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
     radial-gradient(ellipse at 20% 30%, rgba(30,125,58,0.18) 0%, transparent 60%),
     radial-gradient(ellipse at 80% 60%, rgba(26,46,90,0.28) 0%, transparent 60%),
     #0d1f12;
-  padding:30px 36px 0; overflow:hidden; }
+  padding:30px 0 0; overflow:hidden; }
 #round-end.on{ display:flex; }
-/* header must span the SAME width as the betting banner (.tbar). The table has
-   no side padding, but #round-end has 36px side padding — so cancel it with a
-   negative margin and restore the 8px inset the .tbar uses. */
+/* header is the SAME banner as the betting screen — identical .tbar box model
+   (margin:0 8px, no side padding on the container to fight it). */
 #round-end .re-header{ background:var(--blue); box-shadow:0 2px 12px rgba(0,0,0,0.4);
-  transform:skewX(-8deg); padding:6px 4px 6px 48px; margin:0 -28px 26px; min-height:76px; box-sizing:border-box;
-  display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+  transform:skewX(-8deg); padding:6px 48px; margin:0 8px 26px; min-height:76px; box-sizing:border-box;
+  display:flex; align-items:center; justify-content:space-between; flex-shrink:0; position:relative; z-index:101; }
 #round-end .re-header > *{ transform:skewX(8deg); }
 #round-end .re-title{ font-family:'Barlow Condensed',sans-serif; font-weight:800;
   font-size:3.4rem; letter-spacing:3px; text-transform:uppercase; line-height:1; color:#fff; }
@@ -310,7 +329,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
   letter-spacing:8px; text-transform:uppercase; color:rgba(255,255,255,0.6); }
 /* net-standings grid, centre */
 #round-end .re-body{ flex:1; min-height:0; display:flex; flex-direction:column;
-  align-items:stretch; justify-content:center; gap:12px; padding:0 8px; overflow:hidden; }
+  align-items:stretch; justify-content:center; gap:12px; padding:0 44px; overflow:hidden; }
 .re-row{ display:flex; align-items:center; gap:22px; background:var(--white); color:var(--dark);
   padding:14px 28px; box-shadow:0 2px 12px rgba(0,0,0,0.35); }
 .re-row .re-name{ flex:1; min-width:0; font-family:'Barlow Condensed',sans-serif; font-weight:800;
@@ -326,7 +345,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 .re-row .re-delta.up{ color:var(--green); } .re-row .re-delta.down{ color:var(--red); }
 .re-row .re-delta.flat{ color:var(--mid); }
 /* big-moments marquee along the bottom */
-#round-end-marquee{ flex-shrink:0; margin:24px -36px 0; background:var(--blue);
+#round-end-marquee{ flex-shrink:0; margin:24px 0 0; background:var(--blue);
   box-shadow:0 -2px 12px rgba(0,0,0,0.4); overflow:hidden; position:relative; height:170px; }
 #round-end-marquee::before{ content:"Big moments"; position:absolute; top:0; left:0; z-index:3;
   font-family:'Oswald',sans-serif; font-weight:700; font-size:1rem; letter-spacing:6px;
@@ -354,13 +373,12 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
     radial-gradient(ellipse at 20% 30%, rgba(30,125,58,0.18) 0%, transparent 60%),
     radial-gradient(ellipse at 80% 60%, rgba(26,46,90,0.28) 0%, transparent 60%),
     #0d1f12;
-  flex-direction:column; padding:30px 36px 0; overflow:hidden; }
+  flex-direction:column; padding:30px 0 0; overflow:hidden; }
 #final-overlay.active{ display:flex; }
-/* match the betting banner (.tbar) width: cancel the overlay's 36px side
-   padding with a negative margin, restoring the .tbar 8px inset. */
+/* header is the SAME banner as the betting screen — identical .tbar box model. */
 #final-header{ background:var(--blue); box-shadow:0 2px 12px rgba(0,0,0,0.4);
-  transform:skewX(-8deg); padding:6px 4px 6px 48px; margin:0 -28px 26px; min-height:76px; box-sizing:border-box;
-  display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+  transform:skewX(-8deg); padding:6px 48px; margin:0 8px 26px; min-height:76px; box-sizing:border-box;
+  display:flex; align-items:center; justify-content:space-between; flex-shrink:0; position:relative; z-index:101; }
 #final-header > *{ transform:skewX(8deg); }
 #final-header .fh-title{ font-family:'Barlow Condensed',sans-serif; font-weight:800;
   font-size:3.4rem; letter-spacing:3px; text-transform:uppercase; line-height:1; color:#fff; }
@@ -374,7 +392,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 .fh-btn:active{ transform:translateY(3px); box-shadow:0 1px 0 var(--blue-deep), 0 4px 12px rgba(0,0,0,0.4); }
 .fh-btn.ghost{ background:transparent; color:#fff; box-shadow:inset 0 0 0 2px rgba(255,255,255,0.55); }
 .fh-btn.ghost:active{ transform:translateY(2px); box-shadow:inset 0 0 0 2px rgba(255,255,255,0.55); }
-#final-body{ display:flex; gap:36px; flex:1; min-height:0; }
+#final-body{ display:flex; gap:36px; flex:1; min-height:0; padding:0 36px; }
 #champion-card{ flex:0 0 620px; background:var(--white); color:var(--dark);
   box-shadow:0 2px 12px rgba(0,0,0,0.4); display:flex; flex-direction:column; align-items:center;
   padding:40px 40px 36px; position:relative; overflow:hidden; }
@@ -434,7 +452,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 .fl-delta{ flex:0 0 132px; text-align:right; font-family:'Oswald',sans-serif; font-weight:700;
   font-size:1.5rem; letter-spacing:1px; font-variant-numeric:tabular-nums; }
 .fl-delta.up{ color:var(--green); } .fl-delta.down{ color:var(--red); } .fl-delta.flat{ color:var(--mid); }
-#final-marquee{ flex-shrink:0; margin:24px -36px 0; background:var(--blue);
+#final-marquee{ flex-shrink:0; margin:24px 0 0; background:var(--blue);
   box-shadow:0 -2px 12px rgba(0,0,0,0.4); overflow:hidden; position:relative; height:200px; }
 #final-marquee::before{ content:"Big moments"; position:absolute; top:0; left:0; z-index:3;
   font-family:'Oswald',sans-serif; font-weight:700; font-size:1rem; letter-spacing:6px;
@@ -640,8 +658,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const GAME_MODE = 'blackjack';
 const DEFAULT_CONFIG = { numRounds:5, startingBalance:200, numDecks:6, shoeMode:'fresh', cardTheme:'random' };
 const PLAYER_JOIN_URL = 'https://haydenmquaill.github.io/JustaLittleFun';
-const BET_SECONDS = 30, READY_SECONDS = 5, ACTION_SECONDS = 15, RECAP_SECONDS = 30;
-const BETS_CLOSED_WAIT_MS = 12000;   // breather after betting closes before the deal (BETS CLOSED holds)
+const BET_SECONDS = 30, READY_SECONDS = 5, ACTION_SECONDS = 15, RECAP_SECONDS = 10;
+const BETS_CLOSED_WAIT_MS = 10000;   // breather after betting closes before the deal (BETS CLOSED holds)
 const DEAL_IN_HOLD_MS = 10000;       // "Deal them in" wipe holds this long before betting opens
 const CARD_ANIM_MS = 300;            // must match .card-in animation duration (CSS)
 const TURN_POLL_MS = 150;            // how often the turn loop checks for a player action
@@ -743,16 +761,28 @@ function loadSoundManifest(){
   })();
   return _soundManifestLoaded;
 }
-/* Load a dealer voice pack's vo-manifest.json and make it active. */
+/* Load a dealer voice pack's vo-manifest.json and MAKE IT ACTIVE. Caches the
+   parsed manifest per pack; on a repeat call (e.g. a later AGAIN session picks
+   this pack again) it re-activates from cache instead of no-opping, so the active
+   voice actually switches. Resolves true if the pack is usable. */
+const _voicePackManifest = {};   // pack -> parsed lines object (once loaded)
+function _activateVoicePack(pack){
+  const m = _voicePackManifest[pack];
+  if(m && Object.keys(m).length){ VOICE_MANIFEST = m; _dealerPack = pack; return true; }
+  return false;
+}
 function loadVoicePack(pack){
-  if(_voicePackLoaded[pack]) return _voicePackLoaded[pack];
+  if(_voicePackLoaded[pack]){
+    // ensure a cached success re-activates this pack (not just returns true)
+    return _voicePackLoaded[pack].then(ok=>{ if(ok) _activateVoicePack(pack); return ok; });
+  }
   const p = (async ()=>{
     try{
       const res = await fetch(`audio/vo/${pack}/vo-manifest.json`); if(!res.ok) throw 0;
       const m = await res.json(); const base = `audio/vo/${pack}/` + (m.basePath||'');
       const lines = m.lines || {}; const out = {};
       for(const [k,arr] of Object.entries(lines)){ if(k[0]==='_') continue; out[k] = (arr||[]).map(u=>base+u); }
-      if(Object.keys(out).length){ VOICE_MANIFEST = out; _dealerPack = pack; return true; }
+      if(Object.keys(out).length){ _voicePackManifest[pack] = out; _activateVoicePack(pack); return true; }
       return false;
     }catch(e){ return false; }   // keep inline fallback
   })();
@@ -768,28 +798,9 @@ async function initAudio(){
   for(const name of ['music','ambience','sfx','voice']){
     const g = Audio_.ctx.createGain(); g.gain.value = BUS_BASE[name]!=null?BUS_BASE[name]:1; g.connect(Audio_.master); Audio_.buses[name]=g;
   }
-  // pick a dealer pack for this session. Shuffle the list and try packs until
-  // one actually loads, so a listed-but-missing pack can't silently collapse the
-  // random choice back onto the built-in fallback. Also avoid the same pack
-  // three sessions in a row: if the last two picks were the same pack, drop it
-  // from the candidate list (when another pack is available).
-  let recent = [];
-  try{ recent = JSON.parse(localStorage.getItem('bjDealerHistory')||'[]'); }catch(e){ recent = []; }
-  // Prefer a pack that ISN'T the one we just used, so the dealer voice rotates
-  // and never repeats back-to-back (which also guarantees never 3-in-a-row).
-  // Build a preferred list (everything except last pick) and a fallback list
-  // (the last pick) — try preferred first, only fall back if nothing else loads.
-  const last = recent.length ? recent[recent.length-1] : null;
-  const shuffle = a => { for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [a[i],a[j]]=[a[j],a[i]]; } return a; };
-  const preferred = shuffle(DEALER_PACKS.filter(p=>p!==last));
-  const fallback  = DEALER_PACKS.filter(p=>p===last);   // the just-used pack, tried last
-  const order = [...preferred, ...fallback];
-  let picked = false;
+  // pick this session's dealer voice pack (rotates; see pickDealerPack)
   await loadSoundManifest();
-  for(const pack of order){ if(await loadVoicePack(pack)){ picked = true; break; } }
-  if(!picked){ _dealerPack = 'classic'; }   // nothing loaded — inline fallback stays
-  // record the pick for the no-three-in-a-row rule (keep the last few)
-  try{ recent.push(_dealerPack); localStorage.setItem('bjDealerHistory', JSON.stringify(recent.slice(-5))); }catch(e){}
+  await pickDealerPack();
   // Priority decode: the first playlist track + the wipe whoosh, so background
   // music and the whoosh can start the instant the context unlocks. Mark ready
   // as soon as these land, then decode everything else in the background.
@@ -805,6 +816,40 @@ async function initAudio(){
   _allVoiceUrls().forEach(u=>rest.add(u));
   priority.forEach(u=>rest.delete(u));
   _decodeUrls(rest);   // not awaited — fills in as clips finish decoding
+}
+
+/* Choose (and load) this session's dealer voice pack. Callable more than once
+   per page load — the AGAIN button starts a fresh session WITHOUT reloading, so
+   this must run again each new game or the same voice would repeat every time.
+
+   Rotation rule: pick the LEAST-recently-used pack that actually loads. Ordering
+   by how long ago each pack last played (oldest first, unseen packs first) means
+   the voice always rotates and can never land the same pack 2+ games running as
+   long as at least two packs load. History is persisted so rotation survives a
+   real page reload too; we record what ACTUALLY loaded so a temporarily-missing
+   pack self-corrects instead of pinning the rotation to a fallback. */
+async function pickDealerPack(){
+  let recent = [];
+  try{ recent = JSON.parse(localStorage.getItem('bjDealerHistory')||'[]'); }catch(e){ recent = []; }
+  // rank packs by recency of last use: never-used first, then oldest-used first.
+  const lastUsedAt = {};
+  recent.forEach((p,i)=>{ lastUsedAt[p] = i; });   // higher index = more recent
+  const order = [...DEALER_PACKS].sort((a,b)=>{
+    const ai = (a in lastUsedAt) ? lastUsedAt[a] : -1;   // -1 = never used → first
+    const bi = (b in lastUsedAt) ? lastUsedAt[b] : -1;
+    if(ai !== bi) return ai - bi;                        // least-recent first
+    return Math.random() - 0.5;                          // tie-break randomly
+  });
+  // force a re-attempt of every candidate this session (don't reuse a cached
+  // load promise from a previous pick, so a fresh choice is honoured)
+  let picked = false, chosen = null;
+  for(const pack of order){ if(await loadVoicePack(pack)){ picked = true; chosen = pack; break; } }
+  if(!picked){ _dealerPack = 'classic'; chosen = 'classic'; }   // inline fallback stays
+  // decode the chosen pack's clips if the audio graph is already up (AGAIN path)
+  if(Audio_.ctx){ _decodeUrls(_allVoiceUrls()); }
+  // record what actually played and persist (cap the history length)
+  try{ recent.push(chosen); localStorage.setItem('bjDealerHistory', JSON.stringify(recent.slice(-8))); }catch(e){}
+  return chosen;
 }
 function onAudioReady(fn){ if(Audio_.ready){ try{fn();}catch(e){} return; } Audio_._readyCbs.push(fn); }
 function unlockAudio(){ if(!Audio_.ctx){ initAudio(); } if(Audio_.ctx && Audio_.ctx.state==='suspended'){ Audio_.ctx.resume(); } }
@@ -1250,8 +1295,21 @@ function paintTable(hands, { hideHole=true, activeSeat=null } = {}){
       const mini = document.createElement('div'); mini.style.display='flex'; mini.style.gap='4px';
       const tcap = (G.revealCap && G.revealCap[seat+':'+h.hand_index]);
       const tlimit = (tcap==null) ? h.cards.length : Math.min(tcap, h.cards.length);
-      h.cards.slice(0, tlimit).forEach(c => mini.appendChild(cardEl(c,'sm')));
+      const shownCards = h.cards.slice(0, tlimit);
+      shownCards.forEach(c => mini.appendChild(cardEl(c,'sm')));
       cell.appendChild(mini);
+
+      // at-a-glance running total, top-right of the tile (revealed cards only, so
+      // it never gives away a total before the card has actually landed)
+      if(shownCards.length){
+        const tot = document.createElement('div'); tot.className='hand-total';
+        const tv = handTotal(shownCards);
+        const isBJ = fullyRevealed && h.status==='blackjack';
+        if(tv>21) tot.classList.add('bust');
+        else if(isBJ) tot.classList.add('bj');
+        tot.textContent = isBJ ? 'BJ' : tv;
+        cell.appendChild(tot);
+      }
 
       const chip = document.createElement('div'); chip.className='bet-chip';
       chip.dataset.seat = seat; chip.dataset.hand = h.hand_index;
@@ -1389,9 +1447,10 @@ function paintCenter(hands, seat){
     }
     const shownCards = h.cards.slice(0, limit);
     const t = handTotal(shownCards);
-    const revealed = limit>=h.cards.length;   // don't announce an outcome before its card is shown
-    badgeHost.innerHTML = (h.status==='bust' && revealed)?badge('bust','Bust')
-      : (h.status==='blackjack' && revealed)?badge('blackjack','Blackjack'):badge('total',t);
+    // Always show the running total here. The outcome word (Bust / Blackjack) is
+    // carried by the animated .hand-action text below the hand, so we must NOT
+    // also render the old pill badge — that produced a duplicate BUST.
+    badgeHost.innerHTML = badge('total', t);
   });
 }
 
@@ -2248,6 +2307,10 @@ $('confirm-yes').addEventListener('click',()=>{
    the screen, swap to the table under the cover, hold, then playSession()
    begins the betting phase only after doWipe's callback resolves. */
 $('lobby-start-game').addEventListener('click',()=>{
+  // rotate the dealer voice for this game. Runs on every start (including AGAIN,
+  // which returns here without a page reload), so the same voice can't carry over
+  // between games. onAudioReady defers until the pack machinery is up.
+  onAudioReady(()=>{ pickDealerPack().catch(()=>{}); });
   doWipe(()=> new Promise(resolve=>{
     $('lobby-overlay').style.display='none';
     $('table').style.display='flex'; $('table').classList.add('on');
