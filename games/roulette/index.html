@@ -600,13 +600,18 @@ let _dealerPack = 'classic';
 let VOICE_MANIFEST = (()=>{
   const base='audio/vo/classic/'; const m={};
   const one = (k,folder)=> m[k]=[base+folder+'/1.mp3'];
-  one('placeYourBets','place_your_bets'); one('betsClosed','bets_closed'); one('dealersTurn','dealers_turn');
-  one('playerBust','player_bust'); one('playerBlackjack','player_blackjack');
-  one('dealerBust','dealer_bust'); one('dealerBlackjack','dealer_blackjack');
-  one('dealerWin','dealer_win'); one('dealerLose','dealer_lose'); one('dealerPartial','dealer_partial');
-  one('pushAll','push_all'); one('pushWinner','push_winner'); one('pushLoser','push_loser'); one('pushMixed','push_mixed');
+  // round-loop flow cues
+  one('placeYourBets','place_your_bets'); one('noMoreBets','no_more_bets');
+  one('spinning','spinning'); one('payingOut','paying_out');
+  // generic result sting (fallback when no number/colour lines exist)
+  one('winningNumber','winning_number');
+  // finale
   one('winner','winner'); one('signoff','signoff');
-  for(let t=4;t<=21;t++) m['total_'+t]=[base+'total/'+t+'/1.mp3'];
+  // colours — spoken after the number
+  one('col_red','colour/red'); one('col_black','colour/black'); one('col_green','colour/green');
+  // number pockets 0–36 plus the American double-zero
+  for(let n=0;n<=36;n++) m['num_'+n]=[base+'number/'+n+'/1.mp3'];
+  m['num_00']=[base+'number/00/1.mp3'];
   return m;
 })();
 const _voicePackLoaded = {};   // pack -> load promise
@@ -1145,7 +1150,7 @@ let _phrasesLoaded = null;
 function loadPhrases(){
   if(_phrasesLoaded) return _phrasesLoaded;
   _phrasesLoaded = (async ()=>{
-    try{ const r=await fetch('phrases.json'); if(!r.ok) throw 0; const j=await r.json();
+    try{ const r=await fetch('data/phrases.json'); if(!r.ok) throw 0; const j=await r.json();
       PHRASE_DATA = Object.assign({}, PHRASE_DATA, j);
     }catch(e){/* keep built-in fallback */}
   })();
