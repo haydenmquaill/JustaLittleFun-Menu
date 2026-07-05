@@ -60,12 +60,13 @@
   },
 
   "music": [
-    {
-      "_use": "Optional in-round background music. Add tracks here; they shuffle (each once before any repeat) and drive the Now Playing toast. Leave empty for no music.",
-      "url": "music/track1.mp3",
-      "title": "Track One",
-      "artist": "Your Artist",
-      "cover": "music/track1.jpg"
-    }
+    { "url": "music/horizon_glow.mp3", "title": "Horizon Glow", "artist": "Kaiya Habibi", "cover": "music/horizon_glow.jpg" },
+    { "url": "music/late_night_brooklyn.mp3", "title": "Late Night Brooklyn", "artist": "Unknown", "cover": "music/late_night_brooklyn.jpg" },
+    { "url": "music/aura_of_elegance.mp3", "title": "Aura of Elegance", "artist": "Momentum Soundworks", "cover": "music/aura_of_elegance.jpg" },
+    { "url": "music/fashion_boutique_music.mp3", "title": "Fashion Boutique Music", "artist": "HD Quality Tracks", "cover": "music/fashion_boutique_music.jpg" },
+    { "url": "music/lounge_whisperer.mp3", "title": "Lounge Whisperer", "artist": "Inside Record", "cover": "music/lounge_whisperer.jpg" },
+    { "url": "music/luxury_brand_score.mp3", "title": "Luxury Brand Score", "artist": "Luciano Latouche", "cover": "music/luxury_brand_score.jpg" },
+    { "url": "music/vip_lounge_music.mp3", "title": "VIP Lounge Music", "artist": "Nandy Music", "cover": "music/vip_lounge_music.jpg" },
+    { "url": "music/night_drive_vogue.mp3", "title": "Night Drive Vogue", "artist": "JIRMoronta", "cover": "music/night_drive_vogue.jpg" }
   ]
 }
