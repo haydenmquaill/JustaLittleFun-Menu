@@ -485,7 +485,7 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
   <div class="tbar">
     <div class="tbar-info">
       <span class="rnd" id="t-round">Round 1</span>
-      <span class="phase" id="t-phase">Place your bets</span>
+      <span class="phase" id="t-phase">At the table</span>
     </div>
     <div class="clock-wrap"><span class="clock" id="t-clock">0:30</span></div>
   </div>
@@ -1498,7 +1498,7 @@ async function playRound(){
   // 1. BETTING
   clearTable();                       // clean slate: clear last round's cards
   hideRoundEnd();                     // ensure last round's end screen is gone
-  $('t-phase').textContent = 'Betting';           // stable top-banner label
+  $('t-phase').textContent = 'At the table';      // stable top-banner label (matches player page)
   setTicker('status-text', 'Accepting bets');
   playVoice('placeYourBets');
   await sb.rpc('bj_open_betting', { p_session_id:G.session.id, p_seconds:BET_SECONDS });
@@ -1516,7 +1516,7 @@ async function playRound(){
   // 2. DEAL
   const seats = await activeSeats();
   if(seats.length===0){ setTicker('status-text','No bets this round — sitting it out'); await sleep(1500); return; }
-  $('t-phase').textContent = 'Playing';            // stable through the whole play phase
+  $('t-phase').textContent = 'At the table';       // stable through the whole play phase (matches player page)
   playSound('chipBet', { volume:0.8 });        // chips down as the round begins
   await sb.rpc('deal_blackjack_round', { p_session_id:G.session.id });
   let hands = await readHands();

@@ -83,8 +83,9 @@
   }
   .game-banner .glyph{
     font-family:'Barlow Condensed',sans-serif; font-weight:800;
-    font-size:3.4rem; letter-spacing:3px; text-transform:uppercase; color:var(--white);
+    font-size:clamp(1.9rem,3.4vw,2.5rem); letter-spacing:1.5px; text-transform:uppercase; color:var(--white);
     position:relative; text-shadow:0 2px 0 rgba(0,0,0,.4);
+    text-align:center; line-height:1.02; padding:0 18px; max-width:100%;
   }
   .game-body{padding:18px 22px 22px}
   .game-name{
@@ -139,6 +140,17 @@
       <div class="game-body">
         <div class="game-name">Post &amp; Parlay</div>
         <div class="game-desc">Run a card of races, take the room's bets, crown a champion punter.</div>
+        <span class="game-cta">Start session <span class="arrow">&rarr;</span></span>
+      </div>
+    </a>
+
+    <a class="game live" href="games/blackjack/">
+      <div class="game-banner">
+        <span class="glyph">Blackjack</span>
+      </div>
+      <div class="game-body">
+        <div class="game-name">Hit &amp; Stand</div>
+        <div class="game-desc">Deal the table, take the room's bets, see who beats the dealer to 21.</div>
         <span class="game-cta">Start session <span class="arrow">&rarr;</span></span>
       </div>
     </a>
