@@ -307,6 +307,16 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
   letter-spacing:2px; color:#fff; text-transform:uppercase; flex-shrink:0; font-variant-numeric:tabular-nums; }
 .ticker-sep{ font-family:'Barlow Condensed',sans-serif; font-size:3.4rem; font-weight:800;
   color:#fff; flex-shrink:0; padding:0 80px; }
+/* text-swap fade: old copy sinks + fades out, new copy rises + fades in. The
+   horizontal scroll lives on the parent .ticker-text transform, so we animate
+   the individual copies' opacity + vertical offset instead of their transform-X.
+   .fade-out sinks the current line away; .fade-in-start seeds the new line above
+   before it settles back to rest. */
+.ticker-text .ticker-copy, .ticker-text .ticker-sep{ transition:opacity .28s ease, transform .28s ease; }
+.ticker-text.fade-out .ticker-copy, .ticker-text.fade-out .ticker-sep{
+  opacity:0; transform:translateY(26px); }
+.ticker-text.fade-in-start .ticker-copy, .ticker-text.fade-in-start .ticker-sep{
+  opacity:0; transform:translateY(-26px); }
 
 /* ══════════ END-OF-ROUND SCREEN (marquee of big wins/losses) ══════════ */
 #round-end{ position:absolute; inset:0; z-index:60; display:none; flex-direction:column;
@@ -1499,7 +1509,12 @@ async function playRound(){
   clearTable();                       // clean slate: clear last round's cards
   hideRoundEnd();                     // ensure last round's end screen is gone
   $('t-phase').textContent = 'At the table';      // stable top-banner label (matches player page)
-  setTicker('status-text', 'Accepting bets');
+  // The previous round faded the ticker into "Accepting bets" as its countdown
+  // ended; if so, leave that text in place rather than hard-resetting it (which
+  // would kill the fade). On the very first round (or after AGAIN) there's no
+  // faded text yet, so set it normally.
+  if(G._tickerSeeded){ G._tickerSeeded = false; }
+  else { setTicker('status-text', 'Accepting bets'); }
   playVoice('placeYourBets');
   await sb.rpc('bj_open_betting', { p_session_id:G.session.id, p_seconds:BET_SECONDS });
   runClock(Date.now()+BET_SECONDS*1000);
@@ -1658,19 +1673,34 @@ async function playRound(){
   // hold on the settled table so players see the outcome before we transition
   await sleep(5000);
 
-  // 6. END-OF-ROUND SCREEN (wipe in from the table)
-  await refreshPlayers();             // pull settled balances for the screen
+  // 6. NEXT-ROUND COUNTDOWN (stay on the main table screen — no post-round screen).
+  //    On the FINAL round we skip the countdown entirely and let playSession()
+  //    wipe straight to the final results. Otherwise we run a live "NEXT ROUND IN
+  //    XX" countdown right here in the bottom ticker, then fade it into
+  //    "ACCEPTING BETS" as the next round's betting opens.
+  await refreshPlayers();             // settled balances (kept for final screen)
   const isFinalRound = G.round >= G.cfg.numRounds;
-  const stopReCountdown = await new Promise(res=> doWipe(()=>{ const stop=buildRoundEnd(hands, isFinalRound); res(stop); }));
-  await sb.rpc('bj_start_recap', { p_session_id:G.session.id, p_seconds:RECAP_SECONDS });
-  await sleep(RECAP_SECONDS*1000);
-  if(stopReCountdown) stopReCountdown();
+  if(!isFinalRound){
+    await sb.rpc('bj_start_recap', { p_session_id:G.session.id, p_seconds:RECAP_SECONDS });
+    // live countdown in the ticker (two-digit padded so the width doesn't jump).
+    // The count itself just updates the number — no fade per step. Only the final
+    // transition to ACCEPTING BETS fades.
+    const pad = n => String(n).padStart(2,'0');
+    let remain = RECAP_SECONDS;
+    setTicker('status-text', `Next round in ${pad(remain)}`);
+    await new Promise(res=>{
+      const iv = setInterval(()=>{
+        remain--;
+        if(remain<=0){ clearInterval(iv); res(); return; }
+        updateTicker(`Next round in ${pad(remain)}`);
+      }, 1000);
+    });
+    // fade the countdown into ACCEPTING BETS; the next playRound leaves this in
+    // place (guarded by G._tickerSeeded) rather than hard-resetting it.
+    await updateTickerFade('Accepting bets');
+    G._tickerSeeded = true;
 
-  // advance round counter (unless it's the last — loop handles finish)
-  if(G.round < G.cfg.numRounds){
     await sb.rpc('bj_next_round', { p_session_id:G.session.id });
-    // wipe from the end-of-round screen back to the betting table
-    await new Promise(res=> doWipe(()=>{ hideRoundEnd(); res(); }));
   }
 }
 
@@ -1961,6 +1991,35 @@ function updateTicker(msg){
   _tk.msg = msg;
   el.querySelectorAll('.ticker-copy').forEach(s=> s.textContent = msg);
 }
+/* Swap the message on the CURRENT ticker element with a vertical crossfade: the
+   existing text sinks down + fades out, then the new text is seeded above and
+   rises up + fades in. Keeps the horizontal scroll position untouched (that
+   transform lives on .ticker-text; we only animate the child copies). Resolves
+   when the new text has settled. Falls back to a plain updateTicker if the
+   engine isn't pointed anywhere yet. */
+function updateTickerFade(msg){
+  const el = _tk.el;
+  if(!el){ return Promise.resolve(); }
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches){
+    updateTicker(msg); return Promise.resolve();
+  }
+  return new Promise(resolve=>{
+    // 1. sink the current text away
+    el.classList.add('fade-out');
+    setTimeout(()=>{
+      // 2. swap the text and seed it above (no transition on the jump)
+      _tk.msg = msg;
+      el.querySelectorAll('.ticker-copy').forEach(s=> s.textContent = msg);
+      el.classList.remove('fade-out');
+      el.classList.add('fade-in-start');
+      // force a reflow so the seeded position takes effect before we release
+      void el.offsetWidth;
+      // 3. release → rises up + fades in
+      el.classList.remove('fade-in-start');
+      setTimeout(resolve, 300);
+    }, 300);
+  });
+}
 
 /* ════════ END-OF-ROUND SCREEN ════════ */
 /* Build net-per-player rows + a big-moments marquee, then show the screen with
@@ -2198,6 +2257,7 @@ $('btn-again') && $('btn-again').addEventListener('click', ()=>{
     // background music keeps playing across AGAIN
     // reset the game's per-session runtime state, keep the room + players
     G.round = 1;
+    G._tickerSeeded = false;
     try{ await sb.rpc('bj_reset_session', { p_session_id:G.session.id }); }catch(e){}
     await refreshPlayers();
     $('lobby-overlay').style.display='flex';
