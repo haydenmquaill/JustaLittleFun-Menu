@@ -1,0 +1,71 @@
+{
+  "_comment": "JALF Roulette — SFX manifest. Loaded by the host at boot from audio/sfx/sfx-manifest.json. basePath is prepended to every url below. A url may be a single string or an array of interchangeable takes (one is chosen at random each play). Set loop:true for sustained ambiences. Any key whose file is missing simply stays silent, so you can add clips incrementally. bus is one of: sfx | ambience | music.",
+  "basePath": "audio/sfx/",
+
+  "sounds": {
+    "_roulette": "— roulette cues wired in the round loop —",
+
+    "wheelSpin": {
+      "_use": "Looping ball-in-track ambience. Starts when the wheel begins spinning and fades out when the ball drops. MUST be a seamless loop.",
+      "url": "roulette/wheel_spin_loop.mp3",
+      "bus": "ambience",
+      "loop": true
+    },
+    "ballDrop": {
+      "_use": "One-shot: the ball rattling into a pocket as the wheel settles.",
+      "url": [
+        "roulette/ball_drop/1.mp3",
+        "roulette/ball_drop/2.mp3",
+        "roulette/ball_drop/3.mp3"
+      ],
+      "bus": "sfx"
+    },
+    "payout": {
+      "_use": "One-shot: chips being pushed to winners at settle (only plays when at least one bet won).",
+      "url": [
+        "roulette/payout/1.mp3",
+        "roulette/payout/2.mp3"
+      ],
+      "bus": "sfx"
+    },
+
+    "_shared": "— inherited cues also used by roulette —",
+
+    "chipBet": {
+      "_use": "Chips down. Fired as the spin begins (and reusable elsewhere).",
+      "url": [
+        "chip/1.mp3",
+        "chip/2.mp3",
+        "chip/3.mp3",
+        "chip/4.mp3",
+        "chip/5.mp3"
+      ],
+      "bus": "sfx"
+    },
+    "uiWhoosh": {
+      "_use": "Screen wipe transition whoosh.",
+      "url": "general/ui_whoosh.mp3",
+      "bus": "sfx"
+    },
+    "fanfare": {
+      "_use": "Finale — champion reveal sting.",
+      "url": "general/fanfare.mp3",
+      "bus": "music"
+    },
+    "cheer": {
+      "_use": "Finale — crowd cheer under the champion reveal.",
+      "url": "general/cheer.mp3",
+      "bus": "ambience"
+    }
+  },
+
+  "music": [
+    {
+      "_use": "Optional in-round background music. Add tracks here; they shuffle (each once before any repeat) and drive the Now Playing toast. Leave empty for no music.",
+      "url": "music/track1.mp3",
+      "title": "Track One",
+      "artist": "Your Artist",
+      "cover": "music/track1.jpg"
+    }
+  ]
+}
