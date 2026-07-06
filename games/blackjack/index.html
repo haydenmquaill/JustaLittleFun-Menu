@@ -1707,7 +1707,9 @@ async function playRound(){
     // place (guarded by G._tickerSeeded) rather than hard-resetting it.
     await updateTickerFade('Accepting bets');
     G._tickerSeeded = true;
-    await sb.rpc('bj_next_round', { p_session_id:G.session.id });
+    // (No bj_next_round here: since Migration 2, bj_open_betting stamps
+    // current_round = G.round and clears seat/turn state at the start of every
+    // round, so advancing the round separately is redundant.)
   }
 }
 
