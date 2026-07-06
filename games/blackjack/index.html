@@ -1481,9 +1481,9 @@ async function playSession(){
   $('table').classList.add('on');
   G.players.forEach(p => G.names[p.id]=p.display_name);
 
-  for(let r=1; r<=G.cfg.numRounds; r++){
-    G.round = r;
-    $('t-round').textContent = `Round ${r} of ${G.cfg.numRounds}`;
+  for(let r=0; r<G.cfg.numRounds; r++){
+    G.round = r;                                    // 0-indexed, matches sessions.current_round + the other modes
+    $('t-round').textContent = `Round ${r+1} of ${G.cfg.numRounds}`;
     await playRound();
   }
   // finished
@@ -1684,7 +1684,7 @@ async function playRound(){
   //    fades into "ACCEPTING BETS" and advances to the next round; the final round
   //    just runs out the clock, then playSession() wipes to the final results.
   await refreshPlayers();             // settled balances (kept for final screen)
-  const isFinalRound = G.round >= G.cfg.numRounds;
+  const isFinalRound = G.round >= G.cfg.numRounds-1;
   // drive the players' countdown clock too (works for both the next-round and the
   // final-results wait — it's just a timed deadline on their side).
   await sb.rpc('bj_start_recap', { p_session_id:G.session.id, p_seconds:RECAP_SECONDS });
@@ -2055,7 +2055,7 @@ function buildRoundEnd(hands, isFinalRound){
     (outcome[h.player_id] ??= []).push(h.status);
   });
   const rows = Object.entries(net).sort((a,b)=>b[1]-a[1]);
-  $('re-round-n').textContent = G.round;
+  $('re-round-n').textContent = G.round+1;
   // outcome label for a player's hand(s): a single hand shows its status; splits
   // summarise (e.g. "Won · Lost") in play order.
   const outLabel = st => ({won:'Won',lost:'Lost',push:'Push',blackjack:'Blackjack',bust:'Bust'}[st] || (st? st[0].toUpperCase()+st.slice(1) : ''));
@@ -2277,7 +2277,7 @@ $('btn-again') && $('btn-again').addEventListener('click', ()=>{
     $('table').classList.remove('on'); $('table').style.display='none';
     // background music keeps playing across AGAIN
     // reset the game's per-session runtime state, keep the room + players
-    G.round = 1;
+    G.round = 0;
     G._tickerSeeded = false;
     // Unified session reset (clears hands + bets + rounds, refunds balances, →
     // lobby, keeps config). Surface failure rather than swallowing it.
@@ -2300,7 +2300,7 @@ $('btn-mainmenu') && $('btn-mainmenu').addEventListener('click', ()=>{
   doWipe(async ()=>{
     try{ await sb.rpc('close_session',{p_session_id:G.session.id}); }catch(e){}
     if(G.rosterPoll){ clearInterval(G.rosterPoll); G.rosterPoll=null; }
-    G.session=null; G.players=[]; G.names={}; G.round=1;
+    G.session=null; G.players=[]; G.names={}; G.round=0;
     // background music keeps playing back on the menu
     $('final-overlay').classList.remove('active');
     $('table').classList.remove('on'); $('table').style.display='none';
@@ -2387,7 +2387,7 @@ $('confirm-yes').addEventListener('click',()=>{
   doWipe(async ()=>{
     if(G.session){try{await sb.rpc('close_session',{p_session_id:G.session.id});}catch(e){}}
     if(G.rosterPoll){ clearInterval(G.rosterPoll); G.rosterPoll=null; }
-    G.session=null; G.players=[]; G.names={}; G.round=1;
+    G.session=null; G.players=[]; G.names={}; G.round=0;
     showStack('lobby-menu');
   });
 });
