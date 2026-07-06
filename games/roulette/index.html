@@ -799,7 +799,23 @@ function _duck(on){
 function playVoice(key, { volume=1 } = {}){
   if(!Audio_.ready || Audio_.muted) return null;
   const entry=VOICE_MANIFEST[key]; if(!entry||!entry.length) return null;
-  const url=entry[(Math.random()*entry.length)|0]; const buffer=_buf(url); if(!buffer) return null;
+  const url=entry[(Math.random()*entry.length)|0];
+  const buffer=_buf(url);
+  if(!buffer){
+    // Clip not decoded yet. Voice takes decode in the BACKGROUND after Audio_.ready
+    // flips (see initAudio), so the very first round's line could land before its
+    // buffer exists — that was the "no voice on round 1" bug. Instead of a silent
+    // no-op, decode this clip on demand and play it the moment it's ready.
+    _decodeUrls(new Set([url])).then(()=>{
+      if(Audio_.muted) return;
+      const b=_buf(url); if(!b) return;
+      const s=Audio_.ctx.createBufferSource(); s.buffer=b;
+      const g=Audio_.ctx.createGain(); g.gain.value=volume; s.connect(g).connect(Audio_.buses.voice);
+      _duck(true); let rl=false; const done=()=>{ if(!rl){ rl=true; _duck(false); } };
+      s.onended=done; setTimeout(done, b.duration*1000 + 400); s.start(0);
+    });
+    return null;
+  }
   const src=Audio_.ctx.createBufferSource(); src.buffer=buffer;
   const g=Audio_.ctx.createGain(); g.gain.value=volume; src.connect(g).connect(Audio_.buses.voice);
   _duck(true); let released=false; const rel=()=>{ if(!released){ released=true; _duck(false); } };
@@ -940,6 +956,7 @@ const SVGNS = 'http://www.w3.org/2000/svg';
 function buildWheel(){
   const host = $('wheel-svg-host'); if(!host) return;
   host.innerHTML = '';
+  G.wheelRotor = 0; G.wheelBall = 0;   // fresh SVG starts unrotated; keep tracking in sync
   const POCKETS = wheelPockets();
   const N = POCKETS.length, cx=200, cy=200, rOuter=196, rInner=150, rHub=64, step=360/N;
   const svg = document.createElementNS(SVGNS,'svg'); svg.setAttribute('viewBox','0 0 400 400');
@@ -992,19 +1009,32 @@ function spinTo(winIndex, { rotorTurns=6, ballTurns=9, dur=5200 }={}){
     const N=wheelPockets().length, step=360/N;
     const rotor=$('wheel-rotor'), ball=$('ball-rotor');
     if(!rotor||!ball){ resolve(); return; }
-    const target = rotorTurns*360 - ((winIndex+0.5)*step);
+    // Continue from wherever the wheel came to rest last spin rather than
+    // snapping back to 0. We keep spinning FORWARD: add full turns on top of the
+    // current angle, then land so the winning pocket sits under the marker. The
+    // pocket alignment is modulo-360, so adding whole turns keeps it correct.
+    const curR = G.wheelRotor||0, curB = G.wheelBall||0;
+    // desired rotor angle (mod 360) that puts winIndex under the top marker
+    const wantR = -((winIndex+0.5)*step);
+    // smallest forward advance from curR that reaches wantR, plus the flourish turns
+    let advR = ((wantR - curR) % 360 + 360) % 360;   // 0..359 forward
+    const target = curR + rotorTurns*360 + advR;
+    const ballTarget = curB - ballTurns*360;          // ball spins opposite; any full-turn multiple is fine
     rotor.style.transition=`transform ${dur}ms cubic-bezier(.15,.55,.15,1)`;
     ball.style.transition=`transform ${dur}ms cubic-bezier(.1,.6,.2,1)`;
     void rotor.getBoundingClientRect();
     rotor.style.transform=`rotate(${target}deg)`;
-    ball.style.transform=`rotate(${-ballTurns*360}deg)`;
+    ball.style.transform=`rotate(${ballTarget}deg)`;
+    G.wheelRotor = target; G.wheelBall = ballTarget;   // remember where we land
     setTimeout(resolve, dur+120);
   });
 }
 function resetWheelInstant(){
+  // Leave the rotor + ball exactly where they came to rest last spin (do NOT
+  // snap back to 0) so the next spin continues naturally from that position.
+  // We only clear the running transition and hide the previous result chip.
   const rotor=$('wheel-rotor'), ball=$('ball-rotor'); if(!rotor) return;
   rotor.style.transition='none'; ball.style.transition='none';
-  rotor.style.transform='rotate(0deg)'; ball.style.transform='rotate(0deg)';
   $('result-chip').classList.remove('show');
 }
 function showResultChip(pocket){
@@ -1021,31 +1051,65 @@ function pushHistory(pocket){
 /* ── live bet board ── */
 async function loadRoundBets(){
   const { data } = await sb.from('bets')
-    .select('id,player_id,selection,stake,potential_payout,status')
+    .select('id,player_id,placements,selection,stake,potential_payout,status,won_payout')
     .eq('session_id',G.session.id).eq('round_number',G.round).neq('status','slip');
   return data||[];
 }
+/* expand a v2 row (placements[]) into per-placement legs; fall back to a legacy
+   single-selection row so a mid-migration DB still renders. */
+function expandBetRow(r){
+  const pls=Array.isArray(r.placements)?r.placements:null;
+  if(pls&&pls.length){
+    return pls.map(p=>{ const stake=Number(p.stake)||0, mult=Number(p.mult)||0;
+      return { player_id:r.player_id, selection:p.sel, stake, mult,
+               potential_payout:Math.round(stake*mult*100)/100, status:r.status, won_payout:r.won_payout }; });
+  }
+  return [{ player_id:r.player_id, selection:r.selection, stake:Number(r.stake)||0,
+            potential_payout:Number(r.potential_payout)||0, status:r.status, won_payout:r.won_payout }];
+}
 async function renderBets(result=null){
-  const bets = await loadRoundBets();
-  const pool = bets.reduce((s,b)=>s+Number(b.stake||0),0);
+  const rows = await loadRoundBets();
+  const pool = rows.reduce((s,b)=>s+Number(b.stake||0),0);
   $('bh-pool').textContent = '$'+Math.round(pool).toLocaleString();
   const list=$('board-list');
-  if(!bets.length){ list.innerHTML='<div class="board-empty">Waiting for the room to place bets…</div>'; return; }
-  list.innerHTML = bets.map(b=>{
-    const sel=b.selection||{}, won=b.status==='won', lost=b.status==='lost';
-    const net=Number(b.potential_payout)-Number(b.stake);
-    const ret = won?`+$${Math.round(net).toLocaleString()}` : lost?`−$${Math.round(b.stake).toLocaleString()}`
-      : `$${Math.round(b.potential_payout).toLocaleString()}`;
-    const retCls = won?'win':lost?'loss':'';
-    const tail = (won||lost)?'':' <span style="color:rgba(255,255,255,.4)">to win</span>';
-    return `<div class="pbet ${won?'won':''} ${lost?'lost':''}">
-      <span class="pb-chip" style="background:${chipColorFor(sel)}"></span>
-      <span class="pb-who">${esc(G.names[b.player_id]||'Player')}</span>
-      <span class="pb-sel">${esc(betLabel(sel))}</span>
-      <span class="pb-stake">$${Math.round(b.stake).toLocaleString()}</span>
-      <span class="pb-ret ${retCls}">${ret}${tail}</span>
-    </div>`;
+  if(!rows.length){ list.innerHTML='<div class="board-empty">Waiting for the room to place bets…</div>'; return; }
+  // one visual block per player: their outside bets as individual lines + all
+  // their straight-ups collapsed into a single "N numbers" line.
+  const html = rows.map(row=>{
+    const legs=expandBetRow(row);
+    const who=esc(G.names[row.player_id]||'Player');
+    const straights=legs.filter(l=>(l.selection&&l.selection.type)==='straight');
+    const others   =legs.filter(l=>(l.selection&&l.selection.type)!=='straight');
+    const lines=[];
+    if(straights.length){
+      const stakeSum=straights.reduce((a,l)=>a+(Number(l.stake)||0),0);
+      const potSum=straights.reduce((a,l)=>a+(Number(l.potential_payout)||0),0);
+      lines.push(betLineHtml(who, `${straights.length} straight number${straights.length===1?'':'s'}`,
+        stakeSum, potSum, row.status, row.won_payout, 'var(--blue-lt)'));
+    }
+    others.forEach(l=>{
+      lines.push(betLineHtml(who, betLabel(l.selection), Number(l.stake)||0,
+        Number(l.potential_payout)||0, row.status, null, chipColorFor(l.selection)));
+    });
+    return lines.join('');
   }).join('');
+  list.innerHTML = html;
+}
+/* one row on the host live board */
+function betLineHtml(who, selLabel, stake, potential, status, wonPayout, chipColor){
+  const won=status==='won', lost=status==='lost';
+  const net = won ? ((wonPayout!=null?Number(wonPayout):potential) - stake) : 0;
+  const ret = won?`+$${Math.round(net).toLocaleString()}` : lost?`−$${Math.round(stake).toLocaleString()}`
+    : `$${Math.round(potential).toLocaleString()}`;
+  const retCls = won?'win':lost?'loss':'';
+  const tail = (won||lost)?'':' <span style="color:rgba(255,255,255,.4)">to win</span>';
+  return `<div class="pbet ${won?'won':''} ${lost?'lost':''}">
+    <span class="pb-chip" style="background:${chipColor}"></span>
+    <span class="pb-who">${who}</span>
+    <span class="pb-sel">${esc(selLabel)}</span>
+    <span class="pb-stake">$${Math.round(stake).toLocaleString()}</span>
+    <span class="pb-ret ${retCls}">${ret}${tail}</span>
+  </div>`;
 }
 
 
@@ -1138,7 +1202,7 @@ async function playRound(){
   // 4. SETTLE — DB flips every pending bet to won/lost and pays winners, and
   // stamps the result. This moves the session to 'settling'.
   $('t-phase').textContent = 'Paying out';
-  await sb.rpc('settle_roulette_round', { p_session_id:G.session.id,
+  await sb.rpc('rl_settle_round', { p_session_id:G.session.id,
     p_round_number:G.round, p_result:{ number:pocket, color } });
   await refreshPlayers();
   await renderBets({ number:pocket, color });       // colour rows won/lost
@@ -1518,8 +1582,8 @@ function showFinal(){
     const profit = (Number(champ.balance)||0) - start;
     const pEl = $('champ-profit');
     const c = PHRASE_DATA.champion || {};
-    pEl.textContent = profit>0 ? fillPhrase(c.profitUp,{amount:'$'+profit})
-                    : profit<0 ? fillPhrase(c.profitDown,{amount:'$'+Math.abs(profit)})
+    pEl.textContent = profit>0 ? fillPhrase(c.profitUp,{amount:profit})
+                    : profit<0 ? fillPhrase(c.profitDown,{amount:Math.abs(profit)})
                     : pickPhrase(c.profitFlat);
     pEl.classList.toggle('down', profit<0);
     $('champ-sub').textContent = standings.length>1 ? pickPhrase(c.subMany) : pickPhrase(c.subSolo);
@@ -1547,6 +1611,12 @@ function showFinal(){
     launchConfetti();
     playSound('cheer', { volume:1.0 });
     playSound('fanfare', { volume:0.9 });
+    // tell the phones the final placements are revealed NOW (same instant the
+    // 1st-place row lands on the TV) — this flips config.final_revealed, which is
+    // exactly what the player page waits on. Without it, phones sat on the
+    // "waiting for the leaderboard" screen until their 30s fallback fired. The
+    // reveal_final RPC already exists (the horse host uses it the same way).
+    if(G.session){ sb.rpc('reveal_final', { p_session_id:G.session.id }).catch(()=>{}); }
     // hold the sign-off voice until the fanfare has mostly rung out, then winner
     // → signoff, spaced so neither is masked by the sting or each other.
     setTimeout(()=> playVoice('winner'), 1400);
@@ -1563,7 +1633,17 @@ $('btn-again') && $('btn-again').addEventListener('click', ()=>{
     // reset the game's per-session runtime state, keep the room + players
     G.round = 0; G.history = [];
     G._tickerSeeded = false;
-    try{ await sb.rpc('reset_roulette_session', { p_session_id:G.session.id }); }catch(e){}
+    G.wheelRotor = 0; G.wheelBall = 0;
+    // Reset the session in the DB (clears bets + rounds + hands, refunds balances,
+    // returns to lobby, keeps config). If this fails the new game would inherit the
+    // old state — so surface it loudly rather than swallowing it.
+    const { error:resetErr } = await sb.rpc('reset_session', { p_session_id:G.session.id });
+    if(resetErr){
+      console.error('reset_session failed:', resetErr);
+      alert('Could not reset the table for a new game:\n'+(resetErr.message||resetErr)+
+            '\n\nMake sure reset_session is deployed in the database.');
+      return;
+    }
     await refreshPlayers();
     $('lobby-overlay').style.display='flex';
     showStack('lobby-room');

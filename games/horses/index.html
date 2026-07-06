@@ -669,6 +669,16 @@ body {
   color:var(--white); flex-shrink: 0;
   padding: 0 80px;
 }
+/* text-swap fade: on a genuine text change the current line sinks + fades out,
+   then the new line is seeded above and rises + fades in. The horizontal scroll
+   lives on #status-text's transform, so we animate the child copies' opacity +
+   vertical offset instead. Per-second countdown ticks skip this (see the
+   {instant:true} path in setStatusText). */
+#status-text .ticker-copy, #status-text .ticker-sep{ transition:opacity .28s ease, transform .28s ease; }
+#status-text.fade-out .ticker-copy, #status-text.fade-out .ticker-sep{
+  opacity:0; transform:translateY(26px); }
+#status-text.fade-in-start .ticker-copy, #status-text.fade-in-start .ticker-sep{
+  opacity:0; transform:translateY(-26px); }
 #btn-wrap {
   background:var(--white);
   padding:4px 28px;
@@ -4094,45 +4104,59 @@ function _tickerLoop(ts) {
   _tickerRaf = requestAnimationFrame(_tickerLoop);
 }
 
-function setStatusText(msg) {
+function setStatusText(msg, opts) {
   const el   = document.getElementById('status-text');
   const clip = document.getElementById('status-clip');
   if(!el || !clip) return;
+  const instant = !!(opts && opts.instant);
+  const reduce  = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
 
   if(_tickerBuilt) {
-    // Already running — swap text then remeasure unit width (phrase length may
-    // have changed). When the unit width changes we must rescale the current
-    // offset by the SAME ratio, otherwise the scroll position jumps: _tickerX
-    // is held constant while the wrap point (_tickerUnit) moves, so the copies
-    // visibly snap. Rescaling keeps the visual phase continuous as the
-    // countdown number (and thus the text length) ticks down each second.
-    el.querySelectorAll('.ticker-copy').forEach(s => s.textContent = msg);
-    requestAnimationFrame(() => {
-      const copies = el.querySelectorAll('.ticker-copy');
-      if(copies.length >= 2) {
-        const pageScale = Math.min(window.innerWidth / PAGE_W, window.innerHeight / PAGE_H);
-        const screenUnit = copies[1].getBoundingClientRect().left - copies[0].getBoundingClientRect().left;
-        const newUnit = Math.abs(screenUnit / pageScale);
-        if(_tickerUnit > 0 && newUnit > 0) {
-          // Preserve the fractional phase through the new unit width.
-          const phase = (_tickerX % _tickerUnit) / _tickerUnit;   // -1..0
-          _tickerX = phase * newUnit;
-        }
-        _tickerUnit = newUnit;
-        // If a longer message now needs more copies to cover the clip, add them.
-        const clip = document.getElementById('status-clip');
-        if(clip && _tickerUnit > 0){
-          const needed = Math.ceil((clip.offsetWidth * 2) / _tickerUnit) + 2;
-          while(el.querySelectorAll('.ticker-copy').length < needed){
-            const s = document.createElement('span');
-            s.className = 'ticker-copy'; s.textContent = msg; el.appendChild(s);
-            const sep = document.createElement('span');
-            sep.className = 'ticker-sep'; sep.textContent = '\u00a0\u00a0\u25c6\u00a0\u00a0';
-            el.appendChild(sep);
+    // Swap the visible text then remeasure the unit width (phrase length may have
+    // changed) while preserving the scroll phase so the copies don't snap.
+    const swapAndRemeasure = () => {
+      el.querySelectorAll('.ticker-copy').forEach(s => s.textContent = msg);
+      requestAnimationFrame(() => {
+        const copies = el.querySelectorAll('.ticker-copy');
+        if(copies.length >= 2) {
+          const pageScale = Math.min(window.innerWidth / PAGE_W, window.innerHeight / PAGE_H);
+          const screenUnit = copies[1].getBoundingClientRect().left - copies[0].getBoundingClientRect().left;
+          const newUnit = Math.abs(screenUnit / pageScale);
+          if(_tickerUnit > 0 && newUnit > 0) {
+            const phase = (_tickerX % _tickerUnit) / _tickerUnit;   // -1..0
+            _tickerX = phase * newUnit;
+          }
+          _tickerUnit = newUnit;
+          const clip2 = document.getElementById('status-clip');
+          if(clip2 && _tickerUnit > 0){
+            const needed = Math.ceil((clip2.offsetWidth * 2) / _tickerUnit) + 2;
+            while(el.querySelectorAll('.ticker-copy').length < needed){
+              const s = document.createElement('span');
+              s.className = 'ticker-copy'; s.textContent = msg; el.appendChild(s);
+              const sep = document.createElement('span');
+              sep.className = 'ticker-sep'; sep.textContent = '\u00a0\u00a0\u25c6\u00a0\u00a0';
+              el.appendChild(sep);
+            }
           }
         }
-      }
-    });
+      });
+    };
+
+    if(instant || reduce){
+      // per-second countdown tick (or reduced motion): swap in place, no fade
+      swapAndRemeasure();
+    } else {
+      // genuine transition: sink current line away, swap + remeasure, then seed
+      // the new line above and release it up into a fade-in.
+      el.classList.add('fade-out');
+      setTimeout(() => {
+        el.classList.remove('fade-out');
+        el.classList.add('fade-in-start');
+        swapAndRemeasure();
+        // release on the next frame so the seeded (raised) position applies first
+        requestAnimationFrame(() => { void el.offsetWidth; el.classList.remove('fade-in-start'); });
+      }, 300);
+    }
     return;
   }
 
@@ -4648,19 +4672,16 @@ lq('#btn-again').addEventListener('click', async ()=>{
     lobby.rematch     = false;
 
     // Reset the SAME session in place: wipe rounds + bets, clear current_round,
-    // set status back to 'lobby' — WITHOUT removing the player rows, so the crew
-    // stays joined. reset_lobby blanks config, so we immediately re-apply the
-    // current in-memory settings (re-stamps balances + restores the card).
+    // set status back to 'lobby', refund balances — WITHOUT removing the player
+    // rows, so the crew stays joined. reset_session KEEPS the config, so there's
+    // no need to re-apply it afterward (it also re-stamps balances to the
+    // configured starting stack, matching the old reset_lobby + apply_config pair).
     if(lobby.session){
-      const { error: rErr } = await sb.rpc('reset_lobby', { p_session_id: lobby.session.id });
-      if(rErr){ console.error('reset_lobby failed:', rErr); }
-      const { error: aErr } = await sb.rpc('apply_config', {
-        p_session_id: lobby.session.id, p_config: lobby.cfg,
-      });
-      if(aErr){
-        console.error('apply_config failed:', aErr);
+      const { error: rErr } = await sb.rpc('reset_session', { p_session_id: lobby.session.id });
+      if(rErr){
+        console.error('reset_session failed:', rErr);
         lq('#lobby-room-msg').textContent =
-          'Couldn’t fully reset the room (' + (aErr.message||'unknown') + '). Try Edit settings → Confirm, or Close session.';
+          'Couldn’t fully reset the room (' + (rErr.message||'unknown') + '). Try Edit settings → Confirm, or Close session.';
       } else {
         lq('#lobby-room-msg').textContent = '';
       }
@@ -5529,10 +5550,11 @@ function startNextRaceCountdown(){
   // (combined with tabular-nums this keeps the scroll width perfectly stable,
   // so the marquee never has to re-measure mid-countdown).
   const pad = n => String(n).padStart(2,'0');
-  const show = n => setStatusText(isFinalRace
-    ? `FINAL RESULTS IN ${pad(n)}`
-    : `NEXT RACE IN ${pad(n)}`);
-  show(secs);
+  const label = n => isFinalRace ? `FINAL RESULTS IN ${pad(n)}` : `NEXT RACE IN ${pad(n)}`;
+  // first display fades in from the previous banner text; per-second ticks update
+  // in place (instant) so only the number changes, without a fade each second.
+  setStatusText(label(secs));
+  const show = n => setStatusText(label(n), {instant:true});
 
   _nextRaceInterval = setInterval(()=>{
     secs--;

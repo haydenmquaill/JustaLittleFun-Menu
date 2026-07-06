@@ -2279,7 +2279,15 @@ $('btn-again') && $('btn-again').addEventListener('click', ()=>{
     // reset the game's per-session runtime state, keep the room + players
     G.round = 1;
     G._tickerSeeded = false;
-    try{ await sb.rpc('bj_reset_session', { p_session_id:G.session.id }); }catch(e){}
+    // Unified session reset (clears hands + bets + rounds, refunds balances, →
+    // lobby, keeps config). Surface failure rather than swallowing it.
+    const { error:resetErr } = await sb.rpc('reset_session', { p_session_id:G.session.id });
+    if(resetErr){
+      console.error('reset_session failed:', resetErr);
+      alert('Could not reset the table for a new game:\n'+(resetErr.message||resetErr)+
+            '\n\nMake sure reset_session is deployed in the database.');
+      return;
+    }
     await refreshPlayers();
     $('lobby-overlay').style.display='flex';
     showStack('lobby-room');
