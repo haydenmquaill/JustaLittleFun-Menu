@@ -1482,6 +1482,19 @@ async function playSession(){
   G.players.forEach(p => G.names[p.id]=p.display_name);
 
   for(let r=0; r<G.cfg.numRounds; r++){
+    // If nobody has chips left, don't open an empty betting window (which would
+    // just burn the full timer and deal a dealer-only round). End the game here
+    // and go straight to the finale. Read balances fresh rather than trusting the
+    // in-memory G.players, which may lag a settlement.
+    const { data:bals } = await sb.from('players').select('balance').eq('session_id',G.session.id);
+    const anyFunded = (bals||[]).some(p => (Number(p.balance)||0) > 0);
+    if(!anyFunded){
+      $('t-phase').textContent = 'Everyone’s out of chips';
+      setTicker('status-text', 'All players busted — wrapping up');
+      await sleep(1800);
+      break;
+    }
+
     G.round = r;                                    // 0-indexed, matches sessions.current_round + the other modes
     $('t-round').textContent = `Round ${r+1} of ${G.cfg.numRounds}`;
     await playRound();
@@ -1658,7 +1671,7 @@ async function playRound(){
 
   // 5. SETTLE
   $('t-phase').textContent = 'Results';
-  await sb.rpc('bj_settle_round', { p_session_id:G.session.id });
+  await sb.rpc('settle_blackjack_round', { p_session_id:G.session.id });
   hands = await readHands(); paintTable(hands,{hideHole:false});
   // outcome word above each player's hand: win / loss / push (a hand that won
   // via a natural keeps the "Blackjack" word). Hands that busted during play are
@@ -1717,11 +1730,16 @@ async function playRound(){
 async function waitForBetsOrTimeout(ms){
   const end = Date.now()+ms;
   while(Date.now() < end){
-    const { data:players } = await sb.from('players').select('id').eq('session_id',G.session.id);
+    const { data:players } = await sb.from('players').select('id,balance').eq('session_id',G.session.id);
     const { data:hands } = await sb.from('hands').select('player_id')
       .eq('session_id',G.session.id).eq('round_number',G.round);
     const betCount = new Set((hands||[]).map(h=>h.player_id)).size;
-    if(players && players.length>0 && betCount>=players.length) return; // all in
+    // Only players who CAN bet count toward "everyone's in". A broke player
+    // (balance <= 0) can never place a bet, so waiting on them would burn the
+    // full timer every round once someone busts out. Exclude them so the window
+    // closes as soon as every funded player has bet.
+    const fundedCount = (players||[]).filter(p => (Number(p.balance)||0) > 0).length;
+    if(fundedCount>0 && betCount>=fundedCount) return; // all funded players in
     await sleep(600);
   }
 }
@@ -2225,7 +2243,11 @@ function launchConfetti(){
    1st place lands, then reveal bottom→top and fire confetti on the winner. */
 function showFinal(){
   const start = Number(G.cfg.startingBalance)||0;
-  const standings = [...G.players].sort((a,b)=>(Number(b.balance)||0)-(Number(a.balance)||0));
+  // Balance desc, tie-break by joined_at asc — IDENTICAL to the player finale
+  // leaderboard so tied players rank the same on host and phones.
+  const standings = [...G.players].sort((a,b)=>
+    (Number(b.balance)||0)-(Number(a.balance)||0)
+    || (new Date(a.joined_at)-new Date(b.joined_at)));
   const champ = standings[0];
 
   // prepare (but don't show) the champion card
