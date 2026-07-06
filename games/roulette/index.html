@@ -1567,6 +1567,16 @@ function launchConfetti(){
   _confettiRaf = requestAnimationFrame(frame);
 }
 
+/* Tell the phones the final placements are revealed (fired as the 1st-place row
+   lands on the TV). Mirrors the horse host's signalFinalReveal — flips
+   config.final_revealed via reveal_final; best-effort, the 'finished' status is
+   the fallback. */
+async function signalFinalReveal(){
+  if(!G.session) return;
+  try { await sb.rpc('reveal_final', { p_session_id: G.session.id }); }
+  catch(e){ /* best-effort; the finished status is the fallback */ }
+}
+
 /* Show the finale: standings render hidden, champion card + marquee held until
    1st place lands, then reveal bottom→top and fire confetti on the winner. */
 function showFinal(){
@@ -1611,12 +1621,10 @@ function showFinal(){
     launchConfetti();
     playSound('cheer', { volume:1.0 });
     playSound('fanfare', { volume:0.9 });
-    // tell the phones the final placements are revealed NOW (same instant the
-    // 1st-place row lands on the TV) — this flips config.final_revealed, which is
-    // exactly what the player page waits on. Without it, phones sat on the
-    // "waiting for the leaderboard" screen until their 30s fallback fired. The
-    // reveal_final RPC already exists (the horse host uses it the same way).
-    if(G.session){ sb.rpc('reveal_final', { p_session_id:G.session.id }).catch(()=>{}); }
+    // tell the phones the final placements are revealed now (same instant the
+    // 1st-place row lands on the TV) — flips config.final_revealed, which the
+    // player waits on. Matches the horse host's signalFinalReveal() placement.
+    signalFinalReveal();
     // hold the sign-off voice until the fanfare has mostly rung out, then winner
     // → signoff, spaced so neither is masked by the sting or each other.
     setTimeout(()=> playVoice('winner'), 1400);
