@@ -4928,12 +4928,12 @@ async function onRaceFinished(){
   // word its banner correctly instead of always claiming a photo finish.
   const hadPhotoFinish = photoFinishPositions.size > 0;
 
-  const { error } = await sb.rpc('settle_round', {
+  const { error } = await sb.rpc('horse_settle_round', {
     p_session_id:  lobby.session.id,
     p_round_number: multiGame.raceNumber,
     p_result:      { order, detail, photo: hadPhotoFinish },
   });
-  if(error){ console.error('settle_round failed:', error); }
+  if(error){ console.error('horse_settle_round failed:', error); }
 
   // Surface this race's BIG MOMENTS on the postrace image tile. Best-effort; if
   // the read fails we simply don't overlay anything.

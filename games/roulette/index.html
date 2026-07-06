@@ -1202,7 +1202,7 @@ async function playRound(){
   // 4. SETTLE — DB flips every pending bet to won/lost and pays winners, and
   // stamps the result. This moves the session to 'settling'.
   $('t-phase').textContent = 'Paying out';
-  await sb.rpc('rl_settle_round', { p_session_id:G.session.id,
+  await sb.rpc('roulette_settle_round', { p_session_id:G.session.id,
     p_round_number:G.round, p_result:{ number:pocket, color } });
   await refreshPlayers();
   await renderBets({ number:pocket, color });       // colour rows won/lost

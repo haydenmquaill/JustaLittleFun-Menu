@@ -1658,7 +1658,7 @@ async function playRound(){
 
   // 5. SETTLE
   $('t-phase').textContent = 'Results';
-  await sb.rpc('settle_blackjack_round', { p_session_id:G.session.id });
+  await sb.rpc('bj_settle_round', { p_session_id:G.session.id });
   hands = await readHands(); paintTable(hands,{hideHole:false});
   // outcome word above each player's hand: win / loss / push (a hand that won
   // via a natural keeps the "Blackjack" word). Hands that busted during play are
