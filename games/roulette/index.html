@@ -797,7 +797,21 @@ function _duck(on){
   });
 }
 function playVoice(key, { volume=1 } = {}){
-  if(!Audio_.ready || Audio_.muted) return null;
+  if(Audio_.muted) return null;
+  // Audio init is async and only kicks off on the host's first gesture (which is
+  // often the very click that starts session 1). The opening lines of the first
+  // game can therefore fire BEFORE Audio_.ready flips — previously they silently
+  // no-oped, which is why voice only worked from the 2nd session (AGAIN) on, once
+  // init had long since finished. Instead of dropping the line, defer it until
+  // audio is ready (onAudioReady runs immediately if already ready). A fresh
+  // gesture-driven init is still nudged via unlockAudio so readiness actually
+  // arrives. Lines are short and phase-timed, so a brief deferral lands them a
+  // beat late rather than never.
+  if(!Audio_.ready){
+    unlockAudio();
+    onAudioReady(()=>{ if(!Audio_.muted) playVoice(key, { volume }); });
+    return null;
+  }
   const entry=VOICE_MANIFEST[key]; if(!entry||!entry.length) return null;
   const url=entry[(Math.random()*entry.length)|0];
   const buffer=_buf(url);
@@ -1061,8 +1075,16 @@ function expandBetRow(r){
   const pls=Array.isArray(r.placements)?r.placements:null;
   if(pls&&pls.length){
     return pls.map(p=>{ const stake=Number(p.stake)||0, mult=Number(p.mult)||0;
+      // Per-placement outcome comes from the DB once settled (settle writes
+      // p.won / p.payout onto each placement). Before settlement those fields are
+      // absent, so leg status stays 'pending'. We no longer fall back to the
+      // row-level status for a settled row — that's exactly what made every
+      // placement under a winning slip show as won.
+      const settled = (p.won!==undefined);
+      const legStatus = settled ? (p.won ? 'won' : 'lost') : 'pending';
       return { player_id:r.player_id, selection:p.sel, stake, mult,
-               potential_payout:Math.round(stake*mult*100)/100, status:r.status, won_payout:r.won_payout }; });
+               potential_payout:Math.round(stake*mult*100)/100,
+               status:legStatus, won_payout: settled ? (Number(p.payout)||0) : null }; });
   }
   return [{ player_id:r.player_id, selection:r.selection, stake:Number(r.stake)||0,
             potential_payout:Number(r.potential_payout)||0, status:r.status, won_payout:r.won_payout }];
@@ -1083,13 +1105,27 @@ async function renderBets(result=null){
     const lines=[];
     if(straights.length){
       const stakeSum=straights.reduce((a,l)=>a+(Number(l.stake)||0),0);
-      const potSum=straights.reduce((a,l)=>a+(Number(l.potential_payout)||0),0);
-      lines.push(betLineHtml(who, `${straights.length} straight number${straights.length===1?'':'s'}`,
-        stakeSum, potSum, row.status, row.won_payout, 'var(--blue-lt)'));
+      // Show the ACTUAL numbers backed, not just a count.
+      const nums=straights.map(l=>(l.selection.numbers&&l.selection.numbers[0]))
+                          .filter(n=>n!=null)
+                          .sort((a,b)=>Number(a)-Number(b));
+      const label = `Straights: ${nums.join(', ')}`;
+      // "To win" is the MAX single-number payout among these straights — you can
+      // only ever hit ONE straight per spin, so summing them overstates it.
+      const maxPot=straights.reduce((m,l)=>Math.max(m,Number(l.potential_payout)||0),0);
+      // Group status from per-placement outcomes: won if any straight leg won;
+      // lost only once settled (all legs have a definite outcome) and none won;
+      // otherwise still pending.
+      const anyWon=straights.some(l=>l.status==='won');
+      const anySettled=straights.some(l=>l.status==='won'||l.status==='lost');
+      const grpStatus = anyWon ? 'won' : (anySettled ? 'lost' : 'pending');
+      // On a win, the actual amount collected is the winning leg's payout.
+      const grpWon = anyWon ? straights.reduce((a,l)=>a+(l.status==='won'?(Number(l.won_payout)||0):0),0) : null;
+      lines.push(betLineHtml(who, label, stakeSum, maxPot, grpStatus, grpWon, 'var(--blue-lt)'));
     }
     others.forEach(l=>{
       lines.push(betLineHtml(who, betLabel(l.selection), Number(l.stake)||0,
-        Number(l.potential_payout)||0, row.status, null, chipColorFor(l.selection)));
+        Number(l.potential_payout)||0, l.status, l.won_payout, chipColorFor(l.selection)));
     });
     return lines.join('');
   }).join('');
