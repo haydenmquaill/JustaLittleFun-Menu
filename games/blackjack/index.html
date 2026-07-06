@@ -1516,7 +1516,7 @@ async function playRound(){
   if(G._tickerSeeded){ G._tickerSeeded = false; }
   else { setTicker('status-text', 'Accepting bets'); }
   playVoice('placeYourBets');
-  await sb.rpc('bj_open_betting', { p_session_id:G.session.id, p_seconds:BET_SECONDS });
+  await sb.rpc('bj_open_betting', { p_session_id:G.session.id, p_seconds:BET_SECONDS, p_round_number:G.round });
   runClock(Date.now()+BET_SECONDS*1000);
   await waitForBetsOrTimeout(BET_SECONDS*1000);
   // Betting window over — either the timer expired or every player is already in.
