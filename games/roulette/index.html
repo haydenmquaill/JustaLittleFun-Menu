@@ -164,6 +164,14 @@ body{ background:#000; overflow:hidden; font-family:'Barlow Condensed',sans-seri
 .pbet .pb-stake{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.5rem; font-variant-numeric:tabular-nums; }
 .pbet .pb-ret{ font-family:'Oswald',sans-serif; font-weight:600; font-size:1.1rem; min-width:96px; text-align:right; }
 .pbet .pb-ret.win{ color:#5fe08a; } .pbet .pb-ret.loss{ color:#ff6b60; }
+/* straights row: the selection column becomes a wrapping strip of coloured,
+   numbered pocket tiles instead of a text list. */
+.pbet .pb-tiles{ flex:1; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.pbet .pb-tile{ min-width:30px; height:30px; padding:0 6px; border-radius:6px; flex-shrink:0;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.15rem; color:#fff;
+  border:1px solid rgba(255,255,255,0.18); font-variant-numeric:tabular-nums; }
+.pbet .pb-tile.green{ border-color:rgba(255,255,255,0.3); }
 .board-empty{ margin:auto; text-align:center; color:rgba(255,255,255,0.4);
   font-family:'Oswald',sans-serif; letter-spacing:2px; text-transform:uppercase; font-size:1.05rem; }
 
@@ -587,12 +595,17 @@ const Audio_ = { ctx:null, master:null, buses:{}, buffers:{}, _decoding:{}, loop
 const BUS_BASE = { music:0.6, ambience:0.55, sfx:0.9, voice:1.0 };
 
 /* Inline fallbacks keep every key defined until the JSON resolves (or if it
-   fails). basePath is prepended by the loader. url may be a single file or an
-   array of interchangeable takes (random per play). */
+   fails). These mirror audio/sfx/sfx-manifest.json with its basePath ("audio/sfx/")
+   already applied, since the inline fallback is used verbatim (the loader only
+   prepends basePath to the fetched manifest, not to these). Keep this in sync
+   with the roulette manifest's `sounds`. */
 let SOUND_MANIFEST = {
-  cardDeal:  { url:['audio/sfx/deal/1.mp3','audio/sfx/deal/2.mp3','audio/sfx/deal/3.mp3','audio/sfx/deal/4.mp3','audio/sfx/deal/5.mp3','audio/sfx/deal/6.mp3','audio/sfx/deal/7.mp3','audio/sfx/deal/8.mp3'], bus:'sfx' },
+  // roulette-specific cues
+  wheelSpin: { url:'audio/sfx/roulette/wheel_spin_loop.mp3', bus:'ambience', loop:true },
+  ballDrop:  { url:['audio/sfx/roulette/ball_drop/1.mp3','audio/sfx/roulette/ball_drop/2.mp3','audio/sfx/roulette/ball_drop/3.mp3'], bus:'sfx' },
+  payout:    { url:['audio/sfx/roulette/payout/1.mp3','audio/sfx/roulette/payout/2.mp3'], bus:'sfx' },
+  // shared cues
   chipBet:   { url:['audio/sfx/chip/1.mp3','audio/sfx/chip/2.mp3','audio/sfx/chip/3.mp3','audio/sfx/chip/4.mp3','audio/sfx/chip/5.mp3'], bus:'sfx' },
-  holeFlip:  { url:['audio/sfx/flip/1.mp3','audio/sfx/flip/2.mp3','audio/sfx/flip/3.mp3','audio/sfx/flip/4.mp3','audio/sfx/flip/5.mp3'], bus:'sfx' },
   uiWhoosh:  { url:'audio/sfx/general/ui_whoosh.mp3', bus:'sfx' },
   fanfare:   { url:'audio/sfx/general/fanfare.mp3',   bus:'music' },
   cheer:     { url:'audio/sfx/general/cheer.mp3',     bus:'ambience' },
@@ -1105,11 +1118,10 @@ async function renderBets(result=null){
     const lines=[];
     if(straights.length){
       const stakeSum=straights.reduce((a,l)=>a+(Number(l.stake)||0),0);
-      // Show the ACTUAL numbers backed, not just a count.
+      // Show the ACTUAL numbers backed as coloured pocket tiles (no text label).
       const nums=straights.map(l=>(l.selection.numbers&&l.selection.numbers[0]))
                           .filter(n=>n!=null)
                           .sort((a,b)=>Number(a)-Number(b));
-      const label = `Straights: ${nums.join(', ')}`;
       // "To win" is the MAX single-number payout among these straights — you can
       // only ever hit ONE straight per spin, so summing them overstates it.
       const maxPot=straights.reduce((m,l)=>Math.max(m,Number(l.potential_payout)||0),0);
@@ -1121,7 +1133,7 @@ async function renderBets(result=null){
       const grpStatus = anyWon ? 'won' : (anySettled ? 'lost' : 'pending');
       // On a win, the actual amount collected is the winning leg's payout.
       const grpWon = anyWon ? straights.reduce((a,l)=>a+(l.status==='won'?(Number(l.won_payout)||0):0),0) : null;
-      lines.push(betLineHtml(who, label, stakeSum, maxPot, grpStatus, grpWon, 'var(--blue-lt)'));
+      lines.push(betLineHtmlStraights(who, nums, stakeSum, maxPot, grpStatus, grpWon));
     }
     others.forEach(l=>{
       lines.push(betLineHtml(who, betLabel(l.selection), Number(l.stake)||0,
@@ -1143,6 +1155,28 @@ function betLineHtml(who, selLabel, stake, potential, status, wonPayout, chipCol
     <span class="pb-chip" style="background:${chipColor}"></span>
     <span class="pb-who">${who}</span>
     <span class="pb-sel">${esc(selLabel)}</span>
+    <span class="pb-stake">$${Math.round(stake).toLocaleString()}</span>
+    <span class="pb-ret ${retCls}">${ret}${tail}</span>
+  </div>`;
+}
+/* Straights row: same pbet layout, but the selection column shows the actual
+   coloured, numbered pocket tiles rather than a "Straights: 3, 17, 30" text list.
+   No leading pb-chip swatch — the tiles are already colour-coded. */
+function betLineHtmlStraights(who, nums, stake, potential, status, wonPayout){
+  const won=status==='won', lost=status==='lost';
+  const net = won ? ((wonPayout!=null?Number(wonPayout):potential) - stake) : 0;
+  const ret = won?`+$${Math.round(net).toLocaleString()}` : lost?`−$${Math.round(stake).toLocaleString()}`
+    : `$${Math.round(potential).toLocaleString()}`;
+  const retCls = won?'win':lost?'loss':'';
+  const tail = (won||lost)?'':' <span style="color:rgba(255,255,255,.4)">to win</span>';
+  const tiles = nums.map(n=>{
+    const c=colorOf(String(n));
+    const bg = c==='red'?'var(--red)':c==='green'?'var(--green)':'#1b1b1b';
+    return `<span class="pb-tile ${c}" style="background:${bg}">${n}</span>`;
+  }).join('');
+  return `<div class="pbet ${won?'won':''} ${lost?'lost':''}">
+    <span class="pb-who">${who}</span>
+    <span class="pb-tiles">${tiles}</span>
     <span class="pb-stake">$${Math.round(stake).toLocaleString()}</span>
     <span class="pb-ret ${retCls}">${ret}${tail}</span>
   </div>`;
