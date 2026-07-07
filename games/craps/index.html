@@ -570,6 +570,38 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// Phone-shooter roll control: how long the shooter has to tap ROLL before the
+// host auto-rolls for them (AFK fallback). The phone counts down against the
+// session deadline we stamp, matching blackjack's turn-clock pattern.
+const ROLL_TIMEOUT_MS = 30000;
+
+// Begin waiting for the shooter to roll: stamp deadline_kind='awaiting_roll' and
+// a real deadline so the phone shows a live countdown and knows to offer ROLL.
+async function beginRollWait(){
+  try{
+    await sb.from('sessions').update({
+      deadline_kind: 'awaiting_roll',
+      deadline: new Date(Date.now() + ROLL_TIMEOUT_MS).toISOString(),
+    }).eq('id', G.session.id);
+  }catch(e){ console.error('beginRollWait failed:', e); }
+}
+
+// Poll until the shooter taps ROLL (craps_request_roll flips deadline_kind to
+// 'roll_requested') or the timeout elapses. Returns true if tapped, false on
+// timeout. Polling matches how the blackjack host drives turns.
+async function waitForRollRequest(timeoutMs){
+  const start = Date.now();
+  while(Date.now() - start < timeoutMs){
+    try{
+      const { data } = await sb.from('sessions')
+        .select('deadline_kind').eq('id', G.session.id).single();
+      if(data && data.deadline_kind === 'roll_requested') return true;
+    }catch(e){ /* transient read error: keep polling */ }
+    await sleep(500);
+  }
+  return false;
+}
 const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 const G = { cfg:structuredClone(DEFAULT_CONFIG), session:null, channel:null, players:[], rosterPoll:null, round:0, names:{}, history:[] };
@@ -1238,19 +1270,38 @@ async function playRound(){
   await renderBets();
   await sleep(1600);
 
-  // 3. THE HAND — begin a fresh come-out, then roll until the hand ends
-  //    (point made or seven-out). v1: the host auto-rolls on a cadence; the
-  //    phone-shooter control is layered on next. Each roll runs the physics dice,
-  //    reads the settled faces, and calls craps_roll to settle + advance.
+  // 3. THE HAND — begin a fresh come-out, then roll until the hand ends (point
+  //    made or seven-out). The shooter taps ROLL on their phone; the host runs
+  //    the physics dice, reads the settled faces, and calls craps_roll. An AFK
+  //    shooter is auto-rolled after 30s. The shooter keeps the dice across hands
+  //    and only passes on a seven-out.
   $('t-phase').textContent = 'Come out roll';
   setTicker('status-text', 'Coming out');
   clearPoint();
   try{ await sb.rpc('start_racing', { p_session_id:G.session.id }); }catch(e){ console.error('start_racing failed:', e); }
   await sb.rpc('craps_begin_hand', { p_session_id:G.session.id, p_round_number:G.round });
 
+  // Who holds the dice this hand? (server decides; host mirrors for display)
+  let shooterId = null, shooterName = 'the shooter';
+  try{
+    const { data:sid } = await sb.rpc('craps_current_shooter', { p_session_id:G.session.id });
+    if(sid){ shooterId = sid; shooterName = G.names[sid] || 'the shooter'; }
+  }catch(e){ console.error('craps_current_shooter failed:', e); }
+
   let handEnded = false, guard = 0;
   while(!handEnded && guard++ < 40){
-    await sleep(1400);
+    // Wait for the shooter to tap ROLL on their phone. beginRollWait stamps
+    // 'awaiting_roll' + a 30s deadline (the phone shows the countdown + ROLL
+    // button); craps_request_roll flips it to 'roll_requested' when they tap.
+    // Auto-roll on timeout so an AFK shooter can't stall the table.
+    setTicker('status-text', `Waiting for ${shooterName} to roll…`);
+    await beginRollWait();
+    const requested = await waitForRollRequest(ROLL_TIMEOUT_MS);
+    // clear the signal regardless of how we got here (tap or timeout)
+    try{ await sb.from('sessions').update({ deadline_kind:null })
+           .eq('id',G.session.id); }catch(e){}
+    if(!requested){ setTicker('status-text', `${shooterName} is away — rolling…`); }
+
     playSound('chipBet', { volume:0.6 });
     const roll = await Dice.roll();
     const a = roll ? roll[0] : 1, b = roll ? roll[1] : 1;
@@ -1274,6 +1325,11 @@ async function playRound(){
       setTicker('status-text', `${total} — point made!`); pushRoll(total,'pt'); handEnded = true;
     } else if(outcome==='seven_out'){
       setTicker('status-text', 'Seven out'); pushRoll(total,'so'); clearPoint(); handEnded = true;
+      // Seven-out: the shooter loses the dice. Pass to the next player (real
+      // craps — a shooter who makes their point keeps rolling, so we only pass
+      // here, not on point_made / comeout_win).
+      try{ await sb.rpc('craps_pass_dice', { p_session_id:G.session.id }); }
+      catch(e){ console.error('craps_pass_dice failed:', e); }
     } else {
       setTicker('status-text', `Rolled ${total}`); pushRoll(total,'');
     }
