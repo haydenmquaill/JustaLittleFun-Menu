@@ -580,11 +580,11 @@ const ROLL_TIMEOUT_MS = 30000;
 // a real deadline so the phone shows a live countdown and knows to offer ROLL.
 async function beginRollWait(){
   try{
-    await sb.from('sessions').update({
-      deadline_kind: 'awaiting_roll',
-      deadline: new Date(Date.now() + ROLL_TIMEOUT_MS).toISOString(),
-    }).eq('id', G.session.id);
-  }catch(e){ console.error('beginRollWait failed:', e); }
+    await sb.rpc('craps_begin_roll_wait', {
+      p_session_id: G.session.id,
+      p_seconds: Math.round(ROLL_TIMEOUT_MS/1000),
+    });
+  }catch(e){ console.error('craps_begin_roll_wait failed:', e); }
 }
 
 // Poll until the shooter taps ROLL (craps_request_roll flips deadline_kind to
@@ -1298,8 +1298,7 @@ async function playRound(){
     await beginRollWait();
     const requested = await waitForRollRequest(ROLL_TIMEOUT_MS);
     // clear the signal regardless of how we got here (tap or timeout)
-    try{ await sb.from('sessions').update({ deadline_kind:null })
-           .eq('id',G.session.id); }catch(e){}
+    try{ await sb.rpc('craps_clear_roll_wait', { p_session_id:G.session.id }); }catch(e){}
     if(!requested){ setTicker('status-text', `${shooterName} is away — rolling…`); }
 
     playSound('chipBet', { volume:0.6 });
