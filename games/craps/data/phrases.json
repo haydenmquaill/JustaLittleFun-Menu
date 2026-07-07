@@ -1,0 +1,24 @@
+{
+  "_comment": "Editable display copy for the Roulette HOST. Overrides the built-in fallback at runtime. Any value may be a single string or an array of interchangeable variants (one chosen at random). {amount} is filled in the champion profit lines.",
+  "wipeTransitions": [
+    "Just a little fun!",
+    "Place your bets",
+    "Round and round",
+    "No more bets",
+    "Lady luck awaits",
+    "Red or black?",
+    "Where she lands, nobody knows",
+    "Back your number"
+  ],
+  "champion": {
+    "subMany": "Top of the table",
+    "subSolo": "Last one standing",
+    "profitUp": "+{amount} on the night",
+    "profitDown": "\u2212{amount} on the night",
+    "profitFlat": "Broke even on the night"
+  },
+  "finaleTicker": [
+    "That\u2019s the wheel \u2014 final results are up",
+    "That\u2019s the game \u2014 here\u2019s how it finished"
+  ]
+}
