@@ -1726,24 +1726,21 @@ async function playRound(){
   }
 }
 
-/* Wait until betting closes — either the timer runs out, or place_blackjack_bet
-   closed it early. The RPC stamps the session deadline to now the moment the last
-   funded player's bet lands (funded = balance > 0), so the host no longer counts
-   bets itself; it just watches the DB's authoritative deadline (the same column
-   bj_close_betting and the bet-open guard use). This removes the poll-vs-write
-   gap that made early-close flaky. The passed ms is a hard ceiling in case a read
-   hiccups. */
+/* wait until every seated player has confirmed a bet, or timeout */
 async function waitForBetsOrTimeout(ms){
-  const hardEnd = Date.now()+ms;
-  while(Date.now() < hardEnd){
-    const { data:s } = await sb.from('sessions')
-      .select('deadline,deadline_kind,status').eq('id',G.session.id).single();
-    if(!s || s.status!=='betting') return;                 // moved on already
-    // Only the bet_close deadline gates betting; ignore any other kind.
-    const dl = (s.deadline && s.deadline_kind==='bet_close')
-      ? new Date(s.deadline).getTime() : hardEnd;
-    if(Date.now() >= dl) return;                           // timer up OR closed early by the RPC
-    await sleep(400);
+  const end = Date.now()+ms;
+  while(Date.now() < end){
+    const { data:players } = await sb.from('players').select('id,balance').eq('session_id',G.session.id);
+    const { data:hands } = await sb.from('hands').select('player_id')
+      .eq('session_id',G.session.id).eq('round_number',G.round);
+    const betCount = new Set((hands||[]).map(h=>h.player_id)).size;
+    // Only players who CAN bet count toward "everyone's in". A broke player
+    // (balance <= 0) can never place a bet, so waiting on them would burn the
+    // full timer every round once someone busts out. Exclude them so the window
+    // closes as soon as every funded player has bet.
+    const fundedCount = (players||[]).filter(p => (Number(p.balance)||0) > 0).length;
+    if(fundedCount>0 && betCount>=fundedCount) return; // all funded players in
+    await sleep(600);
   }
 }
 async function activeSeats(){
@@ -2379,12 +2376,6 @@ function renderPlayers(){
 }
 function subscribeRoster(){
   const sid=G.session.id;
-  // Tear down any previous roster channel + poll first. Without this, every AGAIN
-  // stacks another realtime channel and another 3s interval on top of the last
-  // game's (which were never removed when the game started), leaking a channel
-  // and a timer per game. Clean up before re-subscribing.
-  if(G.channel){ try{ sb.removeChannel(G.channel); }catch(e){} G.channel=null; }
-  if(G.rosterPoll){ clearInterval(G.rosterPoll); G.rosterPoll=null; }
   G.channel=sb.channel('lobby-'+sid)
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'players',filter:'session_id=eq.'+sid},p=>{if(p.new){G.players.push(p.new);renderPlayers();}})
     .on('postgres_changes',{event:'DELETE',schema:'public',table:'players',filter:'session_id=eq.'+sid},p=>{G.players=G.players.filter(x=>x.id!==p.old.id);renderPlayers();})
